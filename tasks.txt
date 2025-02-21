@@ -1,6 +1,19 @@
 open problems for changing to Zig:
-    - create a simple window and colored rectangle with sdl3
-    - create git project
+    - sdl3 
+        - need to find some help documentation which i can use
+            -https://wiki.libsdl.org/SDL3/FrontPage
+        - get some better understanding of what it can do
+            -continue here: https://lazyfoo.net/tutorials/SDL/index.php
+            -unsure if helpful: https://examples.libsdl.org/SDL3/
+        - find out if i can do all the stuff i want with my game    
+            - rotation/translation
+                - paint one citizen based on many images
+                    - just find out how it works. Not need to do the entrire citizens yet
+            - zoom in/out
+            - limit fps. check how i can integrate ticking and painting 
+            - check some performance of 10000 citizens painted
+            - paint text
+                - measure text
 
     - how to use multi core. Build some code to see
     - twitch chat integration
