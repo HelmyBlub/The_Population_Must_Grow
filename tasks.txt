@@ -1,0 +1,8 @@
+open problems for changing to Zig:
+    - create a simple window and colored rectangle with sdl3
+    - create git project
+
+    - how to use multi core. Build some code to see
+    - twitch chat integration
+
+    - go over entire Zig docu to see if there is some new unknown coding stuff
