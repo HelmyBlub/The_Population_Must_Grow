@@ -1,4 +1,10 @@
 open problems for changing to Zig:
+    - continue with: unsure, maybe x11 with openGL or back to sdl
+    - try without 3rd libraries to get better understanding
+        - so no sdl3
+        - will mean it only runs on one OS?
+
+    - web assembly?
     - sdl3 
         - need to find some help documentation which i can use
             -https://wiki.libsdl.org/SDL3/FrontPage
@@ -11,10 +17,13 @@ open problems for changing to Zig:
                     - just find out how it works. Not need to do the entrire citizens yet
             - zoom in/out
             - limit fps. check how i can integrate ticking and painting 
+                - paint FPS as text to screen
+                    - measure text
             - check some performance of 10000 citizens painted
-            - paint text
-                - measure text
+        - check out "Signed Distance Fields (SDF Fonts)"
+            - for drawing text which can be scalled
 
+    - can i see cache misses with Zig? what performance metrics can i get?
     - how to use multi core. Build some code to see
     - twitch chat integration
 

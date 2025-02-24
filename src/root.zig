@@ -1,5 +1,11 @@
 const std = @import("std");
+// continue link:
+// https://ziglang.org/documentation/0.13.0/#toc-Pointers
 
+// learn more zig
+// zig build-exe src/root.zig
+// zig test testing allocator
+//      should find memory leaks. Try it out
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
@@ -22,7 +28,24 @@ const Citizen: type = struct {
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("Hello, {s}!\n", .{"world"});
-    first();
+    var iDoNotUnderstandYet: []const u8 = "hellp";
+    iDoNotUnderstandYet = "hellpll";
+    try stdout.print("no undestanding yet {s}!\n", .{iDoNotUnderstandYet});
+
+    var testUnion: anyerror!u32 = undefined;
+    try stdout.print("testing stuff {!}!\n", .{testUnion});
+    testUnion = 123;
+
+    var x: f32 = 1_0000;
+    comptime var y: i32 = 1;
+    const temp1 = std.math.sin(2.0);
+    if (x == 1 and y == 1) {}
+
+    x += 1;
+    y += @intFromFloat(temp1);
+    x = std.math.nan(f32);
+    try stdout.print("inf? {}!\n", .{x});
+    //first();
 }
 
 fn first() void {

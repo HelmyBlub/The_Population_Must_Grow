@@ -1,4 +1,6 @@
 const std = @import("std");
+// continue:
+// try printing FPS to screen
 
 pub const std_options: std.Options = .{
     .log_level = .debug,
@@ -112,8 +114,11 @@ pub fn main() !void {
             sdl.SDL_FLIP_NONE,
         );
         // Present frame
+        var buffer: [20]u8 = undefined;
+        const temp = try std.fmt.bufPrint(&buffer, "{}", .{frames});
+
         _ = sdl.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        _ = sdl.SDL_RenderDebugText(renderer, 50, 50, "asd");
+        _ = sdl.SDL_RenderDebugText(renderer, 50, 50, @ptrCast(temp));
         if (!sdl.SDL_RenderPresent(renderer)) {
             std.debug.print("render present Error: {s}\n", .{sdl.SDL_GetError()});
             running = false;
