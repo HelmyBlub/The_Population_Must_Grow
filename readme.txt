@@ -12,7 +12,7 @@ $ ./test1
 
 
 ## performant build
-zig build-exe -O ReleaseFast src/root.zig
+zig build-exe -O ReleaseFast src/main.zig
 
 
 

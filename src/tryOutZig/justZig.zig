@@ -1,11 +1,13 @@
 const std = @import("std");
+const expect = @import("std").testing.expect;
 // continue link:
-// https://ziglang.org/documentation/0.13.0/#toc-Pointers
+// https://ziglang.org/documentation/0.13.0/#while
 
 // learn more zig
 // zig build-exe src/root.zig
-// zig test testing allocator
-//      should find memory leaks. Try it out
+// zig stuff i want to try
+//   - vectors
+//
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
@@ -24,6 +26,21 @@ const Citizen: type = struct {
     moveTo: ?Position,
     moveSpeed: f16,
 };
+
+test "test something" {
+    const Value3 = enum(u4) {
+        a,
+        b = 8,
+        c,
+        d = 6,
+        e,
+    };
+
+    try expect(@intFromEnum(Value3.a) == 0);
+    try expect(@intFromEnum(Value3.b) == 8);
+    try expect(@intFromEnum(Value3.c) == 9);
+    try expect(@intFromEnum(Value3.d) == 6);
+}
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
