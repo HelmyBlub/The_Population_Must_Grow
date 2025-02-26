@@ -1,6 +1,7 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
-const Citizen = @import("citizen.zig");
+const Citizen = @import("citizen.zig").Citizen;
+const Paint = @import("paint.zig");
 
 // tasks:
 // trying around with performance and trying to understand what i should expect for a time
@@ -10,12 +11,13 @@ const Citizen = @import("citizen.zig");
 // cpu should do 3_000_000_000 cycles in a second
 
 pub const ChatSimState: type = struct {
-    citizens: std.ArrayList(Citizen.Citizen),
+    citizens: std.ArrayList(Citizen),
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
-    gameTime: u32,
+    gameTimeMs: u32,
     gameEnd: bool,
+    paintInfo: Paint.PaintInfo,
 };
 
 pub const Position: type = struct {
@@ -47,6 +49,7 @@ pub fn main() !void {
 fn runGame(allocator: std.mem.Allocator) !void {
     std.debug.print("game run start\n", .{});
     var state = try createGameState(allocator);
+    defer destroyGameState(state);
     var ticksRequired: f32 = 0;
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
@@ -56,38 +59,40 @@ fn runGame(allocator: std.mem.Allocator) !void {
             ticksRequired -= 1;
             if (state.gameEnd) break :mainLoop;
         }
+        try Paint.paint(&state);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
         std.time.sleep(sleepTime * 1_000);
     }
     printOutSomeData(state);
-    destroyGameState(state);
     std.debug.print("finished\n", .{});
 }
 
 fn tick(state: *ChatSimState) void {
-    state.gameTime += state.tickIntervalMs;
+    state.gameTimeMs += state.tickIntervalMs;
     Citizen.citizensMove(state);
-    if (state.gameTime > 10_000) state.gameEnd = true;
+    if (state.gameTimeMs > 10_000) state.gameEnd = true;
 }
 
 fn createGameState(allocator: std.mem.Allocator) !ChatSimState {
-    var citizensList = std.ArrayList(Citizen.Citizen).init(allocator);
+    var citizensList = std.ArrayList(Citizen).init(allocator);
     for (0..10000) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
     return ChatSimState{
         .citizens = citizensList,
-        .gameSpeed = 100,
+        .gameSpeed = 1,
         .paintIntervalMs = 16,
         .tickIntervalMs = 16,
-        .gameTime = 0,
+        .gameTimeMs = 0,
         .gameEnd = false,
+        .paintInfo = try Paint.paintInit(),
     };
 }
 
 fn destroyGameState(state: ChatSimState) void {
     state.citizens.deinit();
+    Paint.paintDestroy(state);
 }
 
 fn printOutSomeData(state: ChatSimState) void {

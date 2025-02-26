@@ -1,13 +1,13 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
 // continue link:
-// https://ziglang.org/documentation/0.13.0/#while
+// https://ziglang.org/documentation/0.13.0/#Builtin-Functions
 
 // learn more zig
 // zig build-exe src/root.zig
 // zig stuff i want to try
 //   - vectors
-//
+//   - debugging
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
