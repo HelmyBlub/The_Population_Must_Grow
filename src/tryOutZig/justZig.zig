@@ -1,13 +1,14 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
-// continue link:
-// https://ziglang.org/documentation/0.13.0/#Builtin-Functions
-
 // learn more zig
-// zig build-exe src/root.zig
+// zig build-exe src/tryOutZig/justZig.zig
 // zig stuff i want to try
 //   - vectors
+//      - first test result: up to 2 time faster, bad vector size could also end up in slower code
+//      - try with setup data first and than check performance
 //   - debugging
+//   - multi thread
+//      - is debugging different multi threaded?
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
@@ -27,42 +28,38 @@ const Citizen: type = struct {
     moveSpeed: f16,
 };
 
-test "test something" {
-    const Value3 = enum(u4) {
-        a,
-        b = 8,
-        c,
-        d = 6,
-        e,
-    };
-
-    try expect(@intFromEnum(Value3.a) == 0);
-    try expect(@intFromEnum(Value3.b) == 8);
-    try expect(@intFromEnum(Value3.c) == 9);
-    try expect(@intFromEnum(Value3.d) == 6);
+pub fn main() !void {
+    std.debug.print("start justZig!\n", .{});
+    addAlot();
+    addAlotVector();
+    //    first();
 }
 
-pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("Hello, {s}!\n", .{"world"});
-    var iDoNotUnderstandYet: []const u8 = "hellp";
-    iDoNotUnderstandYet = "hellpll";
-    try stdout.print("no undestanding yet {s}!\n", .{iDoNotUnderstandYet});
+fn addAlotVector() void {
+    const start = std.time.microTimestamp();
+    const vectorLength = 8;
+    var someVectorResult: @Vector(vectorLength, u64) = @splat(0);
+    const max: usize = 1_000_000_000 / vectorLength;
+    for (0..max) |i| {
+        const j: u32 = @intCast(i * vectorLength);
+        const indexes = std.simd.iota(u8, vectorLength);
+        someVectorResult += @as(@Vector(vectorLength, u32), @splat(j)) + indexes;
+    }
+    const total = @reduce(.Add, someVectorResult);
+    const end = std.time.microTimestamp();
+    std.debug.print("for time: {} microseconds\n", .{end - start});
+    std.debug.print("result: {d}\n", .{total});
+}
 
-    var testUnion: anyerror!u32 = undefined;
-    try stdout.print("testing stuff {!}!\n", .{testUnion});
-    testUnion = 123;
-
-    var x: f32 = 1_0000;
-    comptime var y: i32 = 1;
-    const temp1 = std.math.sin(2.0);
-    if (x == 1 and y == 1) {}
-
-    x += 1;
-    y += @intFromFloat(temp1);
-    x = std.math.nan(f32);
-    try stdout.print("inf? {}!\n", .{x});
-    //first();
+fn addAlot() void {
+    var someValue: u64 = 0;
+    const start = std.time.microTimestamp();
+    for (0..1_000_000_000) |i| {
+        someValue += i;
+    }
+    const end = std.time.microTimestamp();
+    std.debug.print("for time: {} microseconds\n", .{end - start});
+    std.debug.print("result: {d}\n", .{someValue});
 }
 
 fn first() void {

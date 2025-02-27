@@ -4,7 +4,8 @@ const Citizen = @import("citizen.zig").Citizen;
 const Paint = @import("paint.zig");
 
 // tasks:
-// trying around with performance and trying to understand what i should expect for a time
+//  - testing and sdl
+//  - trying around with performance and trying to understand what i should expect for a time
 // build a game loop
 // 10000 (citizens) * (10000gamesec / 16tickInterval)
 // 10000 * (10000/16) = 6250000 citizen Ticks in performance test takes 650 milliseconds
