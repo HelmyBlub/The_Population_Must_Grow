@@ -5,6 +5,7 @@ const expect = @import("std").testing.expect;
 // zig stuff i want to try
 //   - vectors
 //      - try use vectors with data similar to chatSim data
+//          - confused by performance, vector not faster, vector needs many steps, is there a way to avoid?
 //   - debugging
 //   - multi thread
 //      - is debugging different multi threaded?
@@ -24,10 +25,17 @@ const Position: type = struct {
 };
 
 const Positions: type = struct {
-    x: [100_000]f32,
-    y: [100_000]f32,
+    x: [100000]f32,
+    y: [100000]f32,
     direction: [100_000]f32,
     speed: [100_000]f32,
+};
+
+const PositionsVec: type = struct {
+    x: [12500]@Vector(8, f32),
+    y: [12500]@Vector(8, f32),
+    direction: [12500]@Vector(8, f32),
+    speed: [12500]@Vector(8, f32),
 };
 
 const Citizen: type = struct {
@@ -39,8 +47,8 @@ const Citizen: type = struct {
 pub fn main() !void {
     std.debug.print("start justZig!\n", .{});
     const dataAmount: usize = 100_000;
-    var dataArray: [dataAmount]Position = undefined;
-    for (&dataArray, 0..) |*data, i| {
+    var data1: [dataAmount]Position = undefined;
+    for (&data1, 0..) |*data, i| {
         data.* = .{ .x = 0, .y = @as(f32, @floatFromInt(i)), .direction = @as(f32, @floatFromInt(i)), .speed = @mod(@as(f32, @floatFromInt(i)), 4.0) + 1.0 };
     }
     var data2: Positions = .{ .x = undefined, .y = undefined, .direction = undefined, .speed = undefined };
@@ -50,13 +58,86 @@ pub fn main() !void {
         data2.direction[i] = 0.1 * @as(f32, @floatFromInt(i));
         data2.speed[i] = @mod(@as(f32, @floatFromInt(i)), 4.0) + 1.0;
     }
-    move(&dataArray);
-    moveWithVectors(&data2);
-    //    first();
+    arrayOfStructNoVector(&data1);
+    arrayOfSturctsToVector(&data1);
+    structOfArrayWithoutVector();
+    structOfArraysToVector(&data2);
+    structOfVectorArrays();
+}
+
+fn arrayOfSturctsToVector(positions: []Position) void {
+    const start = std.time.microTimestamp();
+
+    for (0..100) |_| {
+        for (0..12500) |j| {
+            const index = j * vectorLength;
+            var directionVector: @Vector(vectorLength, f32) = undefined;
+            var speedVector: @Vector(vectorLength, f32) = undefined;
+            var posVectorX: @Vector(vectorLength, f32) = undefined;
+            var posVectorY: @Vector(vectorLength, f32) = undefined;
+            for (0..8) |k| {
+                directionVector[k] = positions[index + k].direction;
+                speedVector[k] = positions[index + k].speed;
+                posVectorX[k] = positions[index + k].x;
+                posVectorY[k] = positions[index + k].y;
+            }
+
+            posVectorX += std.math.sin(directionVector) * speedVector;
+            posVectorY += std.math.cos(directionVector) * speedVector;
+            for (0..vectorLength) |i| {
+                positions[index + i].x = posVectorX[i];
+                positions[index + i].y = posVectorY[i];
+            }
+        }
+    }
+
+    const end = std.time.microTimestamp();
+    std.debug.print("time arrayOfSturctsToVector: {} microseconds\n", .{end - start});
+}
+
+fn structOfArrayWithoutVector() void {
+    var data2: Positions = .{ .x = undefined, .y = undefined, .direction = undefined, .speed = undefined };
+    for (0..100_000) |i| {
+        data2.x[i] = 0;
+        data2.y[i] = 0;
+        data2.direction[i] = 0.1 * @as(f32, @floatFromInt(i));
+        data2.speed[i] = @mod(@as(f32, @floatFromInt(i)), 4.0) + 1.0;
+    }
+
+    const start = std.time.microTimestamp();
+    for (0..100) |_| {
+        for (0..100_000) |i| {
+            data2.x[i] += std.math.sin(data2.direction[i]) * data2.speed[i];
+            data2.y[i] += std.math.cos(data2.direction[i]) * data2.speed[i];
+        }
+    }
+    const end = std.time.microTimestamp();
+    std.debug.print("time structOfArrayWithoutVector: {} microseconds\n", .{end - start});
 }
 
 const vectorLength = 8;
-fn moveWithVectors(positions: *Positions) void {
+fn structOfVectorArrays() void {
+    var data2: PositionsVec = .{ .x = undefined, .y = undefined, .direction = undefined, .speed = undefined };
+    for (0..12500) |i| {
+        data2.x[i] = @splat(0);
+        data2.y[i] = @splat(0);
+        data2.direction[i] = std.simd.iota(f32, 8);
+        data2.speed[i] = @splat(2);
+    }
+    const start = std.time.microTimestamp();
+
+    for (0..100) |_| {
+        for (0..12500) |j| {
+            data2.x[j] += std.math.sin(data2.direction[j]) * data2.speed[j];
+            data2.y[j] += std.math.cos(data2.direction[j]) * data2.speed[j];
+        }
+    }
+
+    const end = std.time.microTimestamp();
+    std.debug.print("time structOfVectorArrays: {} microseconds\n", .{end - start});
+}
+
+fn structOfArraysToVector(positions: *Positions) void {
     const start = std.time.microTimestamp();
 
     for (0..100) |_| {
@@ -67,7 +148,6 @@ fn moveWithVectors(positions: *Positions) void {
             const speedVector: @Vector(vectorLength, f32) = positions.speed[index..][0..vectorLength].*;
             var posVectorX: @Vector(vectorLength, f32) = positions.x[index..][0..vectorLength].*;
             var posVectorY: @Vector(vectorLength, f32) = positions.y[index..][0..vectorLength].*;
-            //            posVectorX += std.math.sin(@as(@Vector(vectorLength, f32), @splat(1))) * @as(@Vector(vectorLength, f32), @splat(2));
             posVectorX += std.math.sin(directionVector) * speedVector;
             posVectorY += std.math.cos(directionVector) * speedVector;
             for (0..vectorLength) |i| {
@@ -75,15 +155,13 @@ fn moveWithVectors(positions: *Positions) void {
                 positions.y[index + i] = posVectorY[i];
             }
         }
-        //const oi = 2;
-        //std.debug.print("vector data: {d}, {d}, {d}, {d}\n", .{ positions.x[oi], positions.y[oi], positions.direction[oi], positions.speed[oi] });
     }
 
     const end = std.time.microTimestamp();
-    std.debug.print("vector time: {} microseconds\n", .{end - start});
+    std.debug.print("time structOfArraysToVector: {} microseconds\n", .{end - start});
 }
 
-fn move(positions: []Position) void {
+fn arrayOfStructNoVector(positions: []Position) void {
     const start = std.time.microTimestamp();
     for (0..100) |_| {
         for (positions) |*pos| {
@@ -91,7 +169,7 @@ fn move(positions: []Position) void {
         }
     }
     const end = std.time.microTimestamp();
-    std.debug.print("time: {} microseconds\n", .{end - start});
+    std.debug.print("time arrayOfStructNoVector: {} microseconds\n", .{end - start});
 }
 
 fn movePosition(position: *Position) void {
