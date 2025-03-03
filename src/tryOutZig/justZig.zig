@@ -3,10 +3,6 @@ const expect = @import("std").testing.expect;
 // learn more zig
 // zig build-exe src/tryOutZig/justZig.zig
 // zig stuff i want to try
-//   - get some better idea how many operations my computer can do per seconds
-//      - without vectors but in a way where the compiler hopefully does not use vectors as improvement
-//      - compare to vector testing result
-//   - debugging
 //   - multi thread
 //      - is debugging different multi threaded?
 const ChatSimState = struct {
