@@ -1,30 +1,37 @@
 const std = @import("std");
+const vectorLength = 8;
 pub fn main() !void {
-    // multi thread performance notes:
+    // multi thread and vector performance notes:
     // - with debug build -> multi core is worse than single threaded
     //      -> use ReleaseFast for performance measures
-    //   ~182_000_000 operations per second (1 Thread, debug build)
-    //   ~144_000_000 operations per second (2 Thread, debug build)
-    //   ~650_000_000 operations per second (1 Thread, releaseFast build)
-    // ~1_200_000_000 operations per second (2 Thread, releaseFast build)
-    std.debug.print("start multi thread!\n", .{});
+    //   ~ 180_000_000 operations per second (1 Thread, vectorSize=1, debug build)
+    //   ~ 120_000_000 operations per second (2 Thread, vectorSize=1, debug build)
+    //   ~ 1_000_000_000 operations per second (1 Thread, vectorSize=8, debug build)
+    //   ~ 2_000_000_000 operations per second (2 Thread, vectorSize=8, debug build)
+    //   ~ 2_600_000_000 operations per second (1 Thread, vectorSize=8, ReleaseFast build)
+    //   ~ 4_600_000_000 operations per second (2 Thread, vectorSize=8, ReleaseFast build)
+    std.debug.print("start multi thread + vector!\n", .{});
     const dataLength = 2_000_000;
     const loops = 1000;
-    var data: [dataLength]f32 = undefined;
+    const arrayLength = @divExact(dataLength, vectorLength);
+    var data: [arrayLength]@Vector(vectorLength, f32) = undefined;
     const rand = std.crypto.random;
     for (&data) |*entry| {
-        entry.* = rand.float(f32);
+        entry.* = @splat(0);
+        for (0..vectorLength) |i| {
+            entry.*[i] = rand.float(f32);
+        }
     }
-    const threadCount = 2;
-    const stepSize = @divExact(dataLength, threadCount);
+    const threadCount = 1;
+    const stepSize = @divExact(dataLength, threadCount * vectorLength);
     var threads: [threadCount]std.Thread = undefined;
-    var results: [threadCount]f64 = undefined;
+    var results: [threadCount]@Vector(vectorLength, f64) = undefined;
     const startTime = std.time.microTimestamp();
     for (0..threadCount - 1) |i| {
-        results[i] = 0;
+        results[i] = @splat(0);
         threads[i] = try std.Thread.spawn(.{}, addStuff, .{ &data, i, stepSize, &results[i], loops });
     }
-    results[threadCount - 1] = 0;
+    results[threadCount - 1] = @splat(0);
     addStuff(&data, threadCount - 1, stepSize, &results[threadCount - 1], loops);
     for (0..threadCount - 1) |i| {
         threads[i].join();
@@ -32,7 +39,9 @@ pub fn main() !void {
 
     var result: f64 = 0;
     for (0..threadCount) |i| {
-        result += results[i];
+        for (0..vectorLength) |j| {
+            result += results[i][j];
+        }
     }
     const endTime = std.time.microTimestamp();
     const timePassed = endTime - startTime;
@@ -43,7 +52,7 @@ pub fn main() !void {
     std.debug.print("op ms: {d}\n", .{operationsPerMS});
 }
 
-fn addStuff(data: []f32, index: usize, stepSize: u32, result: *f64, loops: u16) void {
+fn addStuff(data: []@Vector(vectorLength, f32), index: usize, stepSize: u32, result: *@Vector(vectorLength, f64), loops: u16) void {
     const start = stepSize * index;
     const end = start + stepSize;
     // std.debug.print("from: {d} to {d}\n", .{ start, end });

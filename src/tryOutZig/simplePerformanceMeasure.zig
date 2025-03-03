@@ -8,23 +8,20 @@ pub fn main() !void {
     // ~1_950_000 operations per second (Vector16)
     // ~3_200_000 operations per second (Vector16+fast)
     //
-    // vector stuff: estimated 60_000_000 operations
-    // expected time without vectors = 0.3seconds => 300_000 microseconds
-    // expected time without vectors = 0.3seconds => 75_000 microseconds(fast)
     // tried with u32 and f32. Both same result. Than anothertime widly different, only possible to some compiler optimizations
     std.debug.print("start justZig!\n", .{});
     const dataLength = 2_000_000;
-    const loops = 1000;
+    const loops = 100;
     var data: [dataLength]f32 = undefined;
     const rand = std.crypto.random;
     for (&data) |*entry| {
         entry.* = rand.float(f32);
     }
     const startTime = std.time.microTimestamp();
-    var result: f32 = 0;
+    var result2: f64 = 0;
     for (0..loops) |_| {
         for (0..dataLength) |i| {
-            result += data[i];
+            result2 = result2 + data[i];
         }
     }
     const endTime = std.time.microTimestamp();
@@ -32,7 +29,7 @@ pub fn main() !void {
     const operationCount = dataLength * loops;
     const operationsPerMS = @divFloor(operationCount * 1000, timePassed);
     std.debug.print("time: {d}\n", .{timePassed});
-    std.debug.print("result: {d}\n", .{result});
+    std.debug.print("result: {e}\n", .{result2});
     std.debug.print("op ms: {d}\n", .{operationsPerMS});
     vectorTry(dataLength, loops);
 }
@@ -56,7 +53,7 @@ fn vectorTry(comptime dataLength: usize, loops: u16) void {
         }
     }
     const endTime = std.time.microTimestamp();
-    var result: f32 = 0;
+    var result: f64 = 0;
     for (0..vectorLength) |i| {
         result += resultVector[i];
     }
@@ -65,6 +62,6 @@ fn vectorTry(comptime dataLength: usize, loops: u16) void {
     const operationsPerMS = @divFloor(operationCount, timePassed) * 1000;
     std.debug.print("\nVectors:\n", .{});
     std.debug.print("time: {d}\n", .{timePassed});
-    std.debug.print("result: {d}\n", .{result});
+    std.debug.print("result: {e}\n", .{result});
     std.debug.print("op ms: {d}\n", .{operationsPerMS});
 }
