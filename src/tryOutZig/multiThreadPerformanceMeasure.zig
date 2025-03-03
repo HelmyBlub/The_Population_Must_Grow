@@ -38,10 +38,12 @@ pub fn main() !void {
 fn addStuff(data: []u32, index: usize, stepSize: u32, result: *u32) void {
     const start = stepSize * index;
     const end = start + stepSize;
+    std.debug.print("from: {d} to {d}\n", .{ start, end });
     const loops = 100;
     for (0..loops) |_| {
         for (start..end) |i| {
             result.* += data[i];
         }
     }
+    std.debug.print("finished: {d}\n", .{index});
 }

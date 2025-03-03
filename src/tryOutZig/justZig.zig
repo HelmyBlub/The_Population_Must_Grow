@@ -4,7 +4,10 @@ const expect = @import("std").testing.expect;
 // zig build-exe src/tryOutZig/justZig.zig
 // zig stuff i want to try
 //   - multi thread
-//      - is debugging different multi threaded?
+//      - why is multi threading slower?
+//      - check off stream host os vs guest os
+//      - check without streaming
+//      - check with streaming on host os?
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
