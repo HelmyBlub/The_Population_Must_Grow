@@ -1,2 +1,8 @@
+# ignore files without extensions. Must be at start
+*
+!/**/
+!*.*
+
 .zig-cache/*
 zig-out/*
+*.o

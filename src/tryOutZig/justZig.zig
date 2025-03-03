@@ -5,6 +5,8 @@ const expect = @import("std").testing.expect;
 // zig stuff i want to try
 //   - multi thread
 //      - why is multi threading slower?
+//          - debug build does not use multiple cores, but why?
+//   operations per second 3800 to 6000
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
