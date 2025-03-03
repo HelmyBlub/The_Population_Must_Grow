@@ -1,20 +1,20 @@
 const std = @import("std");
 pub fn main() !void {
     std.debug.print("start multi thread!\n", .{});
-    const dataLength = 4_000_000;
+    const dataLength = 2_000_000;
     var data: [dataLength]u32 = undefined;
     const rand = std.crypto.random;
     for (&data) |*entry| {
         entry.* = rand.int(u4);
     }
-    const threadCount = 2;
+    const threadCount = 1;
     const stepSize = @divExact(dataLength, threadCount);
     var threads: [threadCount]std.Thread = undefined;
-    var results: [threadCount]u32 = undefined;
+    var results: [threadCount]u64 = undefined;
     const startTime = std.time.microTimestamp();
     for (0..threadCount - 1) |i| {
         results[i] = 0;
-        threads[i] = std.Thread.spawn(.{}, addStuff, .{ &data, i, stepSize, &results[i] }) catch unreachable;
+        threads[i] = try std.Thread.spawn(.{}, addStuff, .{ &data, i, stepSize, &results[i] });
     }
     results[threadCount - 1] = 0;
     addStuff(&data, threadCount - 1, stepSize, &results[threadCount - 1]);
@@ -22,7 +22,7 @@ pub fn main() !void {
         threads[i].join();
     }
 
-    var result: u32 = 0;
+    var result: u64 = 0;
     for (0..threadCount) |i| {
         result += results[i];
     }
@@ -35,15 +35,17 @@ pub fn main() !void {
     std.debug.print("op ms: {d}\n", .{operationsPerMS});
 }
 
-fn addStuff(data: []u32, index: usize, stepSize: u32, result: *u32) void {
+fn addStuff(data: []u32, index: usize, stepSize: u32, result: *u64) void {
     const start = stepSize * index;
     const end = start + stepSize;
-    std.debug.print("from: {d} to {d}\n", .{ start, end });
-    const loops = 100;
+    // std.debug.print("from: {d} to {d}\n", .{ start, end });
+    // const startTime = std.time.microTimestamp();
+    const loops = 1000;
     for (0..loops) |_| {
         for (start..end) |i| {
             result.* += data[i];
         }
     }
-    std.debug.print("finished: {d}\n", .{index});
+    // const timePassed = std.time.microTimestamp() - startTime;
+    std.debug.print("finished: {d}, time: \n", .{index});
 }
