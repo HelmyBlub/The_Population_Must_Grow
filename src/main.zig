@@ -10,6 +10,16 @@ const Paint = @import("paint.zig");
 // 10000 (citizens) * (10000gamesec / 16tickInterval)
 // 10000 * (10000/16) = 6250000 citizen Ticks in performance test takes 650 milliseconds
 // cpu should do 3_000_000_000 cycles in a second
+//
+//  - think about simpler game idea which i can finish faster as a between state for chatSim idea
+//      - have a simple game, which scales very high, which i can do performance checks on with vectors and multi thread
+//      - simulated world, chatters can enter
+//      - i play
+//          -> place down work to build home
+//          -> assign citizen with job to gather wood
+//          -> assign citizen with job to build buildings
+//
+//      - i have to build jobs
 
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
@@ -28,7 +38,9 @@ pub const Position: type = struct {
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
+    std.debug.print("just a test message: \n", .{});
     try runGame(test_allocator);
+    try std.testing.expect(2 + 7 == 9);
 }
 
 test "test measure performance" {
@@ -77,7 +89,7 @@ fn tick(state: *ChatSimState) void {
 
 fn createGameState(allocator: std.mem.Allocator) !ChatSimState {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..10000) |_| {
+    for (0..10_000) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
     return ChatSimState{

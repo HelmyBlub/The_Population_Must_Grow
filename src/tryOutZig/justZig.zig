@@ -1,10 +1,8 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
-// learn more zig
-// zig build-exe src/tryOutZig/justZig.zig
 // zig stuff i want to try
-//   - multi thread
-//      - debug build does not use multiple cores, but why?
+//  - connect to twitch chat with zig
+//
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };
