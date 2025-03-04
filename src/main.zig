@@ -4,7 +4,6 @@ const Citizen = @import("citizen.zig").Citizen;
 const Paint = @import("paint.zig");
 
 // tasks:
-//  - testing and sdl
 //  - trying around with performance and trying to understand what i should expect for a time
 // build a game loop
 // 10000 (citizens) * (10000gamesec / 16tickInterval)
