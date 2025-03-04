@@ -1,11 +1,5 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
-// zig stuff i want to try
-//  - connect to twitch chat with zig
-//      - twitch IRC: older and harder to pass but i can connect anonymously with justinfanxxxx
-//          - read more
-//      - have to undstand how to use websocket with zig
-//      - be able to get one chat message from my twich chat
 const ChatSimState = struct {
     citizens: [10000]Citizen,
 };

@@ -22,6 +22,7 @@ pub fn paintInit() !PaintInfo {
 
     const window_w = 640;
     const window_h = 480;
+
     if (!sdl.SDL_SetHint(sdl.SDL_HINT_RENDER_VSYNC, "1")) {
         std.debug.print("SDL_SetHint Error: {s}\n", .{sdl.SDL_GetError()});
         return error.ERROR_SDL_HINT;
@@ -49,6 +50,12 @@ pub fn paintInit() !PaintInfo {
         std.debug.print("SDL_CreateTextureFromSurface Error: {s}\n", .{sdl.SDL_GetError()});
         return error.Failure;
     }
+    if (!sdl.SDL_SetTextureScaleMode(texture, sdl.SDL_SCALEMODE_LINEAR)) {
+        std.debug.print("SDL_SetTextureScaleMode Error: {s}\n", .{sdl.SDL_GetError()});
+    }
+    var scaleMode: u32 = 0;
+    _ = sdl.SDL_GetTextureScaleMode(texture, &scaleMode);
+    std.debug.print("scaleMode: {}\n", .{scaleMode});
     sdl.SDL_DestroySurface(testImage);
 
     return PaintInfo{
@@ -85,8 +92,8 @@ pub fn paint(state: *main.ChatSimState) !void {
         const stretchRect: [1]sdl.SDL_FRect = .{.{
             .x = citizen.position.x + centerOffsetX,
             .y = citizen.position.y + centerOffsetY,
-            .w = 100.0,
-            .h = 100.0,
+            .w = 50.0,
+            .h = 50.0,
         }};
         const point: [1]sdl.SDL_FPoint = .{.{ .x = 20, .y = 20 }};
         _ = sdl.SDL_RenderTextureRotated(

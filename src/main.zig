@@ -4,22 +4,25 @@ const Citizen = @import("citizen.zig").Citizen;
 const Paint = @import("paint.zig");
 
 // tasks:
-//  - trying around with performance and trying to understand what i should expect for a time
+//  - scaling of image bad. No anti aliasing?
 // build a game loop
-// 10000 (citizens) * (10000gamesec / 16tickInterval)
-// 10000 * (10000/16) = 6250000 citizen Ticks in performance test takes 650 milliseconds
-// cpu should do 3_000_000_000 cycles in a second
-//
+//  - text to screen
+//      - ttf: existing library, but in c. Not yet for Zig. Could do myself but looks complicated
+//      - make my own text with images
+//      - can only load bmp images, which use a lot more space
 //  - think about simpler game idea which i can finish faster as a between state for chatSim idea
 //      - have a simple game, which scales very high, which i can do performance checks on with vectors and multi thread
 //      - simulated world, chatters can enter
+//          - each citizen needs food or he starves
+//          - each citizens wants a home
 //      - i play
 //          -> place down work to build home
-//          -> assign citizen with job to gather wood
-//          -> assign citizen with job to build buildings
+//              -> assign citizen with job to gather wood
+//              -> assign citizen with job to build buildings
+//          -> place down work order for farm which makes food
 //
 //      - i have to build jobs
-
+// look into "RenderDoc"
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
     gameSpeed: f32,
@@ -88,7 +91,7 @@ fn tick(state: *ChatSimState) void {
 
 fn createGameState(allocator: std.mem.Allocator) !ChatSimState {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..10_000) |_| {
+    for (0..100) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
     return ChatSimState{
