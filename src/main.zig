@@ -5,6 +5,13 @@ const Paint = @import("paint.zig");
 
 // tasks:
 //  - scaling of image bad. No anti aliasing?
+//      - does not work. Not found any reason why. Maybe some Zig Problem? or not supported by my drivers?
+//  - if anti aliasing not working -> try out webassembly and use browser canvas.
+//      - check performance with webassembly and see difference, what are limitations?
+//      - to many limitations for browser wasm. Most std functions can not be used
+//  - maybe access openGL directly and see what can be done
+//  - if nothing else satisfies me, maybe to soon for Zig
+
 // build a game loop
 //  - text to screen
 //      - ttf: existing library, but in c. Not yet for Zig. Could do myself but looks complicated
