@@ -4,32 +4,11 @@ const Citizen = @import("citizen.zig").Citizen;
 const Paint = @import("paint.zig");
 
 // tasks:
-//  - scaling of image bad. No anti aliasing?
-//      - does not work. Not found any reason why. Maybe some Zig Problem? or not supported by my drivers?
-//  - if anti aliasing not working -> try out webassembly and use browser canvas.
-//      - check performance with webassembly and see difference, what are limitations?
-//      - to many limitations for browser wasm. Most std functions can not be used
-//  - maybe access openGL directly and see what can be done
-//  - if nothing else satisfies me, maybe to soon for Zig
+//  - switch to use sdl with vulkan directly
+//      - paint 10_000 images
+//      - compare performance
+//  - before: 20_000 images moving and turning in 36fps. Size of image on screen did not change result
 
-// build a game loop
-//  - text to screen
-//      - ttf: existing library, but in c. Not yet for Zig. Could do myself but looks complicated
-//      - make my own text with images
-//      - can only load bmp images, which use a lot more space
-//  - think about simpler game idea which i can finish faster as a between state for chatSim idea
-//      - have a simple game, which scales very high, which i can do performance checks on with vectors and multi thread
-//      - simulated world, chatters can enter
-//          - each citizen needs food or he starves
-//          - each citizens wants a home
-//      - i play
-//          -> place down work to build home
-//              -> assign citizen with job to gather wood
-//              -> assign citizen with job to build buildings
-//          -> place down work order for farm which makes food
-//
-//      - i have to build jobs
-// look into "RenderDoc"
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
     gameSpeed: f32,
@@ -98,7 +77,7 @@ fn tick(state: *ChatSimState) void {
 
 fn createGameState(allocator: std.mem.Allocator) !ChatSimState {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..100) |_| {
+    for (0..20_000) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
     return ChatSimState{

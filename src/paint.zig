@@ -57,7 +57,6 @@ pub fn paintInit() !PaintInfo {
     _ = sdl.SDL_GetTextureScaleMode(texture, &scaleMode);
     std.debug.print("scaleMode: {}\n", .{scaleMode});
     sdl.SDL_DestroySurface(testImage);
-
     return PaintInfo{
         .renderer = renderer,
         .window = window,
