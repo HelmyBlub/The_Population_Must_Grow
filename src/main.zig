@@ -2,6 +2,11 @@ const std = @import("std");
 const expect = @import("std").testing.expect;
 const Citizen = @import("citizen.zig").Citizen;
 const Paint = @import("paint.zig");
+const sdl = @cImport({
+    @cInclude("SDL3/SDL.h");
+    @cInclude("SDL3/SDL_revision.h");
+    @cInclude("SDL3/SDL_vulkan.h");
+});
 
 // tasks:
 //  - switch to use sdl with vulkan directly
@@ -40,11 +45,13 @@ test "test measure performance" {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    const startTime = std.time.microTimestamp();
-    try runGame(allocator);
-    std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
+    try @import("vulkanCopy.zig").mainVulkan();
+
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // const allocator = gpa.allocator();
+    // const startTime = std.time.microTimestamp();
+    // try runGame(allocator);
+    // std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
 fn runGame(allocator: std.mem.Allocator) !void {

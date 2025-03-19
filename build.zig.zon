@@ -27,6 +27,10 @@
             .url = "git+https://github.com/castholm/SDL.git#2bb5f57ea8b8c43eabe514f7bbd3361365ba2ff3",
             .hash = "1220f653f5b656888b522bf5be06fc3062278767cfa7764e5d00eb559056d65b616f",
         },
+        .zigimg = .{
+            .url = "git+https://github.com/zigimg/zigimg.git#b0a046be99bbe67b8a1611aff39d1dcbec89f6f9",
+            .hash = "zigimg-0.1.0-AAAAAABoEABi8SAnVIitstXxPM3Szg3PHDsOtcnhKm6s",
+        },
     },
     .paths = .{
         "build.zig",

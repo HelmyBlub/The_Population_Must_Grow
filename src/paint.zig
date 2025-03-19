@@ -4,6 +4,7 @@ const main = @import("main.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
+    @cInclude("SDL3/SDL_vulkan.h");
 });
 
 pub const PaintInfo: type = struct {
