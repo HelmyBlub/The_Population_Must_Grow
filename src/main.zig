@@ -8,12 +8,6 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_vulkan.h");
 });
 
-// tasks:
-//  - switch to use sdl with vulkan directly
-//      - paint 10_000 images
-//      - compare performance
-//  - before: 20_000 images moving and turning in 36fps. Size of image on screen did not change result
-
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
     gameSpeed: f32,

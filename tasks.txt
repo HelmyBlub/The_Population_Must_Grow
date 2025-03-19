@@ -1,18 +1,34 @@
-open problems for changing to Zig:
-    - sdl3 
-        - need to find some help documentation which i can use
-            -https://wiki.libsdl.org/SDL3/FrontPage
-        - get some better understanding of what it can do
-            -continue here: https://lazyfoo.net/tutorials/SDL/index.php
-            -unsure if helpful: https://examples.libsdl.org/SDL3/
-        - find out if i can do all the stuff i want with my game    
-            - rotation/translation
-                - paint one citizen based on many images
-                    - just find out how it works. Not need to do the entrire citizens yet
-            - zoom in/out
-            - limit fps. check how i can integrate ticking and painting 
-                - paint FPS as text to screen
-                    - measure text
-        - check out "Signed Distance Fields (SDF Fonts)"
-            - for drawing text which can be scalled
+tasks:
+  - why can i not select this window to share on stream?
+     - window frezzes if i open OBS window search thingy, maybe this is a reason
+  - clean up code to now use vulkan for graphics
+  - have some basic input handling
+  - look into: moving window should be possible without window frezzing
+  
+Goal:
+- a game which should not take more than 6month to make. Maybe publish to steam.
+- performance should matter
+- game idea:
+    - city builder extreme
+    - i have citizens. Each citizen just needs a home and food
+        - citizens can be chatters
+    - i as the player can:
+        - place building orders: 
+            - houses for citizens to live in
+            - sawmill: citizens can become lumberjacks to gather wood and cut it. Required for building houses
+            - farm: citizens can become farmers to plant food. Required for not starving
+            - citizens must build these and gather resources for it
+            - storage area. Used for storing food and wood
+            - upgrade building:
+                - bigger house: more people can live in it
+    - citizens will automatically join if houses with space exit
+    - game start with one small house and one citizen (the player) and storage area with some food and wood
+    - game loop:
+        - build more houses -> get more citizens
+        - more citizen need more food -> build more or bigger farms
+        - more citizens -> can build more faster
+        - scale town up to what the PC can handle
+            -> code performance matters
+            -> expectations with my pc: 10_000 citizens and 60fp should be easy
+                -> expectations which i guess should be possible: 100_000 citizens and 60fps
 
