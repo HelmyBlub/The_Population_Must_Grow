@@ -1,9 +1,6 @@
 tasks:
-  - why can i not select this window to share on stream?
-     - window frezzes if i open OBS window search thingy, maybe this is a reason
   - clean up code to now use vulkan for graphics
   - have some basic input handling
-  - look into: moving window should be possible without window frezzing
   
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

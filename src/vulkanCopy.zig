@@ -102,6 +102,7 @@ const Vertex = struct {
 };
 
 var vertices: []Vertex = undefined;
+pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
 pub fn mainVulkan() !void {
     std.debug.print("start\n", .{});
@@ -110,7 +111,7 @@ pub fn mainVulkan() !void {
     var vkState: Vk_State = .{};
 
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
-    const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE | sdl.SDL_WINDOW_UTILITY;
+    const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
     window = try (sdl.SDL_CreateWindow("ChatSim", 1600, 800, flags) orelse error.createWindow);
 
     try initVulkan(&vkState);
@@ -153,6 +154,10 @@ fn mainLoop(vkState: *Vk_State) !void {
     try setupVertexDataForGPU(vkState);
 
     while (counter < maxCounter) {
+        var event: sdl.SDL_Event = undefined;
+        while (sdl.SDL_PollEvent(&event)) {
+            std.debug.print("event: {}\n", .{event.type});
+        }
         counter += 1;
         tick();
         try drawFrame(vkState);
@@ -443,7 +448,6 @@ fn createTextureImage(vkState: *Vk_State) !void {
 
     try transitionImageLayout(vkState.textureImage, vk.VK_IMAGE_LAYOUT_UNDEFINED, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkState.mipLevels, vkState);
     try copyBufferToImage(stagingBuffer, vkState.textureImage, imageWidth, imageHeight, vkState);
-    // try transitionImageLayout(vkState.textureImage, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vkState.mipLevels, vkState);
     try generateMipmaps(vkState.textureImage, vk.VK_FORMAT_R8G8B8A8_SRGB, @intCast(imageWidth), @intCast(imageHeight), vkState.mipLevels, vkState);
     vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
     vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
@@ -493,8 +497,8 @@ fn transitionImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, newLayo
             .baseArrayLayer = 0,
             .layerCount = 1,
         },
-        .srcAccessMask = 0, // TODO
-        .dstAccessMask = 0, // TODO
+        .srcAccessMask = 0,
+        .dstAccessMask = 0,
     };
 
     var sourceStage: vk.VkPipelineStageFlags = undefined;
@@ -815,8 +819,8 @@ fn createInstance(vkState: *Vk_State) !void {
         .pNext = null,
         .flags = 0,
         .pApplicationInfo = &app_info,
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = null,
+        .enabledLayerCount = validation_layers.len,
+        .ppEnabledLayerNames = &validation_layers,
         .enabledExtensionCount = 0,
         .ppEnabledExtensionNames = null,
     };
@@ -1341,7 +1345,6 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
     height.* = @intCast(h);
 }
 
-pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn checkValidationLayerSupport() bool {
     var layer_count: u32 = 0;
     _ = vk.vkEnumerateInstanceLayerProperties(&layer_count, null);
