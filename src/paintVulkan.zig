@@ -131,6 +131,7 @@ pub fn initVulkanAndWindow(vkState: *Vk_State) !void {
 }
 
 pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
+    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
     try destroy(vkState);
     sdl.SDL_DestroyWindow(window);
     sdl.SDL_Quit();
