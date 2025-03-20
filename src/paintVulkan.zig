@@ -149,6 +149,21 @@ pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen)) !void {
     }
 }
 
+pub fn setupVerticesForCitizens2(citizens: *std.ArrayList(main.Citizen)) !void {
+    const vertexCount: u64 = citizens.items.len * 6;
+    if (vertices.len != vertexCount) vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
+    const triangleSize = 0.05;
+    const divider: f32 = 200.0;
+    for (citizens.items, 0..) |*citizen, i| {
+        vertices[i * 6] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ 0.0, 0.0 } };
+        vertices[i * 6 + 1] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.0, 1.0 } };
+        vertices[i * 6 + 2] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider + triangleSize }, .texCoord = .{ 0.0, 1.0 } };
+        vertices[i * 6 + 3] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ 0.0, 0.0 } };
+        vertices[i * 6 + 4] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider }, .texCoord = .{ 1.0, 0.0 } };
+        vertices[i * 6 + 5] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.0, 1.0 } };
+    }
+}
+
 pub fn setupVertices() !void {
     const rows = 100;
     const columns = 100;

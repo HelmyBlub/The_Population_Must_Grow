@@ -11,6 +11,7 @@ tasks:
                 - paint citizen at correct location
                     - first use cpu to create triangle, later to geometry shader
                         - try difference between two trianlges or one big triangle to fit the image
+                            - result: single big triangle more performant than 2 triangles as a square from 625 to 550
                         - try geometry shader
 - have some basic input handling
   

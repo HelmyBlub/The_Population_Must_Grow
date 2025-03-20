@@ -16,6 +16,7 @@ pub const ChatSimState: type = struct {
     gameTimeMs: u32,
     gameEnd: bool,
     vkState: Paint.Vk_State,
+    fpsLimiter: bool,
 };
 
 pub const Position: type = struct {
@@ -52,6 +53,8 @@ fn runGame(allocator: std.mem.Allocator) !void {
     try createGameState(allocator, &state);
     defer destroyGameState(&state);
     var ticksRequired: f32 = 0;
+    const totalStartTime = std.time.microTimestamp();
+    var frameCounter: u32 = 0;
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
@@ -63,10 +66,16 @@ fn runGame(allocator: std.mem.Allocator) !void {
         try Paint.setupVerticesForCitizens(&state.citizens);
         try Paint.setupVertexDataForGPU(&state.vkState);
         try Paint.drawFrame(&state.vkState);
-        const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
-        const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
-        std.time.sleep(sleepTime * 1_000);
+        frameCounter += 1;
+        if (state.fpsLimiter) {
+            const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
+            const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
+            std.time.sleep(sleepTime * 1_000);
+        }
     }
+    const totalLoopTime = std.time.microTimestamp() - totalStartTime;
+    const fps: i64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
+    std.debug.print("FPS: {d}\n", .{fps});
     printOutSomeData(state);
     std.debug.print("finished\n", .{});
 }
@@ -91,6 +100,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .gameTimeMs = 0,
         .gameEnd = false,
         .vkState = .{},
+        .fpsLimiter = false,
     };
     try Paint.setupVerticesForCitizens(&state.citizens);
     try Paint.initVulkanAndWindow(&state.vkState);
