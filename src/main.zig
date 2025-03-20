@@ -27,7 +27,7 @@ test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
     std.debug.print("just a test message: \n", .{});
     try runGame(test_allocator);
-    try std.testing.expect(2 + 7 == 9);
+    try std.testing.expect(2 + 7 == 8);
 }
 
 test "test measure performance" {
@@ -39,8 +39,6 @@ test "test measure performance" {
 }
 
 pub fn main() !void {
-    // try Paint.mainVulkan();
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     const startTime = std.time.microTimestamp();

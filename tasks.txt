@@ -1,5 +1,4 @@
 tasks:
-- continue: paintVulkan with citizen data: i see just black, where are the dogs?
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - try out geometry shader to get one input point which is citizen position to  generate output 2 triangles as a square to paint to
@@ -11,7 +10,7 @@ tasks:
             - citizen data
                 - paint citizen at correct location
                     - first use cpu to create triangle, later to geometry shader
-                        - try difference between two trinalges or one big triangle to fit the image
+                        - try difference between two trianlges or one big triangle to fit the image
                         - try geometry shader
 - have some basic input handling
   
