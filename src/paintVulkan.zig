@@ -9,9 +9,10 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_revision.h");
     @cInclude("SDL3/SDL_vulkan.h");
 });
+const main = @import("main.zig");
 
 var window: *sdl.SDL_Window = undefined;
-const Vk_State = struct {
+pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
     instance: vk.VkInstance = undefined,
     surface: vk.VkSurfaceKHR = undefined,
@@ -70,7 +71,6 @@ const SwapChainSupportDetails = struct {
 
 const Vertex = struct {
     pos: [2]f32,
-    color: [3]f32,
     texCoord: [2]f32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -83,20 +83,16 @@ const Vertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [3]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [3]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined };
+    fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(Vertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk.VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = @offsetOf(Vertex, "color");
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = vk.VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = @offsetOf(Vertex, "texCoord");
+        attributeDescriptions[1].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[1].offset = @offsetOf(Vertex, "texCoord");
         return attributeDescriptions;
     }
 };
@@ -125,7 +121,34 @@ pub fn mainVulkan() !void {
     std.debug.print("done\n", .{});
 }
 
-fn setupVertices() !void {
+pub fn initVulkanAndWindow(vkState: *Vk_State) !void {
+    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
+    const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
+    window = try (sdl.SDL_CreateWindow("ChatSim", 1600, 800, flags) orelse error.createWindow);
+
+    try initVulkan(vkState);
+    _ = sdl.SDL_ShowWindow(window);
+}
+
+pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
+    try destroy(vkState);
+    sdl.SDL_DestroyWindow(window);
+    sdl.SDL_Quit();
+}
+
+pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen)) !void {
+    const vertexCount: u64 = citizens.items.len * 3;
+    if (vertices.len != vertexCount) vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
+    const triangleSize = 0.1;
+    const divider: f32 = 200.0;
+    for (citizens.items, 0..) |*citizen, i| {
+        vertices[i * 3] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ -0.2, -0.5 } };
+        vertices[i * 3 + 1] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.8, 1.5 } };
+        vertices[i * 3 + 2] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider + triangleSize }, .texCoord = .{ -0.2, 1.5 } };
+    }
+}
+
+pub fn setupVertices() !void {
     const rows = 100;
     const columns = 100;
     const triangleCount = rows * columns;
@@ -138,9 +161,9 @@ fn setupVertices() !void {
         const currX = -1.0 + stepSizeX * @as(f32, @floatFromInt(x));
         for (0..rows) |y| {
             const currY = -1.0 + stepSizeY * @as(f32, @floatFromInt(y));
-            vertices[(x * rows + y) * 3] = .{ .pos = .{ currX, currY }, .color = .{ 1.0, 0.0, 0.0 }, .texCoord = .{ -0.2, -0.5 } };
-            vertices[(x * rows + y) * 3 + 1] = .{ .pos = .{ currX + triangleSize, currY + triangleSize }, .color = .{ 1.0, 0.0, 0.0 }, .texCoord = .{ 1.8, 1.5 } };
-            vertices[(x * rows + y) * 3 + 2] = .{ .pos = .{ currX, currY + triangleSize }, .color = .{ 1.0, 0.0, 0.0 }, .texCoord = .{ -0.2, 1.5 } };
+            vertices[(x * rows + y) * 3] = .{ .pos = .{ currX, currY }, .texCoord = .{ -0.2, -0.5 } };
+            vertices[(x * rows + y) * 3 + 1] = .{ .pos = .{ currX + triangleSize, currY + triangleSize }, .texCoord = .{ 1.8, 1.5 } };
+            vertices[(x * rows + y) * 3 + 2] = .{ .pos = .{ currX, currY + triangleSize }, .texCoord = .{ -0.2, 1.5 } };
         }
     }
     std.debug.print("verticeCount: {}\n", .{vertices.len});
@@ -150,7 +173,7 @@ fn mainLoop(vkState: *Vk_State) !void {
     std.time.sleep(500_000_000);
     var counter: u32 = 0;
     const startTime = std.time.microTimestamp();
-    const maxCounter = 2000;
+    const maxCounter = 1000;
     try setupVertexDataForGPU(vkState);
 
     while (counter < maxCounter) {
@@ -161,7 +184,7 @@ fn mainLoop(vkState: *Vk_State) !void {
         counter += 1;
         tick();
         try drawFrame(vkState);
-        std.time.sleep(10_000_000);
+        // std.time.sleep(10_000_000);
     }
     const timePassed = std.time.microTimestamp() - startTime;
     const fps = @divTrunc(maxCounter * 1_000_000, timePassed);
@@ -847,7 +870,7 @@ fn createInstance(vkState: *Vk_State) !void {
     if (vk.vkCreateInstance(&instance_create_info, null, &vkState.instance) != vk.VK_SUCCESS) return error.vkCreateInstance;
 }
 
-fn setupVertexDataForGPU(vkState: *Vk_State) !void {
+pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     var data: ?*anyopaque = undefined;
     if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(Vertex) * vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]Vertex = @ptrCast(@alignCast(data));
@@ -856,11 +879,11 @@ fn setupVertexDataForGPU(vkState: *Vk_State) !void {
 }
 
 fn updateUniformBuffer(vkState: *Vk_State) !void {
-    const change: f32 = @as(f32, @floatFromInt(@mod(std.time.milliTimestamp(), 10000))) / 10000.0;
+    // const change: f32 = @as(f32, @floatFromInt(@mod(std.time.milliTimestamp(), 10000))) / 10000.0;
     var ubo: UniformBufferObject = .{
         .transform = .{
-            .{ 1.0, change, 0.0, 0.0 },
-            .{ -change, 1.0, 0.0, 0.0 },
+            .{ 1.0, 0, 0.0, 0.0 },
+            .{ 0, 1.0, 0.0, 0.0 },
             .{ 0.0, 0.0, 1, 0.0 },
             .{ 0.0, 0.0, 0.0, 1 },
         },
@@ -871,11 +894,9 @@ fn updateUniformBuffer(vkState: *Vk_State) !void {
             @as([*]u8, @ptrCast(&ubo)),
         );
     }
-    // const gpu_uniform: [*]UniformBufferObject = @ptrCast(@alignCast(vkState.uniformBuffersMapped[vkState.currentFrame]));
-    // @memcpy(gpu_uniform, @as([*]u8, @ptrCast(&ubo)));
 }
 
-fn drawFrame(vkState: *Vk_State) !void {
+pub fn drawFrame(vkState: *Vk_State) !void {
     try updateUniformBuffer(vkState);
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));

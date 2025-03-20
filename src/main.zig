@@ -1,7 +1,7 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
-const Citizen = @import("citizen.zig").Citizen;
-const Paint = @import("paint.zig");
+pub const Citizen = @import("citizen.zig").Citizen;
+const Paint = @import("paintVulkan.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
@@ -15,7 +15,7 @@ pub const ChatSimState: type = struct {
     tickIntervalMs: u8,
     gameTimeMs: u32,
     gameEnd: bool,
-    paintInfo: Paint.PaintInfo,
+    vkState: Paint.Vk_State,
 };
 
 pub const Position: type = struct {
@@ -39,19 +39,20 @@ test "test measure performance" {
 }
 
 pub fn main() !void {
-    try @import("vulkanCopy.zig").mainVulkan();
+    // try Paint.mainVulkan();
 
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // const allocator = gpa.allocator();
-    // const startTime = std.time.microTimestamp();
-    // try runGame(allocator);
-    // std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const startTime = std.time.microTimestamp();
+    try runGame(allocator);
+    std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
 fn runGame(allocator: std.mem.Allocator) !void {
     std.debug.print("game run start\n", .{});
-    var state = try createGameState(allocator);
-    defer destroyGameState(state);
+    var state: ChatSimState = undefined;
+    try createGameState(allocator, &state);
+    defer destroyGameState(&state);
     var ticksRequired: f32 = 0;
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
@@ -61,7 +62,9 @@ fn runGame(allocator: std.mem.Allocator) !void {
             ticksRequired -= 1;
             if (state.gameEnd) break :mainLoop;
         }
-        try Paint.paint(&state);
+        try Paint.setupVerticesForCitizens(&state.citizens);
+        try Paint.setupVertexDataForGPU(&state.vkState);
+        try Paint.drawFrame(&state.vkState);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
         std.time.sleep(sleepTime * 1_000);
@@ -76,25 +79,28 @@ fn tick(state: *ChatSimState) void {
     if (state.gameTimeMs > 10_000) state.gameEnd = true;
 }
 
-fn createGameState(allocator: std.mem.Allocator) !ChatSimState {
+fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..20_000) |_| {
+    for (0..10_000) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
-    return ChatSimState{
+
+    state.* = .{
         .citizens = citizensList,
         .gameSpeed = 1,
         .paintIntervalMs = 16,
         .tickIntervalMs = 16,
         .gameTimeMs = 0,
         .gameEnd = false,
-        .paintInfo = try Paint.paintInit(),
+        .vkState = .{},
     };
+    try Paint.setupVerticesForCitizens(&state.citizens);
+    try Paint.initVulkanAndWindow(&state.vkState);
 }
 
-fn destroyGameState(state: ChatSimState) void {
+fn destroyGameState(state: *ChatSimState) void {
     state.citizens.deinit();
-    Paint.paintDestroy(state);
+    try Paint.destoryVulkanAndWindow(&state.vkState);
 }
 
 fn printOutSomeData(state: ChatSimState) void {

@@ -1,6 +1,19 @@
 tasks:
-  - clean up code to now use vulkan for graphics
-  - have some basic input handling
+- continue: paintVulkan with citizen data: i see just black, where are the dogs?
+- lean more vulkan?
+    - go over docu? https://docs.vulkan.org/spec/latest/index.html
+        - try out geometry shader to get one input point which is citizen position to  generate output 2 triangles as a square to paint to
+            - some cpp code doing geometry shader https://github.com/SaschaWillems/Vulkan/blob/master/examples/geometryshader/geometryshader.cpp
+            - goal is to reduce data sent to graphics card and hope it will positivly improve performance
+- clean up code to now use vulkan for graphics
+    - how to split up vulkan code?
+        - get some game data into vulkan and take this required code out
+            - citizen data
+                - paint citizen at correct location
+                    - first use cpu to create triangle, later to geometry shader
+                        - try difference between two trinalges or one big triangle to fit the image
+                        - try geometry shader
+- have some basic input handling
   
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
