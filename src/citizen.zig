@@ -11,7 +11,7 @@ pub const Citizen: type = struct {
         return Citizen{
             .position = .{ .x = 0, .y = 0 },
             .moveTo = null,
-            .moveSpeed = 2.23,
+            .moveSpeed = 1.0,
         };
     }
 
@@ -26,14 +26,21 @@ pub const Citizen: type = struct {
             const rand = std.crypto.random;
             citizen.moveTo = .{ .x = rand.float(f32) * 400.0 - 200.0, .y = rand.float(f32) * 400.0 - 200.0 };
         } else {
-            if (citizen.position.x - citizen.moveTo.?.x < citizen.moveSpeed) {
+            if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
                 citizen.moveTo = null;
                 return;
             }
             const direction: f32 = main.calculateDirection(citizen.position, citizen.moveTo.?);
-            //const direction: f32 = 2.3;
             citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
             citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
+        }
+    }
+
+    pub fn randomlyPlace(state: *main.ChatSimState) void {
+        const rand = std.crypto.random;
+        for (state.citizens.items) |*citizen| {
+            citizen.position.x = rand.float(f32) * 400.0 - 200.0;
+            citizen.position.y = rand.float(f32) * 400.0 - 200.0;
         }
     }
 };

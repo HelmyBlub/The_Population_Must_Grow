@@ -24,6 +24,8 @@ pub const Position: type = struct {
     y: f32,
 };
 
+const SIMULATION_MICRO_SECOND_DURATION: i64 = 5_000_000;
+
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
     std.debug.print("just a test message: \n", .{});
@@ -47,45 +49,6 @@ pub fn main() !void {
     std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
-fn runGame(allocator: std.mem.Allocator) !void {
-    std.debug.print("game run start\n", .{});
-    var state: ChatSimState = undefined;
-    try createGameState(allocator, &state);
-    defer destroyGameState(&state);
-    var ticksRequired: f32 = 0;
-    const totalStartTime = std.time.microTimestamp();
-    var frameCounter: u32 = 0;
-    mainLoop: while (!state.gameEnd) {
-        const startTime = std.time.microTimestamp();
-        ticksRequired += state.gameSpeed;
-        while (ticksRequired >= 1) {
-            tick(&state);
-            ticksRequired -= 1;
-            if (state.gameEnd) break :mainLoop;
-        }
-        try Paint.setupVerticesForCitizens(&state.citizens);
-        try Paint.setupVertexDataForGPU(&state.vkState);
-        try Paint.drawFrame(&state.vkState);
-        frameCounter += 1;
-        if (state.fpsLimiter) {
-            const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
-            const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
-            std.time.sleep(sleepTime * 1_000);
-        }
-    }
-    const totalLoopTime = std.time.microTimestamp() - totalStartTime;
-    const fps: i64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
-    std.debug.print("FPS: {d}\n", .{fps});
-    printOutSomeData(state);
-    std.debug.print("finished\n", .{});
-}
-
-fn tick(state: *ChatSimState) void {
-    state.gameTimeMs += state.tickIntervalMs;
-    Citizen.citizensMove(state);
-    if (state.gameTimeMs > 10_000) state.gameEnd = true;
-}
-
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
     for (0..10_000) |_| {
@@ -102,8 +65,51 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .vkState = .{},
         .fpsLimiter = false,
     };
+    Citizen.randomlyPlace(state);
     try Paint.setupVerticesForCitizens(&state.citizens);
     try Paint.initVulkanAndWindow(&state.vkState);
+}
+
+fn runGame(allocator: std.mem.Allocator) !void {
+    std.debug.print("game run start\n", .{});
+    var state: ChatSimState = undefined;
+    try createGameState(allocator, &state);
+    defer destroyGameState(&state);
+    var ticksRequired: f32 = 0;
+    const totalStartTime = std.time.microTimestamp();
+    var frameCounter: u64 = 0;
+    mainLoop: while (!state.gameEnd) {
+        const startTime = std.time.microTimestamp();
+        ticksRequired += state.gameSpeed;
+        while (ticksRequired >= 1) {
+            tick(&state);
+            ticksRequired -= 1;
+            const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
+            if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+            if (state.gameEnd) break :mainLoop;
+        }
+        try Paint.setupVerticesForCitizens(&state.citizens);
+        try Paint.setupVertexDataForGPU(&state.vkState);
+        try Paint.drawFrame(&state.vkState);
+        frameCounter += 1;
+        if (state.fpsLimiter) {
+            const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
+            const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
+            std.time.sleep(sleepTime * 1_000);
+        }
+        const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
+        if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+    }
+    const totalLoopTime: u64 = @as(u64, @intCast((std.time.microTimestamp() - totalStartTime)));
+    const fps: u64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
+    std.debug.print("FPS: {d}\n", .{fps});
+    printOutSomeData(state);
+    std.debug.print("finished\n", .{});
+}
+
+fn tick(state: *ChatSimState) void {
+    state.gameTimeMs += state.tickIntervalMs;
+    Citizen.citizensMove(state);
 }
 
 fn destroyGameState(state: *ChatSimState) void {
@@ -116,28 +122,6 @@ fn printOutSomeData(state: ChatSimState) void {
     std.debug.print("someData: x:{d}, y:{d}\n", .{ oneCitizen.position.x, oneCitizen.position.y });
 }
 
-pub fn calculateDirectionApproximate(startPos: Position, targetPos: Position) f32 {
-    const yDiff = (startPos.y - targetPos.y);
-    const xDiff = (startPos.x - targetPos.x);
-    if (xDiff == 0) {
-        return if (yDiff < 0) 90 else -90;
-    }
-    return std.math.pi / 4.0 * (yDiff / xDiff) - 0.273 * (@abs(yDiff / xDiff) * (@abs(yDiff / xDiff) - 1));
-}
-
-pub fn calculateDirection(startPos: Position, targetPos: Position) f32 {
-    var direction: f32 = 0;
-    const yDiff = (startPos.y - targetPos.y);
-    const xDiff = (startPos.x - targetPos.x);
-
-    if (xDiff >= 0) {
-        if (xDiff == 0) return 0;
-        direction = -std.math.pi + std.math.atan(yDiff / xDiff);
-    } else if (yDiff < 0) {
-        direction = -std.math.atan(xDiff / yDiff) + std.math.pi / 2.0;
-    } else {
-        if (yDiff == 0) return 0;
-        direction = -std.math.atan(xDiff / yDiff) - std.math.pi / 2.0;
-    }
-    return direction;
+pub fn calculateDirection(start: Position, end: Position) f32 {
+    return std.math.atan2(end.y - start.y, end.x - start.x);
 }
