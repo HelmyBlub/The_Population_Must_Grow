@@ -1,5 +1,5 @@
 tasks:
-- continue: try geometry shader
+- continue: check if geometry shader version result same to without. If match -> measure performance
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - try out geometry shader to get one input point which is citizen position to  generate output 2 triangles as a square to paint to
