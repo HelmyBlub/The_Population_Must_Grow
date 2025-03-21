@@ -1,23 +1,16 @@
 tasks:
-- continue: check if geometry shader version result same to without. If match -> measure performanc 
-    - same performance when doing one big triangle
-    - quad with geometry shader is about 50% faster then big triangle
+- current problem:
+    - dynamic array sizes. How do i handle it with vulkan?
+        - currenlty only had fix value from start to finish. This does not work with my current vertex buffer
+        - googling/chatgpt confused me with stuff which might be outdated or not.
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
-        - try out geometry shader to get one input point which is citizen position to  generate output 2 triangles as a square to paint to
-            - some cpp code doing geometry shader https://github.com/SaschaWillems/Vulkan/blob/master/examples/geometryshader/geometryshader.cpp
-            - goal is to reduce data sent to graphics card and hope it will positivly improve performance
+- have some basic input handling
+    - create citizen where i click my mouse
+    - move camera with keys and zoom with mouse wheel
 - clean up code to now use vulkan for graphics
     - how to split up vulkan code?
         - get some game data into vulkan and take this required code out
-            - citizen data
-                - paint citizen at correct location
-                    - first use cpu to create triangle, later to geometry shader
-                        - try difference between two trianlges or one big triangle to fit the image
-                            - result: single big triangle more performant than 2 triangles as a square from 625 to 550
-                        - try geometry shader
-                            - result: 711 with geometry shader doing quads
-- have some basic input handling
   
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

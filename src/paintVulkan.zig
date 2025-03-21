@@ -819,6 +819,31 @@ fn updateUniformBuffer(vkState: *Vk_State) !void {
     }
 }
 
+pub fn handleEvents(state: *main.ChatSimState) !void {
+    var event: sdl.SDL_Event = undefined;
+    while (sdl.SDL_PollEvent(&event)) {
+        if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
+            state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            state.citizens.items[1].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+        } else if (event.type == sdl.SDL_EVENT_QUIT) {
+            std.debug.print("clicked window X \n", .{});
+            state.gameEnd = true;
+        }
+    }
+}
+
+pub fn mousePositionToGamePoisition(x: f32, y: f32) main.Position {
+    var width: u32 = 0;
+    var height: u32 = 0;
+    getWindowSize(&width, &height);
+
+    return main.Position{
+        .x = x / @as(f32, @floatFromInt(width)) * 400.0 - 200.0,
+        .y = y / @as(f32, @floatFromInt(height)) * 400.0 - 200.0,
+    };
+}
+
 pub fn drawFrame(vkState: *Vk_State) !void {
     try updateUniformBuffer(vkState);
 

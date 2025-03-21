@@ -51,7 +51,7 @@ pub fn main() !void {
 
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..10_000) |_| {
+    for (0..10) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
 
@@ -63,7 +63,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .gameTimeMs = 0,
         .gameEnd = false,
         .vkState = .{},
-        .fpsLimiter = false,
+        .fpsLimiter = true,
     };
     Citizen.randomlyPlace(state);
     try Paint.setupVerticesForCitizens(&state.citizens);
@@ -81,6 +81,7 @@ fn runGame(allocator: std.mem.Allocator) !void {
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
+        try Paint.handleEvents(&state);
         while (ticksRequired >= 1) {
             tick(&state);
             ticksRequired -= 1;
