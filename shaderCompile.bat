@@ -1,4 +1,3 @@
 C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.vert -o src/vert.spv
 C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.frag -o src/frag.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shaderGeom.vert -o src/geomVert.spv
 C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.geom -o src/geom.spv

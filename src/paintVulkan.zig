@@ -71,7 +71,6 @@ const SwapChainSupportDetails = struct {
 
 const Vertex = struct {
     pos: [2]f32,
-    texCoord: [2]f32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -83,43 +82,18 @@ const Vertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
+    fn getAttributeDescriptions() [1]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [1]vk.VkVertexInputAttributeDescription = .{undefined};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(Vertex, "pos");
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk.VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[1].offset = @offsetOf(Vertex, "texCoord");
         return attributeDescriptions;
     }
 };
 
 var vertices: []Vertex = undefined;
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
-
-pub fn mainVulkan() !void {
-    std.debug.print("start\n", .{});
-    std.debug.print("validation layer support: {}\n", .{checkValidationLayerSupport()});
-    try setupVertices();
-    var vkState: Vk_State = .{};
-
-    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
-    const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
-    window = try (sdl.SDL_CreateWindow("ChatSim", 1600, 800, flags) orelse error.createWindow);
-
-    try initVulkan(&vkState);
-    _ = sdl.SDL_ShowWindow(window);
-
-    try mainLoop(&vkState);
-    try destroy(&vkState);
-    sdl.SDL_DestroyWindow(window);
-    sdl.SDL_Quit();
-
-    std.debug.print("done\n", .{});
-}
 
 pub fn initVulkanAndWindow(vkState: *Vk_State) !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
@@ -138,79 +112,12 @@ pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
 }
 
 pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen)) !void {
-    const vertexCount: u64 = citizens.items.len * 3;
+    const vertexCount: u64 = citizens.items.len;
     if (vertices.len != vertexCount) vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
-    const triangleSize = 0.1;
     const divider: f32 = 200.0;
     for (citizens.items, 0..) |*citizen, i| {
-        vertices[i * 3] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ -0.2, -0.5 } };
-        vertices[i * 3 + 1] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.8, 1.5 } };
-        vertices[i * 3 + 2] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider + triangleSize }, .texCoord = .{ -0.2, 1.5 } };
+        vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider } };
     }
-}
-
-pub fn setupVerticesForCitizens2(citizens: *std.ArrayList(main.Citizen)) !void {
-    const vertexCount: u64 = citizens.items.len * 6;
-    if (vertices.len != vertexCount) vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
-    const triangleSize = 0.05;
-    const divider: f32 = 200.0;
-    for (citizens.items, 0..) |*citizen, i| {
-        vertices[i * 6] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ 0.0, 0.0 } };
-        vertices[i * 6 + 1] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.0, 1.0 } };
-        vertices[i * 6 + 2] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider + triangleSize }, .texCoord = .{ 0.0, 1.0 } };
-        vertices[i * 6 + 3] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .texCoord = .{ 0.0, 0.0 } };
-        vertices[i * 6 + 4] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider }, .texCoord = .{ 1.0, 0.0 } };
-        vertices[i * 6 + 5] = .{ .pos = .{ citizen.position.x / divider + triangleSize, citizen.position.y / divider + triangleSize }, .texCoord = .{ 1.0, 1.0 } };
-    }
-}
-
-pub fn setupVertices() !void {
-    const rows = 100;
-    const columns = 100;
-    const triangleCount = rows * columns;
-    const vertexCount = triangleCount * 3;
-    const triangleSize = 0.6;
-    vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
-    const stepSizeX: f32 = 2.0 / @as(f32, @floatFromInt(columns));
-    const stepSizeY: f32 = 2.0 / @as(f32, @floatFromInt(rows));
-    for (0..columns) |x| {
-        const currX = -1.0 + stepSizeX * @as(f32, @floatFromInt(x));
-        for (0..rows) |y| {
-            const currY = -1.0 + stepSizeY * @as(f32, @floatFromInt(y));
-            vertices[(x * rows + y) * 3] = .{ .pos = .{ currX, currY }, .texCoord = .{ -0.2, -0.5 } };
-            vertices[(x * rows + y) * 3 + 1] = .{ .pos = .{ currX + triangleSize, currY + triangleSize }, .texCoord = .{ 1.8, 1.5 } };
-            vertices[(x * rows + y) * 3 + 2] = .{ .pos = .{ currX, currY + triangleSize }, .texCoord = .{ -0.2, 1.5 } };
-        }
-    }
-    std.debug.print("verticeCount: {}\n", .{vertices.len});
-}
-
-fn mainLoop(vkState: *Vk_State) !void {
-    std.time.sleep(500_000_000);
-    var counter: u32 = 0;
-    const startTime = std.time.microTimestamp();
-    const maxCounter = 1000;
-    try setupVertexDataForGPU(vkState);
-
-    while (counter < maxCounter) {
-        var event: sdl.SDL_Event = undefined;
-        while (sdl.SDL_PollEvent(&event)) {
-            std.debug.print("event: {}\n", .{event.type});
-        }
-        counter += 1;
-        tick();
-        try drawFrame(vkState);
-        // std.time.sleep(10_000_000);
-    }
-    const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divTrunc(maxCounter * 1_000_000, timePassed);
-    std.debug.print("fps: {}, timePassed: {}\n", .{ fps, timePassed });
-    std.time.sleep(2_000_000_000);
-    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
-}
-
-fn tick() void {
-    // vertices[0].pos[0] += 0.0005;
 }
 
 fn initVulkan(vkState: *Vk_State) !void {
@@ -1121,10 +1028,13 @@ fn createRenderPass(vkState: *Vk_State) !void {
 fn createGraphicsPipeline(vkState: *Vk_State) !void {
     const vertShaderCode = try readFile("src/vert.spv");
     const fragShaderCode = try readFile("src/frag.spv");
+    const geomShaderCode = try readFile("src/geom.spv");
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try createShaderModule(fragShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
+    const geomShaderModule = try createShaderModule(geomShaderCode, vkState);
+    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -1140,7 +1050,14 @@ fn createGraphicsPipeline(vkState: *Vk_State) !void {
         .pName = "main",
     };
 
-    const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo };
+    const geomShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = vk.VK_SHADER_STAGE_GEOMETRY_BIT,
+        .module = geomShaderModule,
+        .pName = "main",
+    };
+
+    const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
     const bindingDescription = Vertex.getBindingDescription();
     const attributeDescriptions = Vertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
@@ -1153,7 +1070,7 @@ fn createGraphicsPipeline(vkState: *Vk_State) !void {
 
     var inputAssembly = vk.VkPipelineInputAssemblyStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .topology = vk.VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
         .primitiveRestartEnable = vk.VK_FALSE,
     };
 
@@ -1232,7 +1149,7 @@ fn createGraphicsPipeline(vkState: *Vk_State) !void {
 
     var pipelineInfo = vk.VkGraphicsPipelineCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = 2,
+        .stageCount = shaderStages.len,
         .pStages = &shaderStages,
         .pVertexInputState = &vertexInputInfo,
         .pInputAssemblyState = &inputAssembly,
@@ -1257,7 +1174,7 @@ fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
         .codeSize = code.len,
         .pCode = @alignCast(@ptrCast(code.ptr)),
     };
-    var shaderModule: vk.VkShaderModule = undefined; //std.mem.zeroes(vk.VkShaderModule)
+    var shaderModule: vk.VkShaderModule = undefined;
     try vkcheck(vk.vkCreateShaderModule(vkState.logicalDevice, &createInfo, null, &shaderModule), "Failed to create Shader Module.");
     std.debug.print("Shader Module Created : {any}\n", .{shaderModule});
     return shaderModule;

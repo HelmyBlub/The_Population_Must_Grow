@@ -1,5 +1,7 @@
 tasks:
-- continue: check if geometry shader version result same to without. If match -> measure performance
+- continue: check if geometry shader version result same to without. If match -> measure performanc 
+    - same performance when doing one big triangle
+    - quad with geometry shader is about 50% faster then big triangle
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - try out geometry shader to get one input point which is citizen position to  generate output 2 triangles as a square to paint to
@@ -14,6 +16,7 @@ tasks:
                         - try difference between two trianlges or one big triangle to fit the image
                             - result: single big triangle more performant than 2 triangles as a square from 625 to 550
                         - try geometry shader
+                            - result: 711 with geometry shader doing quads
 - have some basic input handling
   
 Goal:
