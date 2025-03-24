@@ -845,7 +845,6 @@ pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
 }
 
 fn updateUniformBuffer(state: *main.ChatSimState) !void {
-    // const change: f32 = @as(f32, @floatFromInt(@mod(std.time.milliTimestamp(), 10000))) / 10000.0;
     var ubo: VkCameraData = .{
         .transform = .{
             .{ 1.0, 0, 0.0, 0.0 },
@@ -880,7 +879,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     state.camera.zoom = 0.1;
                 }
             }
-            std.debug.print("Zoom: {d}\n", .{state.camera.zoom});
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             var new = main.Citizen.createCitizen();
             new.position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
@@ -894,8 +892,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.camera.position.y += 0.2;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
                 state.camera.position.y -= 0.2;
-            } else {
-                std.debug.print("Key: {}\n", .{event.key.scancode});
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});

@@ -1,5 +1,6 @@
 tasks:
 - paint more different entities
+    - read up a bit more about how to. But maybe just try myself some things.
     - add trees, buildings
 - making map chunks, infinite world
 - think about how to effectivly use multi core programming for main game logic
