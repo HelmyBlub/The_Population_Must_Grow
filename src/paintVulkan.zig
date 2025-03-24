@@ -389,7 +389,9 @@ fn createTextureImage(vkState: *Vk_State) !void {
     try image.convert(.rgba32);
 
     var stagingBuffer: vk.VkBuffer = undefined;
+    defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
     var stagingBufferMemory: vk.VkDeviceMemory = undefined;
+    defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
     try createBuffer(
         image.imageByteSize(),
         vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -427,8 +429,6 @@ fn createTextureImage(vkState: *Vk_State) !void {
     try transitionImageLayout(vkState.textureImage, vk.VK_IMAGE_LAYOUT_UNDEFINED, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkState.mipLevels, vkState);
     try copyBufferToImage(stagingBuffer, vkState.textureImage, imageWidth, imageHeight, vkState);
     try generateMipmaps(vkState.textureImage, vk.VK_FORMAT_R8G8B8A8_SRGB, @intCast(imageWidth), @intCast(imageHeight), vkState.mipLevels, vkState);
-    vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
 }
 
 fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height: u32, vkState: *Vk_State) !void {
