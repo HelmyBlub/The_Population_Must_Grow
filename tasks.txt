@@ -1,12 +1,20 @@
 tasks:
-- current problem:
-    - dynamic array sizes. How do i handle it with vulkan?
-        - i have to code to recreate buffers to change it's size by destroy old one and create new one
+- have some basic input handling
+    - move camera with keys 
+        - add translation to UniformBufferObject
+        - rename uniformBufferObject to camera 
+    - zoom with mouse wheel
+    - move by mouse click hold and move
+- paint more different entities
+    - add trees, buildings
+- making map chunks, infinite world
+- think about how to effectivly use multi core programming for main game logic
+    - do not forget simd vector stuff
+
+
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
-- have some basic input handling
-    - create citizen where i click my mouse
-    - move camera with keys and zoom with mouse wheel
+        - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
 - clean up code to now use vulkan for graphics
     - how to split up vulkan code?
         - get some game data into vulkan and take this required code out
