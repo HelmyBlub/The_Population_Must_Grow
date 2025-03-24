@@ -39,8 +39,11 @@ pub const Vk_State = struct {
     renderFinishedSemaphore: []vk.VkSemaphore = undefined,
     inFlightFence: []vk.VkFence = undefined,
     currentFrame: u16 = 0,
+    vertexBufferSize: u64 = 0,
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertexBufferCleanUp: []?vk.VkBuffer = undefined,
+    vertexBufferMemoryCleanUp: []?vk.VkDeviceMemory = undefined,
     descriptorSetLayout: vk.VkDescriptorSetLayout = undefined,
     uniformBuffers: []vk.VkBuffer = undefined,
     uniformBuffersMemory: []vk.VkDeviceMemory = undefined,
@@ -57,6 +60,7 @@ pub const Vk_State = struct {
     colorImageMemory: vk.VkDeviceMemory = undefined,
     colorImageView: vk.VkImageView = undefined,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
+    const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
 
 const UniformBufferObject = struct {
@@ -95,12 +99,12 @@ const Vertex = struct {
 var vertices: []Vertex = undefined;
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
-pub fn initVulkanAndWindow(vkState: *Vk_State) !void {
+pub fn initVulkanAndWindow(state: *main.ChatSimState) !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
     const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
     window = try (sdl.SDL_CreateWindow("ChatSim", 1600, 800, flags) orelse error.createWindow);
 
-    try initVulkan(vkState);
+    try initVulkan(state);
     _ = sdl.SDL_ShowWindow(window);
 }
 
@@ -111,16 +115,43 @@ pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
     sdl.SDL_Quit();
 }
 
-pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen)) !void {
-    const vertexCount: u64 = citizens.items.len;
-    if (vertices.len != vertexCount) vertices = try std.heap.page_allocator.alloc(Vertex, vertexCount);
+pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen), vkState: *Vk_State) !void {
+    // recreate buffer with new size
+    if (vkState.vertexBufferSize == 0) return;
+    if (vkState.vertexBufferCleanUp[vkState.currentFrame] != null) {
+        vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[vkState.currentFrame].?, null);
+        vk.vkFreeMemory(vkState.logicalDevice, vkState.vertexBufferMemoryCleanUp[vkState.currentFrame].?, null);
+        vkState.vertexBufferCleanUp[vkState.currentFrame] = null;
+        vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = null;
+    }
+    if ((vkState.vertexBufferSize < citizens.items.len or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > citizens.items.len)) {
+        vkState.vertexBufferCleanUp[vkState.currentFrame] = vkState.vertexBuffer;
+        vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.vertexBufferMemory;
+        try createVertexBuffer(vkState, citizens.items.len);
+    }
+
     const divider: f32 = 200.0;
     for (citizens.items, 0..) |*citizen, i| {
         vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider } };
     }
+
+    if (citizens.items.len < vertices.len) {
+        // no citizens, move data outside so it is not painted
+        for (citizens.items.len..vertices.len) |i| {
+            vertices[i] = .{ .pos = .{ -10, -10 } };
+        }
+    }
 }
 
-fn initVulkan(vkState: *Vk_State) !void {
+fn initVulkan(state: *main.ChatSimState) !void {
+    const vkState: *Vk_State = &state.vkState;
+    vkState.vertexBufferCleanUp = try std.heap.page_allocator.alloc(?vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.vertexBufferMemoryCleanUp = try std.heap.page_allocator.alloc(?vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
+        vkState.vertexBufferCleanUp[i] = null;
+        vkState.vertexBufferMemoryCleanUp[i] = null;
+    }
+
     try createInstance(vkState);
 
     //surface
@@ -142,7 +173,7 @@ fn initVulkan(vkState: *Vk_State) !void {
     try createTextureImage(vkState);
     try createTextureImageView(vkState);
     try createTextureSampler(vkState);
-    try createVertexBuffer(vkState);
+    try createVertexBuffer(vkState, state.citizens.items.len);
     try createUniformBuffers(vkState);
     try createDescriptorPool(vkState);
     try createDescriptorSets(vkState);
@@ -700,9 +731,11 @@ fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, properties:
     if (vk.vkBindBufferMemory(vkState.logicalDevice, buffer.*, bufferMemory.*, 0) != vk.VK_SUCCESS) return error.bindMemory;
 }
 
-fn createVertexBuffer(vkState: *Vk_State) !void {
+fn createVertexBuffer(vkState: *Vk_State, citizenCount: u64) !void {
+    vkState.vertexBufferSize = citizenCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
+    vertices = try std.heap.page_allocator.alloc(Vertex, vkState.vertexBufferSize);
     try createBuffer(
-        @sizeOf(Vertex) * vertices.len,
+        @sizeOf(Vertex) * vkState.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.vertexBuffer,
@@ -712,6 +745,15 @@ fn createVertexBuffer(vkState: *Vk_State) !void {
 }
 
 fn destroy(vkState: *Vk_State) !void {
+    for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
+        if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
+            vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
+            vk.vkFreeMemory(vkState.logicalDevice, vkState.vertexBufferMemoryCleanUp[i].?, null);
+            vkState.vertexBufferCleanUp[i] = null;
+            vkState.vertexBufferMemoryCleanUp[i] = null;
+        }
+    }
+
     vk.vkDestroyImageView(vkState.logicalDevice, vkState.colorImageView, null);
     vk.vkDestroyImage(vkState.logicalDevice, vkState.colorImage, null);
     vk.vkFreeMemory(vkState.logicalDevice, vkState.colorImageMemory, null);
@@ -825,7 +867,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            state.citizens.items[1].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+            var new = main.Citizen.createCitizen();
+            new.position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+            try state.citizens.append(new);
+            // state.citizens.items[1].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;

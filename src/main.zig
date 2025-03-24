@@ -66,8 +66,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .fpsLimiter = true,
     };
     Citizen.randomlyPlace(state);
-    try Paint.setupVerticesForCitizens(&state.citizens);
-    try Paint.initVulkanAndWindow(&state.vkState);
+    try Paint.initVulkanAndWindow(state);
 }
 
 fn runGame(allocator: std.mem.Allocator) !void {
@@ -82,14 +81,18 @@ fn runGame(allocator: std.mem.Allocator) !void {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
         try Paint.handleEvents(&state);
+
         while (ticksRequired >= 1) {
+            var newCitizen = Citizen.createCitizen();
+            newCitizen.position = .{ .x = 0, .y = 0 };
+            try state.citizens.append(newCitizen);
             tick(&state);
             ticksRequired -= 1;
             const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
             if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
             if (state.gameEnd) break :mainLoop;
         }
-        try Paint.setupVerticesForCitizens(&state.citizens);
+        try Paint.setupVerticesForCitizens(&state.citizens, &state.vkState);
         try Paint.setupVertexDataForGPU(&state.vkState);
         try Paint.drawFrame(&state.vkState);
         frameCounter += 1;

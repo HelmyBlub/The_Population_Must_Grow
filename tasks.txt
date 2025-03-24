@@ -1,8 +1,7 @@
 tasks:
 - current problem:
     - dynamic array sizes. How do i handle it with vulkan?
-        - currenlty only had fix value from start to finish. This does not work with my current vertex buffer
-        - googling/chatgpt confused me with stuff which might be outdated or not.
+        - i have to code to recreate buffers to change it's size by destroy old one and create new one
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
 - have some basic input handling
