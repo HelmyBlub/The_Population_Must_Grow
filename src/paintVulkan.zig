@@ -870,7 +870,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             var new = main.Citizen.createCitizen();
             new.position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
             try state.citizens.append(new);
-            // state.citizens.items[1].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
