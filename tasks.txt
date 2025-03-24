@@ -1,10 +1,4 @@
 tasks:
-- have some basic input handling
-    - move camera with keys 
-        - add translation to UniformBufferObject
-        - rename uniformBufferObject to camera 
-    - zoom with mouse wheel
-    - move by mouse click hold and move
 - paint more different entities
     - add trees, buildings
 - making map chunks, infinite world

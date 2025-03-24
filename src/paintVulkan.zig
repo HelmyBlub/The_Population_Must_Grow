@@ -63,8 +63,9 @@ pub const Vk_State = struct {
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
 
-const UniformBufferObject = struct {
+const VkCameraData = struct {
     transform: [4][4]f32,
+    translate: [2]f32,
 };
 
 const SwapChainSupportDetails = struct {
@@ -598,7 +599,7 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
         const bufferInfo: vk.VkDescriptorBufferInfo = .{
             .buffer = vkState.uniformBuffers[i],
             .offset = 0,
-            .range = @sizeOf(UniformBufferObject),
+            .range = @sizeOf(VkCameraData),
         };
         const imageInfo: vk.VkDescriptorImageInfo = .{
             .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -653,7 +654,7 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
 }
 
 fn createUniformBuffers(vkState: *Vk_State) !void {
-    const bufferSize: vk.VkDeviceSize = @sizeOf(UniformBufferObject);
+    const bufferSize: vk.VkDeviceSize = @sizeOf(VkCameraData);
 
     vkState.uniformBuffers = try std.heap.page_allocator.alloc(vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
     vkState.uniformBuffersMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
@@ -843,19 +844,20 @@ pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.vertexBufferMemory);
 }
 
-fn updateUniformBuffer(vkState: *Vk_State) !void {
+fn updateUniformBuffer(state: *main.ChatSimState) !void {
     // const change: f32 = @as(f32, @floatFromInt(@mod(std.time.milliTimestamp(), 10000))) / 10000.0;
-    var ubo: UniformBufferObject = .{
+    var ubo: VkCameraData = .{
         .transform = .{
             .{ 1.0, 0, 0.0, 0.0 },
             .{ 0, 1.0, 0.0, 0.0 },
             .{ 0.0, 0.0, 1, 0.0 },
-            .{ 0.0, 0.0, 0.0, 1 },
+            .{ 0.0, 0.0, 0.0, state.camera.zoom },
         },
+        .translate = .{ state.camera.position.x, state.camera.position.y },
     };
-    if (vkState.uniformBuffersMapped[vkState.currentFrame]) |data| {
+    if (state.vkState.uniformBuffersMapped[state.vkState.currentFrame]) |data| {
         @memcpy(
-            @as([*]u8, @ptrCast(data))[0..@sizeOf(UniformBufferObject)],
+            @as([*]u8, @ptrCast(data))[0..@sizeOf(VkCameraData)],
             @as([*]u8, @ptrCast(&ubo)),
         );
     }
@@ -866,10 +868,35 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     while (sdl.SDL_PollEvent(&event)) {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+        } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
+            if (event.wheel.y < 0) {
+                state.camera.zoom *= 1.2;
+                if (state.camera.zoom > 10) {
+                    state.camera.zoom = 10;
+                }
+            } else {
+                state.camera.zoom /= 1.2;
+                if (state.camera.zoom < 0.1) {
+                    state.camera.zoom = 0.1;
+                }
+            }
+            std.debug.print("Zoom: {d}\n", .{state.camera.zoom});
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             var new = main.Citizen.createCitizen();
             new.position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
             try state.citizens.append(new);
+        } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
+            if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
+                state.camera.position.x += 0.2;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
+                state.camera.position.x -= 0.2;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_UP) {
+                state.camera.position.y += 0.2;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
+                state.camera.position.y -= 0.2;
+            } else {
+                std.debug.print("Key: {}\n", .{event.key.scancode});
+            }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
@@ -888,8 +915,9 @@ pub fn mousePositionToGamePoisition(x: f32, y: f32) main.Position {
     };
 }
 
-pub fn drawFrame(vkState: *Vk_State) !void {
-    try updateUniformBuffer(vkState);
+pub fn drawFrame(state: *main.ChatSimState) !void {
+    var vkState = &state.vkState;
+    try updateUniformBuffer(state);
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);

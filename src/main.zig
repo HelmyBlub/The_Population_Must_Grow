@@ -17,6 +17,12 @@ pub const ChatSimState: type = struct {
     gameEnd: bool,
     vkState: Paint.Vk_State,
     fpsLimiter: bool,
+    camera: Camera,
+};
+
+pub const Camera: type = struct {
+    position: Position,
+    zoom: f32,
 };
 
 pub const Position: type = struct {
@@ -24,7 +30,7 @@ pub const Position: type = struct {
     y: f32,
 };
 
-const SIMULATION_MICRO_SECOND_DURATION: i64 = 5_000_000;
+const SIMULATION_MICRO_SECOND_DURATION: i64 = 20_000_000;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
@@ -64,6 +70,10 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .gameEnd = false,
         .vkState = .{},
         .fpsLimiter = true,
+        .camera = .{
+            .position = .{ .x = 0, .y = 0 },
+            .zoom = 1,
+        },
     };
     Citizen.randomlyPlace(state);
     try Paint.initVulkanAndWindow(state);
@@ -91,7 +101,7 @@ fn runGame(allocator: std.mem.Allocator) !void {
         }
         try Paint.setupVerticesForCitizens(&state.citizens, &state.vkState);
         try Paint.setupVertexDataForGPU(&state.vkState);
-        try Paint.drawFrame(&state.vkState);
+        try Paint.drawFrame(&state);
         frameCounter += 1;
         if (state.fpsLimiter) {
             const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));

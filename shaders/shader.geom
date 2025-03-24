@@ -8,7 +8,10 @@ layout (location = 0) out vec2 fragTexCoord;
 void main(void)
 {	
     vec4 center = gl_in[0].gl_Position;
-    float size = 0.025;
+    float size = 0.025 / center[3];
+    center[0] = center[0] / center[3];
+    center[1] = center[1] / center[3];
+    center[3] = 1;
 
     // top-left vertex
     gl_Position = center + vec4(-size, -size, 0.0, 0.0);

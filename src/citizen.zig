@@ -11,7 +11,7 @@ pub const Citizen: type = struct {
         return Citizen{
             .position = .{ .x = 0, .y = 0 },
             .moveTo = null,
-            .moveSpeed = 1.0,
+            .moveSpeed = 0.1,
         };
     }
 
