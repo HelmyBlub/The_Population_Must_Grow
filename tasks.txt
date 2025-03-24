@@ -4,7 +4,8 @@ tasks:
 - making map chunks, infinite world
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff
-
+- get "zig build test" working
+    - how could i see debug messages here?
 
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
