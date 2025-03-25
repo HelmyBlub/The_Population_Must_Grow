@@ -59,6 +59,7 @@ pub const Vk_State = struct {
     colorImage: vk.VkImage = undefined,
     colorImageMemory: vk.VkDeviceMemory = undefined,
     colorImageView: vk.VkImageView = undefined,
+    entityPaintCount: u32 = 0,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
@@ -131,7 +132,14 @@ pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
     sdl.SDL_Quit();
 }
 
-pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen), vkState: *Vk_State) !void {
+pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
+    var vkState = &state.vkState;
+    var entityPaintCount = state.citizens.items.len;
+    if (state.chunks.get("0_0")) |chunk| {
+        entityPaintCount += chunk.buildings.items.len;
+        entityPaintCount += chunk.trees.items.len;
+    }
+    state.vkState.entityPaintCount = @intCast(entityPaintCount);
     // recreate buffer with new size
     if (vkState.vertexBufferSize == 0) return;
     if (vkState.vertexBufferCleanUp[vkState.currentFrame] != null) {
@@ -140,15 +148,27 @@ pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen), vkState:
         vkState.vertexBufferCleanUp[vkState.currentFrame] = null;
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = null;
     }
-    if ((vkState.vertexBufferSize < citizens.items.len or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > citizens.items.len)) {
+    if ((vkState.vertexBufferSize < entityPaintCount or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > entityPaintCount)) {
         vkState.vertexBufferCleanUp[vkState.currentFrame] = vkState.vertexBuffer;
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.vertexBufferMemory;
-        try createVertexBuffer(vkState, citizens.items.len);
+        try createVertexBuffer(vkState, entityPaintCount);
     }
 
     const divider: f32 = 200.0;
-    for (citizens.items, 0..) |*citizen, i| {
-        vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .imageIndex = @intCast(i % IMAGE_DATA.len) };
+    var index: u32 = 0;
+    for (state.citizens.items) |*citizen| {
+        vertices[index] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .imageIndex = 0 };
+        index += 1;
+    }
+    if (state.chunks.get("0_0")) |chunk| {
+        for (chunk.trees.items) |*tree| {
+            vertices[index] = .{ .pos = .{ tree.position.x / divider, tree.position.y / divider }, .imageIndex = 1 };
+            index += 1;
+        }
+        for (chunk.buildings.items) |*building| {
+            vertices[index] = .{ .pos = .{ building.position.x / divider, building.position.y / divider }, .imageIndex = 2 };
+            index += 1;
+        }
     }
 }
 
@@ -766,8 +786,8 @@ fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, properties:
     if (vk.vkBindBufferMemory(vkState.logicalDevice, buffer.*, bufferMemory.*, 0) != vk.VK_SUCCESS) return error.bindMemory;
 }
 
-fn createVertexBuffer(vkState: *Vk_State, citizenCount: u64) !void {
-    vkState.vertexBufferSize = citizenCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
+fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
+    vkState.vertexBufferSize = entityCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
     vertices = try std.heap.page_allocator.alloc(Vertex, vkState.vertexBufferSize);
     try createBuffer(
         @sizeOf(Vertex) * vkState.vertexBufferSize,
@@ -917,9 +937,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            var new = main.Citizen.createCitizen();
-            new.position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
-            try state.citizens.append(new);
+            const position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+            const newBuilding: main.Building = .{
+                .position = position,
+            };
+            var chunk = state.chunks.get("0_0").?;
+            try chunk.buildings.append(newBuilding);
+            try state.chunks.put("0_0", chunk);
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
                 state.camera.position.x += 0.2;
@@ -1056,7 +1080,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
         null,
     );
 
-    vk.vkCmdDraw(commandBuffer, @intCast(state.citizens.items.len), 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCount), 1, 0, 0);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }

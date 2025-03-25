@@ -10,6 +10,7 @@ const sdl = @cImport({
 
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
+    chunks: std.StringHashMap(MapChunk),
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
@@ -18,6 +19,21 @@ pub const ChatSimState: type = struct {
     vkState: Paint.Vk_State,
     fpsLimiter: bool,
     camera: Camera,
+};
+
+pub const MapTree = struct {
+    position: Position,
+    citizenOnTheWay: bool = false,
+};
+
+pub const Building = struct {
+    position: Position,
+    inConstruction: bool = true,
+};
+
+pub const MapChunk = struct {
+    trees: std.ArrayList(MapTree),
+    buildings: std.ArrayList(Building),
 };
 
 pub const Camera: type = struct {
@@ -57,12 +73,23 @@ pub fn main() !void {
 
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
+    var chunks = std.StringHashMap(MapChunk).init(allocator);
+    var mapChunk: MapChunk = .{
+        .buildings = std.ArrayList(Building).init(allocator),
+        .trees = std.ArrayList(MapTree).init(allocator),
+    };
+    try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false });
+    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 0 } });
+    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 20 } });
+
+    try chunks.put("0_0", mapChunk);
     for (0..10) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
 
     state.* = .{
         .citizens = citizensList,
+        .chunks = chunks,
         .gameSpeed = 1,
         .paintIntervalMs = 16,
         .tickIntervalMs = 16,
@@ -99,7 +126,7 @@ fn runGame(allocator: std.mem.Allocator) !void {
             if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
             if (state.gameEnd) break :mainLoop;
         }
-        try Paint.setupVerticesForCitizens(&state.citizens, &state.vkState);
+        try Paint.setupVerticesForCitizens(&state);
         try Paint.setupVertexDataForGPU(&state.vkState);
         try Paint.drawFrame(&state);
         frameCounter += 1;

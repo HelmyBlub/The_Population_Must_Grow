@@ -1,8 +1,9 @@
 tasks:
-- on cmdDraw vertex count is given. So my whole fill up stuff is not required?
-
 - should start with some game logic
-    - game start one home and one citizen, which is me
+    - game start one home and one citizen and one tree
+        - game needs houses, citizens and trees
+        - need to be painted
+        - citizen without purpose just runs around randomly
     - place new home to build
         - citizen goes to cut tree to get wood to build new home
             - always one tree, which respawns
