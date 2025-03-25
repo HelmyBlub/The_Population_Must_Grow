@@ -2,7 +2,12 @@ tasks:
 - on cmdDraw vertex count is given. So my whole fill up stuff is not required?
 - check vulkan validation layer errors
 
-- making map chunks, infinite world
+- should start with some game logic
+    - game start one home and one citizen, which is me
+    - place new home to build
+        - citizen goes to cut tree to get wood to build new home
+            - always one tree, which respawns
+        - new home build. New citizens joins
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff
 - get "zig build test" working

@@ -50,7 +50,7 @@ pub const Vk_State = struct {
     uniformBuffersMapped: []?*anyopaque = undefined,
     descriptorPool: vk.VkDescriptorPool = undefined,
     descriptorSets: []vk.VkDescriptorSet = undefined,
-    mipLevels: u32 = 0,
+    mipLevels: []u32 = undefined,
     textureImage: []vk.VkImage = undefined,
     textureImageMemory: []vk.VkDeviceMemory = undefined,
     textureImageView: []vk.VkImageView = undefined,
@@ -270,7 +270,7 @@ fn createTextureSampler(vkState: *Vk_State) !void {
 fn createTextureImageView(vkState: *Vk_State) !void {
     vkState.textureImageView = try std.heap.page_allocator.alloc(vk.VkImageView, IMAGE_DATA.len);
     for (0..IMAGE_DATA.len) |i| {
-        vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels, vkState);
+        vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels[i], vkState);
     }
 }
 
@@ -404,6 +404,7 @@ fn generateMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, t
 fn createTextureImage(vkState: *Vk_State) !void {
     vkState.textureImage = try std.heap.page_allocator.alloc(vk.VkImage, IMAGE_DATA.len);
     vkState.textureImageMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
+    vkState.mipLevels = try std.heap.page_allocator.alloc(u32, IMAGE_DATA.len);
 
     for (0..IMAGE_DATA.len) |i| {
         var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, IMAGE_DATA[i].path);
@@ -433,11 +434,11 @@ fn createTextureImage(vkState: *Vk_State) !void {
         const imageWidth: u32 = @intCast(image.width);
         const imageHeight: u32 = @intCast(image.height);
         const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
-        vkState.mipLevels = @as(u32, @intFromFloat(log2)) + 1;
+        vkState.mipLevels[i] = @as(u32, @intFromFloat(log2)) + 1;
         try createImage(
             imageWidth,
             imageHeight,
-            vkState.mipLevels,
+            vkState.mipLevels[i],
             vk.VK_SAMPLE_COUNT_1_BIT,
             vk.VK_FORMAT_R8G8B8A8_SRGB,
             vk.VK_IMAGE_TILING_OPTIMAL,
@@ -448,9 +449,22 @@ fn createTextureImage(vkState: *Vk_State) !void {
             vkState,
         );
 
-        try transitionImageLayout(vkState.textureImage[i], vk.VK_IMAGE_LAYOUT_UNDEFINED, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkState.mipLevels, vkState);
+        try transitionImageLayout(
+            vkState.textureImage[i],
+            vk.VK_IMAGE_LAYOUT_UNDEFINED,
+            vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            vkState.mipLevels[i],
+            vkState,
+        );
         try copyBufferToImage(stagingBuffer, vkState.textureImage[i], imageWidth, imageHeight, vkState);
-        try generateMipmaps(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, @intCast(imageWidth), @intCast(imageHeight), vkState.mipLevels, vkState);
+        try generateMipmaps(
+            vkState.textureImage[i],
+            vk.VK_FORMAT_R8G8B8A8_SRGB,
+            @intCast(imageWidth),
+            @intCast(imageHeight),
+            vkState.mipLevels[i],
+            vkState,
+        );
     }
 }
 
