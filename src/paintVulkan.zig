@@ -923,7 +923,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
-            state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+            // state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y < 0) {
                 state.camera.zoom *= 1.2;
@@ -937,13 +937,19 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            const position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
-            const newBuilding: main.Building = .{
-                .position = position,
-            };
+            const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y));
+            if (main.mapIsTilePositionFree(position, state) == false) return;
             var chunk = state.chunks.get("0_0").?;
-            try chunk.buildings.append(newBuilding);
-            try state.chunks.put("0_0", chunk);
+            for (state.citizens.items) |*citizen| {
+                if (citizen.buildingIndex != null) continue;
+                citizen.buildingIndex = chunk.buildings.items.len;
+                const newBuilding: main.Building = .{
+                    .position = position,
+                };
+                try chunk.buildings.append(newBuilding);
+                try state.chunks.put("0_0", chunk);
+                break;
+            }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
                 state.camera.position.x += 0.2;

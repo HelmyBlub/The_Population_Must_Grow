@@ -46,7 +46,7 @@ pub const Position: type = struct {
     y: f32,
 };
 
-const SIMULATION_MICRO_SECOND_DURATION: i64 = 20_000_000;
+const SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
@@ -71,6 +71,34 @@ pub fn main() !void {
     std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
+pub fn mapPositionToTilePosition(pos: Position) Position {
+    return Position{
+        .x = @round(pos.x / 20) * 20,
+        .y = @round(pos.y / 20) * 20,
+    };
+}
+
+pub fn mapIsTilePositionFree(pos: Position, state: *ChatSimState) bool {
+    const chunk = state.chunks.get("0_0").?;
+    for (chunk.buildings.items) |building| {
+        if (calculateDistance(pos, building.position) < 20) {
+            return false;
+        }
+    }
+    for (chunk.trees.items) |tree| {
+        if (calculateDistance(pos, tree.position) < 20) {
+            return false;
+        }
+    }
+    return true;
+}
+
+pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
+    const diffX = pos1.x - pos2.x;
+    const diffY = pos1.y - pos2.y;
+    return @sqrt(diffX * diffX + diffY * diffY);
+}
+
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
     var chunks = std.StringHashMap(MapChunk).init(allocator);
@@ -83,7 +111,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 20 } });
 
     try chunks.put("0_0", mapChunk);
-    for (0..10) |_| {
+    for (0..1) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
 
@@ -120,10 +148,10 @@ fn runGame(allocator: std.mem.Allocator) !void {
         try Paint.handleEvents(&state);
 
         while (ticksRequired >= 1) {
-            tick(&state);
+            try tick(&state);
             ticksRequired -= 1;
             const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
-            if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+            if (SIMULATION_MICRO_SECOND_DURATION != null and totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
             if (state.gameEnd) break :mainLoop;
         }
         try Paint.setupVerticesForCitizens(&state);
@@ -136,7 +164,7 @@ fn runGame(allocator: std.mem.Allocator) !void {
             std.time.sleep(sleepTime * 1_000);
         }
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
-        if (totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+        if (SIMULATION_MICRO_SECOND_DURATION != null and totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
     }
     const totalLoopTime: u64 = @as(u64, @intCast((std.time.microTimestamp() - totalStartTime)));
     const fps: u64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
@@ -145,9 +173,9 @@ fn runGame(allocator: std.mem.Allocator) !void {
     std.debug.print("finished\n", .{});
 }
 
-fn tick(state: *ChatSimState) void {
+fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
-    Citizen.citizensMove(state);
+    try Citizen.citizensMove(state);
 }
 
 fn destroyGameState(state: *ChatSimState) void {
