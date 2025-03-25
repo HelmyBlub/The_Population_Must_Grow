@@ -51,9 +51,9 @@ pub const Vk_State = struct {
     descriptorPool: vk.VkDescriptorPool = undefined,
     descriptorSets: []vk.VkDescriptorSet = undefined,
     mipLevels: u32 = 0,
-    textureImage: vk.VkImage = undefined,
-    textureImageMemory: vk.VkDeviceMemory = undefined,
-    textureImageView: vk.VkImageView = undefined,
+    textureImage: []vk.VkImage = undefined,
+    textureImageMemory: []vk.VkDeviceMemory = undefined,
+    textureImageView: []vk.VkImageView = undefined,
     textureSampler: vk.VkSampler = undefined,
     msaaSamples: vk.VkSampleCountFlagBits = vk.VK_SAMPLE_COUNT_1_BIT,
     colorImage: vk.VkImage = undefined,
@@ -76,6 +76,7 @@ const SwapChainSupportDetails = struct {
 
 const Vertex = struct {
     pos: [2]f32,
+    imageIndex: u32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -87,14 +88,28 @@ const Vertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [1]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [1]vk.VkVertexInputAttributeDescription = .{undefined};
+    fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(Vertex, "pos");
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = vk.VK_FORMAT_R32_UINT;
+        attributeDescriptions[1].offset = @offsetOf(Vertex, "imageIndex");
         return attributeDescriptions;
     }
+};
+
+const ImageData = struct {
+    path: []const u8,
+};
+
+const IMAGE_DATA = [_]ImageData{
+    .{ .path = "src/dog.png" },
+    .{ .path = "src/tree.png" },
+    .{ .path = "src/citizenHouse.png" },
 };
 
 var vertices: []Vertex = undefined;
@@ -133,13 +148,13 @@ pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen), vkState:
 
     const divider: f32 = 200.0;
     for (citizens.items, 0..) |*citizen, i| {
-        vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider } };
+        vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .imageIndex = @intCast(i % IMAGE_DATA.len) };
     }
 
     if (citizens.items.len < vertices.len) {
         // no citizens, move data outside so it is not painted
         for (citizens.items.len..vertices.len) |i| {
-            vertices[i] = .{ .pos = .{ -10, -10 } };
+            vertices[i] = .{ .pos = .{ -10, -10 }, .imageIndex = 0 };
         }
     }
 }
@@ -253,7 +268,10 @@ fn createTextureSampler(vkState: *Vk_State) !void {
 }
 
 fn createTextureImageView(vkState: *Vk_State) !void {
-    vkState.textureImageView = try createImageView(vkState.textureImage, vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels, vkState);
+    vkState.textureImageView = try std.heap.page_allocator.alloc(vk.VkImageView, IMAGE_DATA.len);
+    for (0..IMAGE_DATA.len) |i| {
+        vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels, vkState);
+    }
 }
 
 fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, vkState: *Vk_State) !vk.VkImageView {
@@ -384,51 +402,56 @@ fn generateMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, t
 }
 
 fn createTextureImage(vkState: *Vk_State) !void {
-    var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, "src/test.png");
-    defer image.deinit();
-    try image.convert(.rgba32);
+    vkState.textureImage = try std.heap.page_allocator.alloc(vk.VkImage, IMAGE_DATA.len);
+    vkState.textureImageMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
 
-    var stagingBuffer: vk.VkBuffer = undefined;
-    defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
-    var stagingBufferMemory: vk.VkDeviceMemory = undefined;
-    defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
-    try createBuffer(
-        image.imageByteSize(),
-        vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &stagingBuffer,
-        &stagingBufferMemory,
-        vkState,
-    );
+    for (0..IMAGE_DATA.len) |i| {
+        var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, IMAGE_DATA[i].path);
+        defer image.deinit();
+        try image.convert(.rgba32);
 
-    var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-    @memcpy(
-        @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
-        @as([*]u8, @ptrCast(image.pixels.asBytes())),
-    );
-    vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
-    const imageWidth: u32 = @intCast(image.width);
-    const imageHeight: u32 = @intCast(image.height);
-    const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
-    vkState.mipLevels = @as(u32, @intFromFloat(log2)) + 1;
-    try createImage(
-        imageWidth,
-        imageHeight,
-        vkState.mipLevels,
-        vk.VK_SAMPLE_COUNT_1_BIT,
-        vk.VK_FORMAT_R8G8B8A8_SRGB,
-        vk.VK_IMAGE_TILING_OPTIMAL,
-        vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT | vk.VK_IMAGE_USAGE_TRANSFER_DST_BIT | vk.VK_IMAGE_USAGE_SAMPLED_BIT,
-        vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        &vkState.textureImage,
-        &vkState.textureImageMemory,
-        vkState,
-    );
+        var stagingBuffer: vk.VkBuffer = undefined;
+        defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
+        var stagingBufferMemory: vk.VkDeviceMemory = undefined;
+        defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
+        try createBuffer(
+            image.imageByteSize(),
+            vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            &stagingBuffer,
+            &stagingBufferMemory,
+            vkState,
+        );
 
-    try transitionImageLayout(vkState.textureImage, vk.VK_IMAGE_LAYOUT_UNDEFINED, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkState.mipLevels, vkState);
-    try copyBufferToImage(stagingBuffer, vkState.textureImage, imageWidth, imageHeight, vkState);
-    try generateMipmaps(vkState.textureImage, vk.VK_FORMAT_R8G8B8A8_SRGB, @intCast(imageWidth), @intCast(imageHeight), vkState.mipLevels, vkState);
+        var data: ?*anyopaque = undefined;
+        if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+        @memcpy(
+            @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
+            @as([*]u8, @ptrCast(image.pixels.asBytes())),
+        );
+        vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
+        const imageWidth: u32 = @intCast(image.width);
+        const imageHeight: u32 = @intCast(image.height);
+        const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
+        vkState.mipLevels = @as(u32, @intFromFloat(log2)) + 1;
+        try createImage(
+            imageWidth,
+            imageHeight,
+            vkState.mipLevels,
+            vk.VK_SAMPLE_COUNT_1_BIT,
+            vk.VK_FORMAT_R8G8B8A8_SRGB,
+            vk.VK_IMAGE_TILING_OPTIMAL,
+            vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT | vk.VK_IMAGE_USAGE_TRANSFER_DST_BIT | vk.VK_IMAGE_USAGE_SAMPLED_BIT,
+            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            &vkState.textureImage[i],
+            &vkState.textureImageMemory[i],
+            vkState,
+        );
+
+        try transitionImageLayout(vkState.textureImage[i], vk.VK_IMAGE_LAYOUT_UNDEFINED, vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkState.mipLevels, vkState);
+        try copyBufferToImage(stagingBuffer, vkState.textureImage[i], imageWidth, imageHeight, vkState);
+        try generateMipmaps(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, @intCast(imageWidth), @intCast(imageHeight), vkState.mipLevels, vkState);
+    }
 }
 
 fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height: u32, vkState: *Vk_State) !void {
@@ -601,11 +624,15 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
             .offset = 0,
             .range = @sizeOf(VkCameraData),
         };
-        const imageInfo: vk.VkDescriptorImageInfo = .{
-            .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = vkState.textureImageView,
-            .sampler = vkState.textureSampler,
-        };
+
+        const imageInfo: []vk.VkDescriptorImageInfo = try std.heap.page_allocator.alloc(vk.VkDescriptorImageInfo, IMAGE_DATA.len);
+        for (0..IMAGE_DATA.len) |j| {
+            imageInfo[j] = .{
+                .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .imageView = vkState.textureImageView[j],
+                .sampler = vkState.textureSampler,
+            };
+        }
         const descriptorWrites = [_]vk.VkWriteDescriptorSet{
             .{
                 .sType = vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -624,8 +651,8 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
                 .dstBinding = 1,
                 .dstArrayElement = 0,
                 .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
-                .pImageInfo = &imageInfo,
+                .descriptorCount = @as(u32, @intCast(imageInfo.len)),
+                .pImageInfo = @ptrCast(imageInfo),
             },
         };
         vk.vkUpdateDescriptorSets(vkState.logicalDevice, descriptorWrites.len, &descriptorWrites, 0, null);
@@ -682,7 +709,7 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
     };
     const samplerLayoutBinding: vk.VkDescriptorSetLayoutBinding = .{
         .binding = 1,
-        .descriptorCount = 1,
+        .descriptorCount = IMAGE_DATA.len,
         .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .pImmutableSamplers = null,
         .stageFlags = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -775,9 +802,12 @@ fn destroy(vkState: *Vk_State) !void {
         vk.vkFreeMemory(vkState.logicalDevice, vkState.uniformBuffersMemory[i], null);
     }
     vk.vkDestroySampler(vkState.logicalDevice, vkState.textureSampler, null);
-    vk.vkDestroyImageView(vkState.logicalDevice, vkState.textureImageView, null);
-    vk.vkDestroyImage(vkState.logicalDevice, vkState.textureImage, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.textureImageMemory, null);
+
+    for (0..IMAGE_DATA.len) |i| {
+        vk.vkDestroyImageView(vkState.logicalDevice, vkState.textureImageView[i], null);
+        vk.vkDestroyImage(vkState.logicalDevice, vkState.textureImage[i], null);
+        vk.vkFreeMemory(vkState.logicalDevice, vkState.textureImageMemory[i], null);
+    }
 
     vk.vkDestroyDescriptorPool(vkState.logicalDevice, vkState.descriptorPool, null);
     vk.vkDestroyDescriptorSetLayout(vkState.logicalDevice, vkState.descriptorSetLayout, null);

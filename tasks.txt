@@ -1,7 +1,9 @@
 tasks:
+- on cmdDraw vertex count is given. So my whole fill up stuff is not required?
 - paint more different entities
     - read up a bit more about how to. But maybe just try myself some things.
     - add trees, buildings
+        - how to add to data
 - making map chunks, infinite world
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff

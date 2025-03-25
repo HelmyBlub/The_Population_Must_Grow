@@ -57,7 +57,7 @@ pub fn main() !void {
 
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    for (0..10) |_| {
+    for (0..10_000) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
 
@@ -69,7 +69,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .gameTimeMs = 0,
         .gameEnd = false,
         .vkState = .{},
-        .fpsLimiter = true,
+        .fpsLimiter = false,
         .camera = .{
             .position = .{ .x = 0, .y = 0 },
             .zoom = 1,
