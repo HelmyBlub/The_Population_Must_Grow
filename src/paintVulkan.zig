@@ -76,7 +76,7 @@ const SwapChainSupportDetails = struct {
 
 const Vertex = struct {
     pos: [2]f32,
-    imageIndex: u32,
+    imageIndex: u8,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -96,7 +96,7 @@ const Vertex = struct {
         attributeDescriptions[0].offset = @offsetOf(Vertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk.VK_FORMAT_R32_UINT;
+        attributeDescriptions[1].format = vk.VK_FORMAT_R8_UINT;
         attributeDescriptions[1].offset = @offsetOf(Vertex, "imageIndex");
         return attributeDescriptions;
     }
