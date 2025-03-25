@@ -150,13 +150,6 @@ pub fn setupVerticesForCitizens(citizens: *std.ArrayList(main.Citizen), vkState:
     for (citizens.items, 0..) |*citizen, i| {
         vertices[i] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .imageIndex = @intCast(i % IMAGE_DATA.len) };
     }
-
-    if (citizens.items.len < vertices.len) {
-        // no citizens, move data outside so it is not painted
-        for (citizens.items.len..vertices.len) |i| {
-            vertices[i] = .{ .pos = .{ -10, -10 }, .imageIndex = 0 };
-        }
-    }
 }
 
 fn initVulkan(state: *main.ChatSimState) !void {
@@ -966,7 +959,7 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     _ = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
 
     _ = vk.vkResetCommandBuffer(vkState.command_buffer[vkState.currentFrame], 0);
-    try recordCommandBuffer(vkState.command_buffer[vkState.currentFrame], imageIndex, vkState);
+    try recordCommandBuffer(vkState.command_buffer[vkState.currentFrame], imageIndex, state);
 
     var submitInfo = vk.VkSubmitInfo{
         .sType = vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -1015,7 +1008,8 @@ fn createSyncObjects(vkState: *Vk_State) !void {
     }
 }
 
-fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, vkState: *Vk_State) !void {
+fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state: *main.ChatSimState) !void {
+    const vkState = &state.vkState;
     var beginInfo = vk.VkCommandBufferBeginInfo{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     };
@@ -1062,7 +1056,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, vkSta
         null,
     );
 
-    vk.vkCmdDraw(commandBuffer, @intCast(vertices.len), 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.citizens.items.len), 1, 0, 0);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }

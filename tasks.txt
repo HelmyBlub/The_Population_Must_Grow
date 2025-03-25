@@ -1,6 +1,5 @@
 tasks:
 - on cmdDraw vertex count is given. So my whole fill up stuff is not required?
-- check vulkan validation layer errors
 
 - should start with some game logic
     - game start one home and one citizen, which is me
