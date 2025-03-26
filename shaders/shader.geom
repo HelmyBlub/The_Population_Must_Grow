@@ -3,8 +3,9 @@
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-layout(location = 0) in uint inSpriteIndex[];
-layout(location = 1) in vec2 scale[];
+layout(location = 0) in vec2 scale[];
+layout(location = 1) in uint inSpriteIndex[];
+layout(location = 2) in uint inSize[];
 
 layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out uint spriteIndex;
@@ -12,7 +13,7 @@ layout(location = 1) out uint spriteIndex;
 void main(void)
 {	
     vec4 center = gl_in[0].gl_Position;
-    float size = 10;
+    float size = inSize[0] / 2;
     float width = (size * scale[0].x) / center[3];
     float height = (size * scale[0].y) / center[3];
     center[0] = center[0] / center[3];

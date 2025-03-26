@@ -11,6 +11,7 @@ const sdl = @cImport({
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
     chunks: std.StringHashMap(MapChunk),
+    currentBuildingType: u8 = BUILDING_TYPE_HOUSE,
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
@@ -21,12 +22,18 @@ pub const ChatSimState: type = struct {
     camera: Camera,
 };
 
+pub const BUILDING_TYPE_HOUSE = 0;
+pub const BUILDING_TYPE_TREE_FARM = 1;
+
 pub const MapTree = struct {
     position: Position,
     citizenOnTheWay: bool = false,
+    ///  values from 0 to 1
+    grow: f32,
 };
 
 pub const Building = struct {
+    type: u8,
     position: Position,
     inConstruction: bool = true,
 };
@@ -106,9 +113,9 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .buildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
     };
-    try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false });
-    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 0 } });
-    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 20 } });
+    try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
+    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 0 }, .grow = 1 });
+    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 20 }, .grow = 1 });
 
     try chunks.put("0_0", mapChunk);
     for (0..1) |_| {
@@ -176,6 +183,15 @@ fn runGame(allocator: std.mem.Allocator) !void {
 fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
     try Citizen.citizensMove(state);
+
+    //trees
+    const chunk = state.chunks.getPtr("0_0").?;
+    for (chunk.trees.items) |*tree| {
+        if (tree.grow < 1) {
+            tree.grow += 1.0 / 60.0 / 10.0;
+            if (tree.grow > 1) tree.grow = 1;
+        }
+    }
 }
 
 fn destroyGameState(state: *ChatSimState) void {

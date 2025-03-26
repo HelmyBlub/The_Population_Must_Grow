@@ -80,6 +80,7 @@ const SwapChainSupportDetails = struct {
 const Vertex = struct {
     pos: [2]f32,
     imageIndex: u8,
+    size: u8,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -91,8 +92,8 @@ const Vertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
+    fn getAttributeDescriptions() [3]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [3]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
@@ -101,6 +102,10 @@ const Vertex = struct {
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = vk.VK_FORMAT_R8_UINT;
         attributeDescriptions[1].offset = @offsetOf(Vertex, "imageIndex");
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = vk.VK_FORMAT_R8_UINT;
+        attributeDescriptions[2].offset = @offsetOf(Vertex, "size");
         return attributeDescriptions;
     }
 };
@@ -109,11 +114,20 @@ const ImageData = struct {
     path: []const u8,
 };
 
+pub const IMAGE_DOG = 0;
+pub const IMAGE_TREE = 1;
+pub const IMAGE_HOUSE = 2;
+pub const IMAGE_WHITE_RECTANGLE = 3;
+pub const IMAGE_GREEN_RECTANGLE = 4;
+pub const IMAGE_TREE_FARM = 5;
+
 const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/dog.png" },
     .{ .path = "images/tree.png" },
     .{ .path = "images/house.png" },
     .{ .path = "images/whiteRectangle.png" },
+    .{ .path = "images/greenRectangle.png" },
+    .{ .path = "images/treeFarm.png" },
 };
 
 var vertices: []Vertex = undefined;
@@ -159,17 +173,23 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
 
     var index: u32 = 0;
     for (state.citizens.items) |*citizen| {
-        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = 0 };
+        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = IMAGE_DOG, .size = 20 };
         index += 1;
     }
     if (state.chunks.get("0_0")) |chunk| {
         for (chunk.trees.items) |*tree| {
-            vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = 1 };
+            const size: u8 = @intFromFloat(20.0 * tree.grow);
+            vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = IMAGE_TREE, .size = size };
             index += 1;
         }
         for (chunk.buildings.items) |*building| {
-            const imageIndex: u8 = if (building.inConstruction) 3 else 2;
-            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex };
+            var imageIndex: u8 = 0;
+            if (building.type == main.BUILDING_TYPE_HOUSE) {
+                imageIndex = if (building.inConstruction) IMAGE_WHITE_RECTANGLE else IMAGE_HOUSE;
+            } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
+                imageIndex = if (building.inConstruction) IMAGE_GREEN_RECTANGLE else IMAGE_TREE_FARM;
+            }
+            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = 20 };
             index += 1;
         }
     }
@@ -948,6 +968,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 citizen.buildingIndex = chunk.buildings.items.len;
                 const newBuilding: main.Building = .{
                     .position = position,
+                    .type = state.currentBuildingType,
                 };
                 try chunk.buildings.append(newBuilding);
                 try state.chunks.put("0_0", chunk);
@@ -962,6 +983,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.camera.position.y -= 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
                 state.camera.position.y += 100;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
+                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
+                state.currentBuildingType = main.BUILDING_TYPE_TREE_FARM;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
