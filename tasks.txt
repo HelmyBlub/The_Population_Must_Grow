@@ -1,13 +1,27 @@
 tasks:
-- should start with some game logic
-    - game start one home and one citizen and one tree
-        - game needs houses, citizens and trees
-        - need to be painted
-        - citizen without purpose just runs around randomly
-    - place new home to build
-        - citizen goes to cut tree to get wood to build new home
-            - always one tree, which respawns
-        - new home build. New citizens joins
+- what next?
+    - select between two buildings: house and treefarm 
+        - house -> more citizens
+        - treefarm -> plants trees and cuts them down for wood
+            - building select just by pressing key 1 or 2
+            - cut down tree grows back slowly
+            - tree only cut down when fully grown
+            - when building placed, search free citizen based on distance to building
+                - citizen then selects tree based on distance to him
+    - make UI
+        - rectangles to select which building to place
+        - mass build option
+            - click to drag rectangle for building in entire selected area
+        - citizen counter
+    - change:
+        - problem: unclear why i can not plant more buildings
+            - currently based on free citizens
+            - change to no limit, but i have to remember which one need to be build
+
+    - fix zig tests?
+        - maybe they doe not fit my requirements?
+            - can i console log or not?
+
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff
 - get "zig build test" working

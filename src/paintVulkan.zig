@@ -62,6 +62,8 @@ pub const Vk_State = struct {
     entityPaintCount: u32 = 0,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
+    var ZOOM_1_WIDTH: f32 = 1600;
+    var ZOOM_1_HEIGHT: f32 = 800;
 };
 
 const VkCameraData = struct {
@@ -108,9 +110,10 @@ const ImageData = struct {
 };
 
 const IMAGE_DATA = [_]ImageData{
-    .{ .path = "src/dog.png" },
-    .{ .path = "src/tree.png" },
-    .{ .path = "src/citizenHouse.png" },
+    .{ .path = "images/dog.png" },
+    .{ .path = "images/tree.png" },
+    .{ .path = "images/house.png" },
+    .{ .path = "images/whiteRectangle.png" },
 };
 
 var vertices: []Vertex = undefined;
@@ -119,7 +122,7 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn initVulkanAndWindow(state: *main.ChatSimState) !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
     const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
-    window = try (sdl.SDL_CreateWindow("ChatSim", 1600, 800, flags) orelse error.createWindow);
+    window = try (sdl.SDL_CreateWindow("ChatSim", @intFromFloat(Vk_State.ZOOM_1_WIDTH), @intFromFloat(Vk_State.ZOOM_1_HEIGHT), flags) orelse error.createWindow);
 
     try initVulkan(state);
     _ = sdl.SDL_ShowWindow(window);
@@ -154,19 +157,19 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         try createVertexBuffer(vkState, entityPaintCount);
     }
 
-    const divider: f32 = 200.0;
     var index: u32 = 0;
     for (state.citizens.items) |*citizen| {
-        vertices[index] = .{ .pos = .{ citizen.position.x / divider, citizen.position.y / divider }, .imageIndex = 0 };
+        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = 0 };
         index += 1;
     }
     if (state.chunks.get("0_0")) |chunk| {
         for (chunk.trees.items) |*tree| {
-            vertices[index] = .{ .pos = .{ tree.position.x / divider, tree.position.y / divider }, .imageIndex = 1 };
+            vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = 1 };
             index += 1;
         }
         for (chunk.buildings.items) |*building| {
-            vertices[index] = .{ .pos = .{ building.position.x / divider, building.position.y / divider }, .imageIndex = 2 };
+            const imageIndex: u8 = if (building.inConstruction) 3 else 2;
+            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex };
             index += 1;
         }
     }
@@ -904,12 +907,12 @@ pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
 fn updateUniformBuffer(state: *main.ChatSimState) !void {
     var ubo: VkCameraData = .{
         .transform = .{
-            .{ 1.0, 0, 0.0, 0.0 },
-            .{ 0, 1.0, 0.0, 0.0 },
+            .{ 2 / Vk_State.ZOOM_1_WIDTH, 0, 0.0, 0.0 },
+            .{ 0, 2 / Vk_State.ZOOM_1_HEIGHT, 0.0, 0.0 },
             .{ 0.0, 0.0, 1, 0.0 },
-            .{ 0.0, 0.0, 0.0, state.camera.zoom },
+            .{ 0.0, 0.0, 0.0, 1 / state.camera.zoom },
         },
-        .translate = .{ state.camera.position.x, state.camera.position.y },
+        .translate = .{ -state.camera.position.x, -state.camera.position.y },
     };
     if (state.vkState.uniformBuffersMapped[state.vkState.currentFrame]) |data| {
         @memcpy(
@@ -925,7 +928,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             // state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
-            if (event.wheel.y < 0) {
+            if (event.wheel.y > 0) {
                 state.camera.zoom *= 1.2;
                 if (state.camera.zoom > 10) {
                     state.camera.zoom = 10;
@@ -937,7 +940,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y));
+            const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera));
             if (main.mapIsTilePositionFree(position, state) == false) return;
             var chunk = state.chunks.get("0_0").?;
             for (state.citizens.items) |*citizen| {
@@ -952,13 +955,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
-                state.camera.position.x += 0.2;
+                state.camera.position.x -= 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
-                state.camera.position.x -= 0.2;
+                state.camera.position.x += 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_UP) {
-                state.camera.position.y += 0.2;
+                state.camera.position.y -= 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
-                state.camera.position.y -= 0.2;
+                state.camera.position.y += 100;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
@@ -967,14 +970,16 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn mousePositionToGamePoisition(x: f32, y: f32) main.Position {
+pub fn mousePositionToGamePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
     var width: u32 = 0;
     var height: u32 = 0;
     getWindowSize(&width, &height);
+    const widthFloat = @as(f32, @floatFromInt(width));
+    const heightFloat = @as(f32, @floatFromInt(height));
 
     return main.Position{
-        .x = x / @as(f32, @floatFromInt(width)) * 400.0 - 200.0,
-        .y = y / @as(f32, @floatFromInt(height)) * 400.0 - 200.0,
+        .x = (x - widthFloat / 2) / camera.zoom + camera.position.x,
+        .y = (y - heightFloat / 2) / camera.zoom + camera.position.y,
     };
 }
 
