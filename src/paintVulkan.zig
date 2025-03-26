@@ -173,12 +173,12 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
 
     var index: u32 = 0;
     for (state.citizens.items) |*citizen| {
-        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = IMAGE_DOG, .size = 20 };
+        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = IMAGE_DOG, .size = main.ChatSimState.TILE_SIZE };
         index += 1;
     }
     if (state.chunks.get("0_0")) |chunk| {
         for (chunk.trees.items) |*tree| {
-            const size: u8 = @intFromFloat(20.0 * tree.grow);
+            const size: u8 = @intFromFloat(main.ChatSimState.TILE_SIZE * tree.grow);
             vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = IMAGE_TREE, .size = size };
             index += 1;
         }
@@ -189,7 +189,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
                 imageIndex = if (building.inConstruction) IMAGE_GREEN_RECTANGLE else IMAGE_TREE_FARM;
             }
-            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = 20 };
+            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = main.ChatSimState.TILE_SIZE };
             index += 1;
         }
     }
@@ -959,20 +959,54 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     state.camera.zoom = 0.1;
                 }
             }
-        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera));
-            if (main.mapIsTilePositionFree(position, state) == false) return;
-            var chunk = state.chunks.get("0_0").?;
-            for (state.citizens.items) |*citizen| {
-                if (citizen.buildingIndex != null) continue;
-                citizen.buildingIndex = chunk.buildings.items.len;
-                const newBuilding: main.Building = .{
-                    .position = position,
-                    .type = state.currentBuildingType,
+        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
+            if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
+                const mouseUp = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
+                const topLeft: main.Position = .{
+                    .x = @min(mouseUp.x, state.mouseDown.?.x),
+                    .y = @min(mouseUp.y, state.mouseDown.?.y),
                 };
-                try chunk.buildings.append(newBuilding);
-                try state.chunks.put("0_0", chunk);
-                break;
+                const tileSizeFloat: f32 = @floatFromInt(main.ChatSimState.TILE_SIZE);
+                const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
+                const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
+                var chunk = state.chunks.get("0_0").?;
+                for (0..width) |x| {
+                    for (0..height) |y| {
+                        const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
+                        if (main.mapIsTilePositionFree(position, state) == false) continue;
+                        for (state.citizens.items) |*citizen| {
+                            if (citizen.buildingIndex != null) continue;
+                            citizen.buildingIndex = chunk.buildings.items.len;
+                            const newBuilding: main.Building = .{
+                                .position = position,
+                                .type = state.currentBuildingType,
+                            };
+                            try chunk.buildings.append(newBuilding);
+                            try state.chunks.put("0_0", chunk);
+                            break;
+                        }
+                    }
+                }
+            }
+            state.mouseDown = null;
+        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            if (state.buildMode == main.BUILDING_MODE_SINGLE) {
+                const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera));
+                if (main.mapIsTilePositionFree(position, state) == false) return;
+                var chunk = state.chunks.get("0_0").?;
+                for (state.citizens.items) |*citizen| {
+                    if (citizen.buildingIndex != null) continue;
+                    citizen.buildingIndex = chunk.buildings.items.len;
+                    const newBuilding: main.Building = .{
+                        .position = position,
+                        .type = state.currentBuildingType,
+                    };
+                    try chunk.buildings.append(newBuilding);
+                    try state.chunks.put("0_0", chunk);
+                    break;
+                }
+            } else if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
+                state.mouseDown = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
@@ -985,8 +1019,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.camera.position.y += 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
                 state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
+                state.buildMode = main.BUILDING_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildingType = main.BUILDING_TYPE_TREE_FARM;
+                state.buildMode = main.BUILDING_MODE_SINGLE;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
+                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
+                state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});

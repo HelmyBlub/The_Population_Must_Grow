@@ -1,27 +1,17 @@
 tasks:
-- what next?
-    - select between two buildings: house and treefarm 
-        - house -> more citizens
-        - treefarm -> plants trees and cuts them down for wood
-            - building select just by pressing key 1 or 2
-            - placing down tree farm spawn trees in a radius
-            - cut down tree grows back slowly
-            - tree only cut down when fully grown
-            - when building placed, search free citizen based on distance to building
-                - citizen then selects tree based on distance to him
-    - make UI
-        - rectangles to select which building to place
-        - mass build option
-            - click to drag rectangle for building in entire selected area
-        - citizen counter
-    - change:
-        - problem: unclear why i can not plant more buildings
-            - currently based on free citizens
-            - change to no limit, but i have to remember which one need to be build
+- mass build option with key 3
+    - click to drag rectangle for building in entire selected area
+- make UI
+    - rectangles to select which building to place
+    - citizen counter
+- change:
+    - problem: unclear why i can not plant more buildings
+        - currently based on free citizens
+        - change to no limit, but i have to remember which one need to be build
 
-    - fix zig tests?
-        - maybe they doe not fit my requirements?
-            - can i console log or not?
+- fix zig tests?
+    - maybe they doe not fit my requirements?
+        - can i console log or not?
 
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff

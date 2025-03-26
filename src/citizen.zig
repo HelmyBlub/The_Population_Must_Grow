@@ -56,7 +56,6 @@ pub const Citizen: type = struct {
                     if (building.type == main.BUILDING_TYPE_HOUSE) {
                         return true;
                     } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
-                        //try to place around the house
                         for (0..5) |i| {
                             for (0..5) |j| {
                                 const position: main.Position = .{
@@ -85,9 +84,11 @@ pub const Citizen: type = struct {
                 return false;
             }
         }
-        const direction: f32 = main.calculateDirection(citizen.position, citizen.moveTo.?);
-        citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
-        citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
+        if (citizen.moveTo != null) {
+            const direction: f32 = main.calculateDirection(citizen.position, citizen.moveTo.?);
+            citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
+            citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
+        }
         return false;
     }
 

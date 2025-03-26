@@ -12,6 +12,8 @@ pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
     chunks: std.StringHashMap(MapChunk),
     currentBuildingType: u8 = BUILDING_TYPE_HOUSE,
+    buildMode: u8 = BUILDING_MODE_SINGLE,
+    mouseDown: ?Position = null,
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
@@ -20,8 +22,11 @@ pub const ChatSimState: type = struct {
     vkState: Paint.Vk_State,
     fpsLimiter: bool,
     camera: Camera,
+    pub const TILE_SIZE: u16 = 20;
 };
 
+pub const BUILDING_MODE_SINGLE = 0;
+pub const BUILDING_MODE_DRAG_RECTANGLE = 1;
 pub const BUILDING_TYPE_HOUSE = 0;
 pub const BUILDING_TYPE_TREE_FARM = 1;
 
@@ -80,20 +85,20 @@ pub fn main() !void {
 
 pub fn mapPositionToTilePosition(pos: Position) Position {
     return Position{
-        .x = @round(pos.x / 20) * 20,
-        .y = @round(pos.y / 20) * 20,
+        .x = @round(pos.x / ChatSimState.TILE_SIZE) * ChatSimState.TILE_SIZE,
+        .y = @round(pos.y / ChatSimState.TILE_SIZE) * ChatSimState.TILE_SIZE,
     };
 }
 
 pub fn mapIsTilePositionFree(pos: Position, state: *ChatSimState) bool {
     const chunk = state.chunks.get("0_0").?;
     for (chunk.buildings.items) |building| {
-        if (calculateDistance(pos, building.position) < 20) {
+        if (calculateDistance(pos, building.position) < ChatSimState.TILE_SIZE) {
             return false;
         }
     }
     for (chunk.trees.items) |tree| {
-        if (calculateDistance(pos, tree.position) < 20) {
+        if (calculateDistance(pos, tree.position) < ChatSimState.TILE_SIZE) {
             return false;
         }
     }
@@ -114,8 +119,8 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         .trees = std.ArrayList(MapTree).init(allocator),
     };
     try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
-    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 0 }, .grow = 1 });
-    try mapChunk.trees.append(.{ .position = .{ .x = 20, .y = 20 }, .grow = 1 });
+    try mapChunk.trees.append(.{ .position = .{ .x = ChatSimState.TILE_SIZE, .y = 0 }, .grow = 1 });
+    try mapChunk.trees.append(.{ .position = .{ .x = ChatSimState.TILE_SIZE, .y = ChatSimState.TILE_SIZE }, .grow = 1 });
 
     try chunks.put("0_0", mapChunk);
     for (0..1) |_| {
