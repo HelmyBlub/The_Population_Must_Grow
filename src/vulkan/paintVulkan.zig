@@ -1,11 +1,11 @@
 const std = @import("std");
-const imageZig = @import("image.zig");
-const windowSdlZig = @import("windowSdl.zig");
+const imageZig = @import("../image.zig");
+const windowSdlZig = @import("../windowSdl.zig");
 const vk = @cImport({
     @cDefine("VK_USE_PLATFORM_WIN32_KHR", "1");
     @cInclude("vulkan.h");
 });
-const main = @import("main.zig");
+const main = @import("../main.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -1181,7 +1181,7 @@ fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State) !vk.VkPhysica
 
     for (devices) |device| {
         if (try isDeviceSuitable(device, vkState)) {
-            // vkState.msaaSamples = getMaxUsableSampleCount(device);
+            vkState.msaaSamples = getMaxUsableSampleCount(device);
             return device;
         }
     }

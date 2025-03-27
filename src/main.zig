@@ -1,7 +1,7 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
 pub const Citizen = @import("citizen.zig").Citizen;
-const paintVulkanZig = @import("paintVulkan.zig");
+const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");

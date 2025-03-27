@@ -1,6 +1,7 @@
 tasks:
-- time to clean up the code more?
 - make UI
+    - selection rectangle to learn vulkan line/polygon stuff
+        - 
     - text
         - display fps
         - display citizen counter
