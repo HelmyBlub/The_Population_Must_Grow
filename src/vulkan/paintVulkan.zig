@@ -577,7 +577,7 @@ fn createInstance(vkState: *Vk_State) !void {
         .applicationVersion = vk.VK_MAKE_VERSION(1, 0, 0),
         .pEngineName = "No Engine",
         .engineVersion = vk.VK_MAKE_VERSION(1, 0, 0),
-        .apiVersion = vk.VK_API_VERSION_1_0,
+        .apiVersion = vk.VK_API_VERSION_1_2,
     };
     var instance_create_info = vk.VkInstanceCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -1149,11 +1149,22 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
         .queueCount = 1,
         .pQueuePriorities = &[_]f32{1.0},
     };
+    var vk12Features = vk.VkPhysicalDeviceVulkan12Features{
+        .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .shaderSampledImageArrayNonUniformIndexing = vk.VK_TRUE,
+        .runtimeDescriptorArray = vk.VK_TRUE,
+    };
+    var deviceFeatures: vk.VkPhysicalDeviceFeatures2 = .{
+        .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &vk12Features,
+    };
     var device_features = vk.VkPhysicalDeviceFeatures{
         .samplerAnisotropy = vk.VK_TRUE,
+        .geometryShader = vk.VK_TRUE,
     };
     var device_create_info = vk.VkDeviceCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &deviceFeatures,
         .pQueueCreateInfos = &queue_create_info,
         .queueCreateInfoCount = 1,
         .pEnabledFeatures = &device_features,
@@ -1194,7 +1205,7 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State) !bool {
     var supportedFeatures: vk.VkPhysicalDeviceFeatures = undefined;
     vk.vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-    return indices.isComplete() and supportedFeatures.samplerAnisotropy != 0;
+    return indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and supportedFeatures.geometryShader != 0;
 }
 
 fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State) !QueueFamilyIndices {
