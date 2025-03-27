@@ -1,4 +1,6 @@
 tasks:
+- zig test:
+    - use test allocator and fix all memory leaks and other stuff
 - make UI
     - selection rectangle to learn vulkan line/polygon stuff
         - 

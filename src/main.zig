@@ -59,13 +59,12 @@ pub const Position: type = struct {
     y: f32,
 };
 
-const SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
+const SIMULATION_MICRO_SECOND_DURATION: ?i64 = 10_000_000;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
     std.debug.print("just a test message: \n", .{});
     try runGame(test_allocator);
-    try std.testing.expect(2 + 7 == 8);
 }
 
 test "test measure performance" {
@@ -174,7 +173,9 @@ fn runGame(allocator: std.mem.Allocator) !void {
             try tick(&state);
             ticksRequired -= 1;
             const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
-            if (SIMULATION_MICRO_SECOND_DURATION != null and totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+            if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
+                if (totalPassedTime > duration) state.gameEnd = true;
+            }
             if (state.gameEnd) break :mainLoop;
         }
         try paintVulkanZig.setupVerticesForCitizens(&state);
@@ -187,7 +188,9 @@ fn runGame(allocator: std.mem.Allocator) !void {
             std.time.sleep(sleepTime * 1_000);
         }
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
-        if (SIMULATION_MICRO_SECOND_DURATION != null and totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
+        if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
+            if (totalPassedTime > duration) state.gameEnd = true;
+        }
     }
     const totalLoopTime: u64 = @as(u64, @intCast((std.time.microTimestamp() - totalStartTime)));
     const fps: u64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
@@ -211,8 +214,14 @@ fn tick(state: *ChatSimState) !void {
 }
 
 fn destroyGameState(state: *ChatSimState) void {
-    state.citizens.deinit();
     try destoryPaintVulkanAndWindowSdl(&state.vkState);
+    state.citizens.deinit();
+    var iterator = state.chunks.valueIterator();
+    while (iterator.next()) |chunk| {
+        chunk.buildings.deinit();
+        chunk.trees.deinit();
+    }
+    state.chunks.deinit();
 }
 
 fn printOutSomeData(state: ChatSimState) void {
