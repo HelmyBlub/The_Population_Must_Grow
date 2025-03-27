@@ -252,6 +252,7 @@ fn createTextureSampler(vkState: *Vk_State) !void {
         .maxLod = vk.VK_LOD_CLAMP_NONE,
     };
     if (vk.vkCreateSampler(vkState.logicalDevice, &samplerInfo, null, &vkState.textureSampler) != vk.VK_SUCCESS) return error.createSampler;
+    std.debug.print("createTextureSampler finished\n", .{});
 }
 
 fn createTextureImageView(vkState: *Vk_State) !void {
@@ -259,6 +260,7 @@ fn createTextureImageView(vkState: *Vk_State) !void {
     for (0..imageZig.IMAGE_DATA.len) |i| {
         vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels[i], vkState);
     }
+    std.debug.print("createTextureImageView finished\n", .{});
 }
 
 fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, vkState: *Vk_State) !vk.VkImageView {
@@ -423,6 +425,7 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
         .maxSets = Vk_State.MAX_FRAMES_IN_FLIGHT,
     };
     if (vk.vkCreateDescriptorPool(vkState.logicalDevice, &poolInfo, null, &vkState.descriptorPool) != vk.VK_SUCCESS) return error.descriptionPool;
+    std.debug.print("createDescriptorPool finished\n", .{});
 }
 
 fn createUniformBuffers(vkState: *Vk_State) !void {
@@ -443,6 +446,7 @@ fn createUniformBuffers(vkState: *Vk_State) !void {
         );
         if (vk.vkMapMemory(vkState.logicalDevice, vkState.uniformBuffersMemory[i], 0, bufferSize, 0, &vkState.uniformBuffersMapped[i]) != vk.VK_SUCCESS) return error.uniformMapMemory;
     }
+    std.debug.print("createUniformBuffers finished\n", .{});
 }
 
 fn createDescriptorSetLayout(vkState: *Vk_State) !void {
@@ -515,6 +519,7 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
         &vkState.vertexBufferMemory,
         vkState,
     );
+    std.debug.print("createVertexBuffer finished\n", .{});
 }
 
 pub fn destroyPaintVulkan(vkState: *Vk_State) !void {

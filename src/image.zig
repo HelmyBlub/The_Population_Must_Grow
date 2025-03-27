@@ -91,6 +91,7 @@ pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State) !void {
             vkState,
         );
     }
+    std.debug.print("createVulkanTextureImage finished\n", .{});
 }
 
 fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *vulkan.Vk_State) !void {
@@ -123,7 +124,18 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
         barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = vk.VK_ACCESS_TRANSFER_READ_BIT;
 
-        vk.vkCmdPipelineBarrier(commandBuffer, vk.VK_PIPELINE_STAGE_TRANSFER_BIT, vk.VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier);
+        vk.vkCmdPipelineBarrier(
+            commandBuffer,
+            vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
+            vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0,
+            null,
+            0,
+            null,
+            1,
+            &barrier,
+        );
 
         const blit: vk.VkImageBlit = .{
             .srcOffsets = .{
@@ -269,8 +281,8 @@ fn transitionVulkanImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, n
 
     vk.vkCmdPipelineBarrier(
         commandBuffer,
-        0,
-        0,
+        sourceStage,
+        destinationStage,
         0,
         0,
         null,
