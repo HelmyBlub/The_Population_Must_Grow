@@ -1,14 +1,11 @@
 tasks:
-- mass build option with key 3
-    - click to drag rectangle for building in entire selected area
-        - somehow game crashed. Last feature was mass building
-            Segmentation fault at address 0x18cd70a0000 D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:66:63: 0x7ff7a72658b4 in citizenMove (zig.exe.obj)
-                            if (main.mapIsTilePositionFree(position, state) == false) continue;
-                                                          ^
-                                                    unsure why here?
-- use less ".?" in zig and better use this zig if construct
 - time to clean up the code more?
 - make UI
+    - text
+        - display fps
+        - display citizen counter
+        - create my own font? with images or polygons?
+            - what options does vulkan have here?
     - rectangles to select which building to place
     - citizen counter
 - change:

@@ -1,17 +1,12 @@
 const std = @import("std");
+const imageZig = @import("image.zig");
+const windowSdlZig = @import("windowSdl.zig");
 const vk = @cImport({
     @cDefine("VK_USE_PLATFORM_WIN32_KHR", "1");
     @cInclude("vulkan.h");
 });
-const zigimg = @import("zigimg");
-const sdl = @cImport({
-    @cInclude("SDL3/SDL.h");
-    @cInclude("SDL3/SDL_revision.h");
-    @cInclude("SDL3/SDL_vulkan.h");
-});
 const main = @import("main.zig");
 
-var window: *sdl.SDL_Window = undefined;
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
     instance: vk.VkInstance = undefined,
@@ -60,10 +55,9 @@ pub const Vk_State = struct {
     colorImageMemory: vk.VkDeviceMemory = undefined,
     colorImageView: vk.VkImageView = undefined,
     entityPaintCount: u32 = 0,
+    vertices: []Vertex = undefined,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
-    var ZOOM_1_WIDTH: f32 = 1600;
-    var ZOOM_1_HEIGHT: f32 = 800;
 };
 
 const VkCameraData = struct {
@@ -110,44 +104,7 @@ const Vertex = struct {
     }
 };
 
-const ImageData = struct {
-    path: []const u8,
-};
-
-pub const IMAGE_DOG = 0;
-pub const IMAGE_TREE = 1;
-pub const IMAGE_HOUSE = 2;
-pub const IMAGE_WHITE_RECTANGLE = 3;
-pub const IMAGE_GREEN_RECTANGLE = 4;
-pub const IMAGE_TREE_FARM = 5;
-
-const IMAGE_DATA = [_]ImageData{
-    .{ .path = "images/dog.png" },
-    .{ .path = "images/tree.png" },
-    .{ .path = "images/house.png" },
-    .{ .path = "images/whiteRectangle.png" },
-    .{ .path = "images/greenRectangle.png" },
-    .{ .path = "images/treeFarm.png" },
-};
-
-var vertices: []Vertex = undefined;
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
-
-pub fn initVulkanAndWindow(state: *main.ChatSimState) !void {
-    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
-    const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
-    window = try (sdl.SDL_CreateWindow("ChatSim", @intFromFloat(Vk_State.ZOOM_1_WIDTH), @intFromFloat(Vk_State.ZOOM_1_HEIGHT), flags) orelse error.createWindow);
-
-    try initVulkan(state);
-    _ = sdl.SDL_ShowWindow(window);
-}
-
-pub fn destoryVulkanAndWindow(vkState: *Vk_State) !void {
-    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
-    try destroy(vkState);
-    sdl.SDL_DestroyWindow(window);
-    sdl.SDL_Quit();
-}
 
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
@@ -173,29 +130,29 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
 
     var index: u32 = 0;
     for (state.citizens.items) |*citizen| {
-        vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = IMAGE_DOG, .size = main.ChatSimState.TILE_SIZE };
+        vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = main.ChatSimState.TILE_SIZE };
         index += 1;
     }
     if (state.chunks.get("0_0")) |chunk| {
         for (chunk.trees.items) |*tree| {
             const size: u8 = @intFromFloat(main.ChatSimState.TILE_SIZE * tree.grow);
-            vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = IMAGE_TREE, .size = size };
+            vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
             index += 1;
         }
         for (chunk.buildings.items) |*building| {
             var imageIndex: u8 = 0;
             if (building.type == main.BUILDING_TYPE_HOUSE) {
-                imageIndex = if (building.inConstruction) IMAGE_WHITE_RECTANGLE else IMAGE_HOUSE;
+                imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
             } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
-                imageIndex = if (building.inConstruction) IMAGE_GREEN_RECTANGLE else IMAGE_TREE_FARM;
+                imageIndex = if (building.inConstruction) imageZig.IMAGE_GREEN_RECTANGLE else imageZig.IMAGE_TREE_FARM;
             }
-            vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = main.ChatSimState.TILE_SIZE };
+            vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = main.ChatSimState.TILE_SIZE };
             index += 1;
         }
     }
 }
 
-fn initVulkan(state: *main.ChatSimState) !void {
+pub fn initVulkan(state: *main.ChatSimState) !void {
     const vkState: *Vk_State = &state.vkState;
     vkState.vertexBufferCleanUp = try std.heap.page_allocator.alloc(?vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
     vkState.vertexBufferMemoryCleanUp = try std.heap.page_allocator.alloc(?vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
@@ -205,13 +162,7 @@ fn initVulkan(state: *main.ChatSimState) !void {
     }
 
     try createInstance(vkState);
-
-    //surface
-    var tempSurface: sdl.VkSurfaceKHR = undefined;
-    const tempInstance: sdl.VkInstance = @ptrCast(vkState.instance);
-    _ = sdl.SDL_Vulkan_CreateSurface(window, tempInstance, null, &tempSurface);
-    vkState.surface = @ptrCast(tempSurface);
-
+    vkState.surface = @ptrCast(windowSdlZig.getSurfaceForVulkan(@ptrCast(vkState.instance)));
     vkState.physical_device = try pickPhysicalDevice(vkState.instance, vkState);
     try createLogicalDevice(vkState.physical_device, vkState);
     try createSwapChain(vkState);
@@ -222,7 +173,7 @@ fn initVulkan(state: *main.ChatSimState) !void {
     try createColorResources(vkState);
     try createFramebuffers(vkState);
     try createCommandPool(vkState);
-    try createTextureImage(vkState);
+    try imageZig.createVulkanTextureImage(vkState);
     try createTextureImageView(vkState);
     try createTextureSampler(vkState);
     try createVertexBuffer(vkState, state.citizens.items.len);
@@ -304,8 +255,8 @@ fn createTextureSampler(vkState: *Vk_State) !void {
 }
 
 fn createTextureImageView(vkState: *Vk_State) !void {
-    vkState.textureImageView = try std.heap.page_allocator.alloc(vk.VkImageView, IMAGE_DATA.len);
-    for (0..IMAGE_DATA.len) |i| {
+    vkState.textureImageView = try std.heap.page_allocator.alloc(vk.VkImageView, imageZig.IMAGE_DATA.len);
+    for (0..imageZig.IMAGE_DATA.len) |i| {
         vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels[i], vkState);
     }
 }
@@ -330,263 +281,7 @@ fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, vkSta
     return imageView;
 }
 
-fn generateMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *Vk_State) !void {
-    var formatProperties: vk.VkFormatProperties = undefined;
-    vk.vkGetPhysicalDeviceFormatProperties(vkState.physical_device, imageFormat, &formatProperties);
-
-    if ((formatProperties.optimalTilingFeatures & vk.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) return error.doesNotSupportOptimailTiling;
-
-    const commandBuffer: vk.VkCommandBuffer = try beginSingleTimeCommands(vkState);
-
-    var barrier: vk.VkImageMemoryBarrier = .{
-        .sType = vk.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .image = image,
-        .srcQueueFamilyIndex = vk.VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = vk.VK_QUEUE_FAMILY_IGNORED,
-        .subresourceRange = .{
-            .aspectMask = vk.VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-            .levelCount = 1,
-        },
-    };
-    var mipWidth: i32 = texWidth;
-    var mipHeight: i32 = texHeight;
-
-    for (1..mipLevels) |i| {
-        barrier.subresourceRange.baseMipLevel = @as(u32, @intCast(i)) - 1;
-        barrier.oldLayout = vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = vk.VK_ACCESS_TRANSFER_READ_BIT;
-
-        vk.vkCmdPipelineBarrier(commandBuffer, vk.VK_PIPELINE_STAGE_TRANSFER_BIT, vk.VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier);
-
-        const blit: vk.VkImageBlit = .{
-            .srcOffsets = .{
-                .{ .x = 0, .y = 0, .z = 0 },
-                .{ .x = mipWidth, .y = mipHeight, .z = 1 },
-            },
-            .srcSubresource = .{
-                .aspectMask = vk.VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = @as(u32, @intCast(i)) - 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .dstOffsets = .{
-                .{ .x = 0, .y = 0, .z = 0 },
-                .{ .x = if (mipWidth > 1) @divFloor(mipWidth, 2) else 1, .y = if (mipHeight > 1) @divFloor(mipHeight, 2) else 1, .z = 1 },
-            },
-            .dstSubresource = .{
-                .aspectMask = vk.VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = @as(u32, @intCast(i)),
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-        };
-        vk.vkCmdBlitImage(
-            commandBuffer,
-            image,
-            vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            image,
-            vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &blit,
-            vk.VK_FILTER_LINEAR,
-        );
-        barrier.oldLayout = vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = vk.VK_ACCESS_SHADER_READ_BIT;
-
-        vk.vkCmdPipelineBarrier(
-            commandBuffer,
-            vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
-            vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0,
-            null,
-            0,
-            null,
-            1,
-            &barrier,
-        );
-        if (mipWidth > 1) mipWidth = @divFloor(mipWidth, 2);
-        if (mipHeight > 1) mipHeight = @divFloor(mipHeight, 2);
-    }
-
-    barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-    barrier.oldLayout = vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = vk.VK_ACCESS_SHADER_READ_BIT;
-
-    vk.vkCmdPipelineBarrier(
-        commandBuffer,
-        vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
-        vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0,
-        0,
-        null,
-        0,
-        null,
-        1,
-        &barrier,
-    );
-
-    try endSingleTimeCommands(commandBuffer, vkState);
-}
-
-fn createTextureImage(vkState: *Vk_State) !void {
-    vkState.textureImage = try std.heap.page_allocator.alloc(vk.VkImage, IMAGE_DATA.len);
-    vkState.textureImageMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
-    vkState.mipLevels = try std.heap.page_allocator.alloc(u32, IMAGE_DATA.len);
-
-    for (0..IMAGE_DATA.len) |i| {
-        var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, IMAGE_DATA[i].path);
-        defer image.deinit();
-        try image.convert(.rgba32);
-
-        var stagingBuffer: vk.VkBuffer = undefined;
-        defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
-        var stagingBufferMemory: vk.VkDeviceMemory = undefined;
-        defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
-        try createBuffer(
-            image.imageByteSize(),
-            vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &stagingBuffer,
-            &stagingBufferMemory,
-            vkState,
-        );
-
-        var data: ?*anyopaque = undefined;
-        if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-        @memcpy(
-            @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
-            @as([*]u8, @ptrCast(image.pixels.asBytes())),
-        );
-        vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
-        const imageWidth: u32 = @intCast(image.width);
-        const imageHeight: u32 = @intCast(image.height);
-        const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
-        vkState.mipLevels[i] = @as(u32, @intFromFloat(log2)) + 1;
-        try createImage(
-            imageWidth,
-            imageHeight,
-            vkState.mipLevels[i],
-            vk.VK_SAMPLE_COUNT_1_BIT,
-            vk.VK_FORMAT_R8G8B8A8_SRGB,
-            vk.VK_IMAGE_TILING_OPTIMAL,
-            vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT | vk.VK_IMAGE_USAGE_TRANSFER_DST_BIT | vk.VK_IMAGE_USAGE_SAMPLED_BIT,
-            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            &vkState.textureImage[i],
-            &vkState.textureImageMemory[i],
-            vkState,
-        );
-
-        try transitionImageLayout(
-            vkState.textureImage[i],
-            vk.VK_IMAGE_LAYOUT_UNDEFINED,
-            vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            vkState.mipLevels[i],
-            vkState,
-        );
-        try copyBufferToImage(stagingBuffer, vkState.textureImage[i], imageWidth, imageHeight, vkState);
-        try generateMipmaps(
-            vkState.textureImage[i],
-            vk.VK_FORMAT_R8G8B8A8_SRGB,
-            @intCast(imageWidth),
-            @intCast(imageHeight),
-            vkState.mipLevels[i],
-            vkState,
-        );
-    }
-}
-
-fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height: u32, vkState: *Vk_State) !void {
-    const commandBuffer: vk.VkCommandBuffer = try beginSingleTimeCommands(vkState);
-    const region: vk.VkBufferImageCopy = .{
-        .bufferOffset = 0,
-        .bufferRowLength = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource = .{
-            .aspectMask = vk.VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-        .imageOffset = .{ .x = 0, .y = 0, .z = 0 },
-        .imageExtent = .{ .width = width, .height = height, .depth = 1 },
-    };
-    vk.vkCmdCopyBufferToImage(
-        commandBuffer,
-        buffer,
-        image,
-        vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &region,
-    );
-
-    try endSingleTimeCommands(commandBuffer, vkState);
-}
-
-fn transitionImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, newLayout: vk.VkImageLayout, mipLevels: u32, vkState: *Vk_State) !void {
-    const commandBuffer = try beginSingleTimeCommands(vkState);
-
-    var barrier: vk.VkImageMemoryBarrier = .{
-        .sType = vk.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = vk.VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = vk.VK_QUEUE_FAMILY_IGNORED,
-        .image = image,
-        .subresourceRange = .{
-            .aspectMask = vk.VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = mipLevels,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-        .srcAccessMask = 0,
-        .dstAccessMask = 0,
-    };
-
-    var sourceStage: vk.VkPipelineStageFlags = undefined;
-    var destinationStage: vk.VkPipelineStageFlags = undefined;
-
-    if (oldLayout == vk.VK_IMAGE_LAYOUT_UNDEFINED and newLayout == vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        sourceStage = vk.VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = vk.VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (oldLayout == vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL and newLayout == vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = vk.VK_ACCESS_SHADER_READ_BIT;
-
-        sourceStage = vk.VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else {
-        return error.unsuportetLayoutTransition;
-    }
-
-    vk.vkCmdPipelineBarrier(
-        commandBuffer,
-        0,
-        0,
-        0,
-        0,
-        null,
-        0,
-        null,
-        1,
-        &barrier,
-    );
-    try endSingleTimeCommands(commandBuffer, vkState);
-}
-
-fn beginSingleTimeCommands(vkState: *Vk_State) !vk.VkCommandBuffer {
+pub fn beginSingleTimeCommands(vkState: *Vk_State) !vk.VkCommandBuffer {
     const allocInfo: vk.VkCommandBufferAllocateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .level = vk.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -607,7 +302,7 @@ fn beginSingleTimeCommands(vkState: *Vk_State) !vk.VkCommandBuffer {
     return commandBuffer;
 }
 
-fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_State) !void {
+pub fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_State) !void {
     _ = vk.vkEndCommandBuffer(commandBuffer);
 
     const submitInfo: vk.VkSubmitInfo = .{
@@ -622,7 +317,7 @@ fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_State) 
     vk.vkFreeCommandBuffers(vkState.logicalDevice, vkState.command_pool, 1, &commandBuffer);
 }
 
-fn createImage(width: u32, height: u32, mipLevels: u32, numSamples: vk.VkSampleCountFlagBits, format: vk.VkFormat, tiling: vk.VkImageTiling, usage: vk.VkImageUsageFlags, properties: vk.VkMemoryPropertyFlags, image: *vk.VkImage, imageMemory: *vk.VkDeviceMemory, vkState: *Vk_State) !void {
+pub fn createImage(width: u32, height: u32, mipLevels: u32, numSamples: vk.VkSampleCountFlagBits, format: vk.VkFormat, tiling: vk.VkImageTiling, usage: vk.VkImageUsageFlags, properties: vk.VkMemoryPropertyFlags, image: *vk.VkImage, imageMemory: *vk.VkDeviceMemory, vkState: *Vk_State) !void {
     const imageInfo: vk.VkImageCreateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = vk.VK_IMAGE_TYPE_2D,
@@ -675,8 +370,8 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
             .range = @sizeOf(VkCameraData),
         };
 
-        const imageInfo: []vk.VkDescriptorImageInfo = try std.heap.page_allocator.alloc(vk.VkDescriptorImageInfo, IMAGE_DATA.len);
-        for (0..IMAGE_DATA.len) |j| {
+        const imageInfo: []vk.VkDescriptorImageInfo = try std.heap.page_allocator.alloc(vk.VkDescriptorImageInfo, imageZig.IMAGE_DATA.len);
+        for (0..imageZig.IMAGE_DATA.len) |j| {
             imageInfo[j] = .{
                 .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 .imageView = vkState.textureImageView[j],
@@ -759,7 +454,7 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
     };
     const samplerLayoutBinding: vk.VkDescriptorSetLayoutBinding = .{
         .binding = 1,
-        .descriptorCount = IMAGE_DATA.len,
+        .descriptorCount = imageZig.IMAGE_DATA.len,
         .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .pImmutableSamplers = null,
         .stageFlags = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -788,7 +483,7 @@ fn findMemoryType(typeFilter: u32, properties: vk.VkMemoryPropertyFlags, vkState
     return error.findMemoryType;
 }
 
-fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, properties: vk.VkMemoryPropertyFlags, buffer: *vk.VkBuffer, bufferMemory: *vk.VkDeviceMemory, vkState: *Vk_State) !void {
+pub fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, properties: vk.VkMemoryPropertyFlags, buffer: *vk.VkBuffer, bufferMemory: *vk.VkDeviceMemory, vkState: *Vk_State) !void {
     const bufferInfo: vk.VkBufferCreateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
@@ -811,7 +506,7 @@ fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, properties:
 
 fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
     vkState.vertexBufferSize = entityCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
-    vertices = try std.heap.page_allocator.alloc(Vertex, vkState.vertexBufferSize);
+    vkState.vertices = try std.heap.page_allocator.alloc(Vertex, vkState.vertexBufferSize);
     try createBuffer(
         @sizeOf(Vertex) * vkState.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -822,7 +517,8 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
     );
 }
 
-fn destroy(vkState: *Vk_State) !void {
+pub fn destroyPaintVulkan(vkState: *Vk_State) !void {
+    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -853,7 +549,7 @@ fn destroy(vkState: *Vk_State) !void {
     }
     vk.vkDestroySampler(vkState.logicalDevice, vkState.textureSampler, null);
 
-    for (0..IMAGE_DATA.len) |i| {
+    for (0..imageZig.IMAGE_DATA.len) |i| {
         vk.vkDestroyImageView(vkState.logicalDevice, vkState.textureImageView[i], null);
         vk.vkDestroyImage(vkState.logicalDevice, vkState.textureImage[i], null);
         vk.vkFreeMemory(vkState.logicalDevice, vkState.textureImageMemory[i], null);
@@ -918,17 +614,17 @@ fn createInstance(vkState: *Vk_State) !void {
 
 pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(Vertex) * vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(Vertex) * vkState.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]Vertex = @ptrCast(@alignCast(data));
-    @memcpy(gpu_vertices, vertices[0..]);
+    @memcpy(gpu_vertices, vkState.vertices[0..]);
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.vertexBufferMemory);
 }
 
 fn updateUniformBuffer(state: *main.ChatSimState) !void {
     var ubo: VkCameraData = .{
         .transform = .{
-            .{ 2 / Vk_State.ZOOM_1_WIDTH, 0, 0.0, 0.0 },
-            .{ 0, 2 / Vk_State.ZOOM_1_HEIGHT, 0.0, 0.0 },
+            .{ 2 / windowSdlZig.windowData.widthFloat, 0, 0.0, 0.0 },
+            .{ 0, 2 / windowSdlZig.windowData.heightFloat, 0.0, 0.0 },
             .{ 0.0, 0.0, 1, 0.0 },
             .{ 0.0, 0.0, 0.0, 1 / state.camera.zoom },
         },
@@ -940,111 +636,6 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
             @as([*]u8, @ptrCast(&ubo)),
         );
     }
-}
-
-pub fn handleEvents(state: *main.ChatSimState) !void {
-    var event: sdl.SDL_Event = undefined;
-    while (sdl.SDL_PollEvent(&event)) {
-        if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
-            // state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
-        } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
-            if (event.wheel.y > 0) {
-                state.camera.zoom *= 1.2;
-                if (state.camera.zoom > 10) {
-                    state.camera.zoom = 10;
-                }
-            } else {
-                state.camera.zoom /= 1.2;
-                if (state.camera.zoom < 0.1) {
-                    state.camera.zoom = 0.1;
-                }
-            }
-        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
-                const mouseUp = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
-                const topLeft: main.Position = .{
-                    .x = @min(mouseUp.x, state.mouseDown.?.x),
-                    .y = @min(mouseUp.y, state.mouseDown.?.y),
-                };
-                const tileSizeFloat: f32 = @floatFromInt(main.ChatSimState.TILE_SIZE);
-                const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
-                const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
-                var chunk = state.chunks.get("0_0").?;
-                for (0..width) |x| {
-                    for (0..height) |y| {
-                        const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
-                        if (main.mapIsTilePositionFree(position, state) == false) continue;
-                        for (state.citizens.items) |*citizen| {
-                            if (citizen.buildingIndex != null) continue;
-                            citizen.buildingIndex = chunk.buildings.items.len;
-                            const newBuilding: main.Building = .{
-                                .position = position,
-                                .type = state.currentBuildingType,
-                            };
-                            try chunk.buildings.append(newBuilding);
-                            try state.chunks.put("0_0", chunk);
-                            break;
-                        }
-                    }
-                }
-            }
-            state.mouseDown = null;
-        } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            if (state.buildMode == main.BUILDING_MODE_SINGLE) {
-                const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera));
-                if (main.mapIsTilePositionFree(position, state) == false) return;
-                var chunk = state.chunks.get("0_0").?;
-                for (state.citizens.items) |*citizen| {
-                    if (citizen.buildingIndex != null) continue;
-                    citizen.buildingIndex = chunk.buildings.items.len;
-                    const newBuilding: main.Building = .{
-                        .position = position,
-                        .type = state.currentBuildingType,
-                    };
-                    try chunk.buildings.append(newBuilding);
-                    try state.chunks.put("0_0", chunk);
-                    break;
-                }
-            } else if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
-                state.mouseDown = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
-            }
-        } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
-            if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
-                state.camera.position.x -= 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
-                state.camera.position.x += 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_UP) {
-                state.camera.position.y -= 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
-                state.camera.position.y += 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
-                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
-                state.buildMode = main.BUILDING_MODE_SINGLE;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
-                state.currentBuildingType = main.BUILDING_TYPE_TREE_FARM;
-                state.buildMode = main.BUILDING_MODE_SINGLE;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
-                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
-                state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
-            }
-        } else if (event.type == sdl.SDL_EVENT_QUIT) {
-            std.debug.print("clicked window X \n", .{});
-            state.gameEnd = true;
-        }
-    }
-}
-
-pub fn mousePositionToGamePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
-    var width: u32 = 0;
-    var height: u32 = 0;
-    getWindowSize(&width, &height);
-    const widthFloat = @as(f32, @floatFromInt(width));
-    const heightFloat = @as(f32, @floatFromInt(height));
-
-    return main.Position{
-        .x = (x - widthFloat / 2) / camera.zoom + camera.position.x,
-        .y = (y - heightFloat / 2) / camera.zoom + camera.position.y,
-    };
 }
 
 pub fn drawFrame(state: *main.ChatSimState) !void {
@@ -1510,7 +1101,7 @@ fn chooseSwapExtent(capabilities: vk.VkSurfaceCapabilitiesKHR) vk.VkExtent2D {
     } else {
         var width: u32 = 0;
         var height: u32 = 0;
-        getWindowSize(&width, &height);
+        windowSdlZig.getWindowSize(&width, &height);
         var actual_extent = vk.VkExtent2D{
             .width = width,
             .height = height,
@@ -1519,14 +1110,6 @@ fn chooseSwapExtent(capabilities: vk.VkSurfaceCapabilitiesKHR) vk.VkExtent2D {
         actual_extent.height = std.math.clamp(actual_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
         return actual_extent;
     }
-}
-
-pub fn getWindowSize(width: *u32, height: *u32) void {
-    var w: c_int = undefined;
-    var h: c_int = undefined;
-    _ = sdl.SDL_GetWindowSize(window, &w, &h);
-    width.* = @intCast(w);
-    height.* = @intCast(h);
 }
 
 pub fn checkValidationLayerSupport() bool {

@@ -1,7 +1,8 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
 pub const Citizen = @import("citizen.zig").Citizen;
-const Paint = @import("paintVulkan.zig");
+const paintVulkanZig = @import("paintVulkan.zig");
+const windowSdlZig = @import("windowSdl.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
@@ -19,7 +20,7 @@ pub const ChatSimState: type = struct {
     tickIntervalMs: u8,
     gameTimeMs: u32,
     gameEnd: bool,
-    vkState: Paint.Vk_State,
+    vkState: paintVulkanZig.Vk_State,
     fpsLimiter: bool,
     camera: Camera,
     pub const TILE_SIZE: u16 = 20;
@@ -143,7 +144,17 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
         },
     };
     Citizen.randomlyPlace(state);
-    try Paint.initVulkanAndWindow(state);
+    try initPaintVulkanAndWindowSdl(state);
+}
+
+fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
+    try windowSdlZig.initWindowSdl();
+    try paintVulkanZig.initVulkan(state);
+}
+
+fn destoryPaintVulkanAndWindowSdl(vkState: *paintVulkanZig.Vk_State) !void {
+    try paintVulkanZig.destroyPaintVulkan(vkState);
+    windowSdlZig.destroyWindowSdl();
 }
 
 fn runGame(allocator: std.mem.Allocator) !void {
@@ -157,7 +168,7 @@ fn runGame(allocator: std.mem.Allocator) !void {
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
-        try Paint.handleEvents(&state);
+        try windowSdlZig.handleEvents(&state);
 
         while (ticksRequired >= 1) {
             try tick(&state);
@@ -166,9 +177,9 @@ fn runGame(allocator: std.mem.Allocator) !void {
             if (SIMULATION_MICRO_SECOND_DURATION != null and totalPassedTime > SIMULATION_MICRO_SECOND_DURATION) state.gameEnd = true;
             if (state.gameEnd) break :mainLoop;
         }
-        try Paint.setupVerticesForCitizens(&state);
-        try Paint.setupVertexDataForGPU(&state.vkState);
-        try Paint.drawFrame(&state);
+        try paintVulkanZig.setupVerticesForCitizens(&state);
+        try paintVulkanZig.setupVertexDataForGPU(&state.vkState);
+        try paintVulkanZig.drawFrame(&state);
         frameCounter += 1;
         if (state.fpsLimiter) {
             const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
@@ -201,7 +212,7 @@ fn tick(state: *ChatSimState) !void {
 
 fn destroyGameState(state: *ChatSimState) void {
     state.citizens.deinit();
-    try Paint.destoryVulkanAndWindow(&state.vkState);
+    try destoryPaintVulkanAndWindowSdl(&state.vkState);
 }
 
 fn printOutSomeData(state: ChatSimState) void {
