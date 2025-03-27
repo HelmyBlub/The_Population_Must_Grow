@@ -31,7 +31,7 @@ pub const Citizen: type = struct {
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !bool {
         if (citizen.buildingIndex != null) {
-            var chunk = state.chunks.get("0_0").?;
+            var chunk = state.chunks.getPtr("0_0").?;
             if (citizen.treeIndex == null and citizen.hasWood == false) {
                 findFastestTreeAndMoveTo(citizen, state);
             } else if (citizen.treeIndex != null and citizen.hasWood == false) {
@@ -70,7 +70,6 @@ pub const Citizen: type = struct {
                                 try chunk.trees.append(newTree);
                             }
                         }
-                        try state.chunks.put("0_0", chunk);
                         return false;
                     }
                 }
