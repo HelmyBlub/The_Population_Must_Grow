@@ -1154,6 +1154,10 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
         .queueCount = 1,
         .pQueuePriorities = &[_]f32{1.0},
     };
+    const device_features = vk.VkPhysicalDeviceFeatures{
+        .samplerAnisotropy = vk.VK_TRUE,
+        .geometryShader = vk.VK_TRUE,
+    };
     var vk12Features = vk.VkPhysicalDeviceVulkan12Features{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .shaderSampledImageArrayNonUniformIndexing = vk.VK_TRUE,
@@ -1162,17 +1166,14 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
     var deviceFeatures: vk.VkPhysicalDeviceFeatures2 = .{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
         .pNext = &vk12Features,
-    };
-    var device_features = vk.VkPhysicalDeviceFeatures{
-        .samplerAnisotropy = vk.VK_TRUE,
-        .geometryShader = vk.VK_TRUE,
+        .features = device_features,
     };
     var device_create_info = vk.VkDeviceCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &deviceFeatures,
         .pQueueCreateInfos = &queue_create_info,
         .queueCreateInfoCount = 1,
-        .pEnabledFeatures = &device_features,
+        .pEnabledFeatures = null,
         .enabledExtensionCount = 1,
         .ppEnabledExtensionNames = &[_][*c]const u8{vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME},
     };
