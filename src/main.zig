@@ -59,7 +59,7 @@ pub const Position: type = struct {
     y: f32,
 };
 
-const SIMULATION_MICRO_SECOND_DURATION: ?i64 = 10_000_000;
+const SIMULATION_MICRO_SECOND_DURATION: ?i64 = null; //10_000_000;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
@@ -187,6 +187,10 @@ fn runGame(allocator: std.mem.Allocator) !void {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
             std.time.sleep(sleepTime * 1_000);
         }
+        if (frameCounter % 600 == 0) {
+            std.debug.print("citizenCounter: {d}\n", .{state.citizens.items.len});
+        }
+
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
             if (totalPassedTime > duration) state.gameEnd = true;
