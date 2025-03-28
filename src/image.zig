@@ -1,6 +1,6 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
-const vulkan = @import("vulkan/paintVulkan.zig");
+const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const vk = @cImport({
     @cDefine("VK_USE_PLATFORM_WIN32_KHR", "1");
     @cInclude("vulkan.h");
@@ -26,7 +26,7 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/treeFarm.png" },
 };
 
-pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State, allocator: std.mem.Allocator) !void {
+pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
     vkState.textureImage = try allocator.alloc(vk.VkImage, IMAGE_DATA.len);
     vkState.textureImageMemory = try allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
     vkState.mipLevels = try allocator.alloc(u32, IMAGE_DATA.len);
@@ -40,7 +40,7 @@ pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State, allocator: std.mem.Al
         defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
         var stagingBufferMemory: vk.VkDeviceMemory = undefined;
         defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
-        try vulkan.createBuffer(
+        try paintVulkanZig.createBuffer(
             image.imageByteSize(),
             vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -60,7 +60,7 @@ pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State, allocator: std.mem.Al
         const imageHeight: u32 = @intCast(image.height);
         const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
         vkState.mipLevels[i] = @as(u32, @intFromFloat(log2)) + 1;
-        try vulkan.createImage(
+        try paintVulkanZig.createImage(
             imageWidth,
             imageHeight,
             vkState.mipLevels[i],
@@ -94,13 +94,13 @@ pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State, allocator: std.mem.Al
     std.debug.print("createVulkanTextureImage finished\n", .{});
 }
 
-fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *vulkan.Vk_State) !void {
+fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *paintVulkanZig.Vk_State) !void {
     var formatProperties: vk.VkFormatProperties = undefined;
     vk.vkGetPhysicalDeviceFormatProperties(vkState.physical_device, imageFormat, &formatProperties);
 
     if ((formatProperties.optimalTilingFeatures & vk.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) return error.doesNotSupportOptimailTiling;
 
-    const commandBuffer: vk.VkCommandBuffer = try vulkan.beginSingleTimeCommands(vkState);
+    const commandBuffer: vk.VkCommandBuffer = try paintVulkanZig.beginSingleTimeCommands(vkState);
 
     var barrier: vk.VkImageMemoryBarrier = .{
         .sType = vk.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -209,11 +209,11 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
         &barrier,
     );
 
-    try vulkan.endSingleTimeCommands(commandBuffer, vkState);
+    try paintVulkanZig.endSingleTimeCommands(commandBuffer, vkState);
 }
 
-fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height: u32, vkState: *vulkan.Vk_State) !void {
-    const commandBuffer: vk.VkCommandBuffer = try vulkan.beginSingleTimeCommands(vkState);
+fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height: u32, vkState: *paintVulkanZig.Vk_State) !void {
+    const commandBuffer: vk.VkCommandBuffer = try paintVulkanZig.beginSingleTimeCommands(vkState);
     const region: vk.VkBufferImageCopy = .{
         .bufferOffset = 0,
         .bufferRowLength = 0,
@@ -236,11 +236,11 @@ fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height:
         &region,
     );
 
-    try vulkan.endSingleTimeCommands(commandBuffer, vkState);
+    try paintVulkanZig.endSingleTimeCommands(commandBuffer, vkState);
 }
 
-fn transitionVulkanImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, newLayout: vk.VkImageLayout, mipLevels: u32, vkState: *vulkan.Vk_State) !void {
-    const commandBuffer = try vulkan.beginSingleTimeCommands(vkState);
+fn transitionVulkanImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, newLayout: vk.VkImageLayout, mipLevels: u32, vkState: *paintVulkanZig.Vk_State) !void {
+    const commandBuffer = try paintVulkanZig.beginSingleTimeCommands(vkState);
 
     var barrier: vk.VkImageMemoryBarrier = .{
         .sType = vk.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -291,5 +291,5 @@ fn transitionVulkanImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, n
         1,
         &barrier,
     );
-    try vulkan.endSingleTimeCommands(commandBuffer, vkState);
+    try paintVulkanZig.endSingleTimeCommands(commandBuffer, vkState);
 }

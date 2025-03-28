@@ -5,6 +5,7 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_vulkan.h");
 });
 const main = @import("main.zig");
+const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 
 const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -43,7 +44,17 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
-            // state.citizens.items[0].position = mousePositionToGamePoisition(event.motion.x, event.motion.y);
+            if (state.mouseDown != null) {
+                if (state.rectangle == null) {
+                    state.rectangle = .{
+                        .color = .{ 1, 0, 0 },
+                        .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
+                    };
+                }
+                state.rectangle.?.pos[0] = gameMapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
+                state.rectangle.?.pos[1] = mouseWindowPositionToVulkanSurfacePoisition(event.motion.x, event.motion.y);
+                try rectangleVulkanZig.setupVertices(state.rectangle.?, state);
+            }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
                 state.camera.zoom *= 1.2;
@@ -58,7 +69,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
             if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
-                const mouseUp = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
+                const mouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
                 const topLeft: main.Position = .{
                     .x = @min(mouseUp.x, state.mouseDown.?.x),
                     .y = @min(mouseUp.y, state.mouseDown.?.y),
@@ -86,9 +97,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
             state.mouseDown = null;
+            state.rectangle = null;
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (state.buildMode == main.BUILDING_MODE_SINGLE) {
-                const position = main.mapPositionToTilePosition(mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera));
+                const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 if (main.mapIsTilePositionFree(position, state) == false) return;
                 var chunk = state.chunks.get("0_0").?;
                 for (state.citizens.items) |*citizen| {
@@ -103,7 +115,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     break;
                 }
             } else if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
-                state.mouseDown = mousePositionToGamePoisition(event.motion.x, event.motion.y, state.camera);
+                state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
@@ -131,7 +143,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn mousePositionToGamePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
+pub fn mouseWindowPositionToGameMapPoisition(x: f32, y: f32, camera: main.Camera) main.Position {
     var width: u32 = 0;
     var height: u32 = 0;
     getWindowSize(&width, &height);
@@ -141,5 +153,31 @@ pub fn mousePositionToGamePoisition(x: f32, y: f32, camera: main.Camera) main.Po
     return main.Position{
         .x = (x - widthFloat / 2) / camera.zoom + camera.position.x,
         .y = (y - heightFloat / 2) / camera.zoom + camera.position.y,
+    };
+}
+
+pub fn mouseWindowPositionToVulkanSurfacePoisition(x: f32, y: f32) main.Position {
+    var width: u32 = 0;
+    var height: u32 = 0;
+    getWindowSize(&width, &height);
+    const widthFloat = @as(f32, @floatFromInt(width));
+    const heightFloat = @as(f32, @floatFromInt(height));
+
+    return main.Position{
+        .x = x / widthFloat * 2 - 1,
+        .y = y / heightFloat * 2 - 1,
+    };
+}
+
+pub fn gameMapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
+    var width: u32 = 0;
+    var height: u32 = 0;
+    getWindowSize(&width, &height);
+    const widthFloat = @as(f32, @floatFromInt(width));
+    const heightFloat = @as(f32, @floatFromInt(height));
+
+    return main.Position{
+        .x = ((x - camera.position.x) * camera.zoom + widthFloat / 2) / widthFloat * 2 - 1,
+        .y = ((y - camera.position.y) * camera.zoom + heightFloat / 2) / heightFloat * 2 - 1,
     };
 }

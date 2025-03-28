@@ -1,9 +1,7 @@
 tasks:
-- zig test:
-    - use test allocator and fix all memory leaks and other stuff
 - make UI
     - selection rectangle to learn vulkan line/polygon stuff
-        - 
+        - continue: last work was creating rectangleVulkan.zig and doing vertexBuffer. Next im am unsure? follow chatGPT maybe
     - text
         - display fps
         - display citizen counter

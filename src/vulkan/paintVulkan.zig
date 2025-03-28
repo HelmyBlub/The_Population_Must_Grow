@@ -6,6 +6,7 @@ const vk = @cImport({
     @cInclude("vulkan.h");
 });
 const main = @import("../main.zig");
+const rectangleVulkanZig = @import("rectangleVulkan.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -56,6 +57,7 @@ pub const Vk_State = struct {
     colorImageView: vk.VkImageView = undefined,
     entityPaintCount: u32 = 0,
     vertices: []Vertex = undefined,
+    rectangle: rectangleVulkanZig.VkRectangle = undefined,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
@@ -182,6 +184,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createDescriptorSets(vkState, state.allocator);
     try createCommandBuffers(vkState, state.allocator);
     try createSyncObjects(vkState, state.allocator);
+    try rectangleVulkanZig.initRectangle(state);
 }
 
 fn createColorResources(vkState: *Vk_State) !void {
@@ -526,6 +529,7 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.A
 
 pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
+    rectangleVulkanZig.destroyRectangle(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -774,6 +778,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     );
 
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCount), 1, 0, 0);
+    try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }
@@ -874,11 +879,11 @@ fn createRenderPass(vkState: *Vk_State) !void {
 }
 
 fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try readFile("src/vert.spv", allocator);
+    const vertShaderCode = try readShaderFile("src/vert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try readFile("src/frag.spv", allocator);
+    const fragShaderCode = try readShaderFile("src/frag.spv", allocator);
     defer allocator.free(fragShaderCode);
-    const geomShaderCode = try readFile("src/geom.spv", allocator);
+    const geomShaderCode = try readShaderFile("src/geom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
@@ -1019,7 +1024,7 @@ fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }
 
-fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
+pub fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
     var createInfo = vk.VkShaderModuleCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .codeSize = code.len,
@@ -1182,6 +1187,7 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
     const device_features = vk.VkPhysicalDeviceFeatures{
         .samplerAnisotropy = vk.VK_TRUE,
         .geometryShader = vk.VK_TRUE,
+        .fillModeNonSolid = vk.VK_TRUE,
     };
     var vk12Features = vk.VkPhysicalDeviceVulkan12Features{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -1283,7 +1289,7 @@ fn vkcheck(result: vk.VkResult, comptime err_msg: []const u8) !void {
     }
 }
 
-fn readFile(filename: []const u8, allocator: std.mem.Allocator) ![]u8 {
+pub fn readShaderFile(filename: []const u8, allocator: std.mem.Allocator) ![]u8 {
     const code = try std.fs.cwd().readFileAlloc(allocator, filename, std.math.maxInt(usize));
     return code;
 }
