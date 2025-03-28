@@ -59,27 +59,42 @@ pub const Position: type = struct {
     y: f32,
 };
 
-const SIMULATION_MICRO_SECOND_DURATION: ?i64 = null; //10_000_000;
+var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null; //10_000_000;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
-    std.debug.print("just a test message: \n", .{});
-    try runGame(test_allocator);
+    SIMULATION_MICRO_SECOND_DURATION = 100_000;
+    try startGame(test_allocator);
+    // testing allocator will fail test if something is not deallocated
 }
 
 test "test measure performance" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+    var state: ChatSimState = undefined;
+    try createGameState(allocator, &state);
+    defer destroyGameState(&state);
+    SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
+    for (0..10_000) |_| {
+        try state.citizens.append(Citizen.createCitizen());
+    }
+    Citizen.randomlyPlace(&state);
+    state.fpsLimiter = false;
+    state.gameSpeed = 1;
+
     const startTime = std.time.microTimestamp();
-    try runGame(allocator);
-    std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
+    try mainLoop(&state);
+    const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
+    const timePassed = std.time.microTimestamp() - startTime;
+    const fps = @divFloor(frames * 1_000_000, timePassed);
+    std.debug.print("FPS: {d}", .{fps});
 }
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     const startTime = std.time.microTimestamp();
-    try runGame(allocator);
+    try startGame(allocator);
     std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
@@ -156,21 +171,24 @@ fn destoryPaintVulkanAndWindowSdl(vkState: *paintVulkanZig.Vk_State) !void {
     windowSdlZig.destroyWindowSdl();
 }
 
-fn runGame(allocator: std.mem.Allocator) !void {
+fn startGame(allocator: std.mem.Allocator) !void {
     std.debug.print("game run start\n", .{});
     var state: ChatSimState = undefined;
     try createGameState(allocator, &state);
     defer destroyGameState(&state);
+    try mainLoop(&state);
+}
+
+fn mainLoop(state: *ChatSimState) !void {
     var ticksRequired: f32 = 0;
     const totalStartTime = std.time.microTimestamp();
-    var frameCounter: u64 = 0;
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
-        try windowSdlZig.handleEvents(&state);
+        try windowSdlZig.handleEvents(state);
 
         while (ticksRequired >= 1) {
-            try tick(&state);
+            try tick(state);
             ticksRequired -= 1;
             const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
             if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
@@ -178,16 +196,15 @@ fn runGame(allocator: std.mem.Allocator) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
-        try paintVulkanZig.setupVerticesForCitizens(&state);
+        try paintVulkanZig.setupVerticesForCitizens(state);
         try paintVulkanZig.setupVertexDataForGPU(&state.vkState);
-        try paintVulkanZig.drawFrame(&state);
-        frameCounter += 1;
+        try paintVulkanZig.drawFrame(state);
         if (state.fpsLimiter) {
             const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
             std.time.sleep(sleepTime * 1_000);
         }
-        if (frameCounter % 600 == 0) {
+        if (state.gameTimeMs % (@as(u32, state.tickIntervalMs) * 600) == 0) {
             std.debug.print("citizenCounter: {d}\n", .{state.citizens.items.len});
         }
 
@@ -196,9 +213,6 @@ fn runGame(allocator: std.mem.Allocator) !void {
             if (totalPassedTime > duration) state.gameEnd = true;
         }
     }
-    const totalLoopTime: u64 = @as(u64, @intCast((std.time.microTimestamp() - totalStartTime)));
-    const fps: u64 = @divFloor(frameCounter * 1_000_000, totalLoopTime);
-    std.debug.print("FPS: {d}\n", .{fps});
     printOutSomeData(state);
     std.debug.print("finished\n", .{});
 }
@@ -228,7 +242,7 @@ fn destroyGameState(state: *ChatSimState) void {
     state.chunks.deinit();
 }
 
-fn printOutSomeData(state: ChatSimState) void {
+fn printOutSomeData(state: *ChatSimState) void {
     const oneCitizen = state.citizens.getLast();
     std.debug.print("someData: x:{d}, y:{d}\n", .{ oneCitizen.position.x, oneCitizen.position.y });
 }
