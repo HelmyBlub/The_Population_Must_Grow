@@ -7,6 +7,7 @@ const vk = @cImport({
 });
 const main = @import("../main.zig");
 const rectangleVulkanZig = @import("rectangleVulkan.zig");
+const fontVulkanZig = @import("fontVulkan.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -58,6 +59,7 @@ pub const Vk_State = struct {
     entityPaintCount: u32 = 0,
     vertices: []Vertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
+    font: fontVulkanZig.VkFont = undefined,
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };

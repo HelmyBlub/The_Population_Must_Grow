@@ -1,8 +1,13 @@
 tasks:
 - make UI
-    - selection rectangle to learn vulkan line/polygon stuff
-        - continue: last work was creating rectangleVulkan.zig and doing vertexBuffer. Next im am unsure? follow chatGPT maybe
     - text
+        - continue: shader need to be corrected to new files in fontVulkan.zig. Think about putting compiled shaders into own folder
+        - idea steps:
+            - new file fontVulkan
+                - similar to rectangle vulkan
+                - destriptor set needs to be extended for one more
+            - create single image, like atlas, for each letter/number/character i want to paint. Not every possible character, just some basic ones
+            - want to be able to assign color per code. How would the image need to look like if color does not matter for the image?
         - display fps
         - display citizen counter
         - create my own font? with images or polygons?
