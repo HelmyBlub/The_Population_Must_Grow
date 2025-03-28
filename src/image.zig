@@ -26,10 +26,10 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/treeFarm.png" },
 };
 
-pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State) !void {
-    vkState.textureImage = try std.heap.page_allocator.alloc(vk.VkImage, IMAGE_DATA.len);
-    vkState.textureImageMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
-    vkState.mipLevels = try std.heap.page_allocator.alloc(u32, IMAGE_DATA.len);
+pub fn createVulkanTextureImage(vkState: *vulkan.Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.textureImage = try allocator.alloc(vk.VkImage, IMAGE_DATA.len);
+    vkState.textureImageMemory = try allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
+    vkState.mipLevels = try allocator.alloc(u32, IMAGE_DATA.len);
 
     for (0..IMAGE_DATA.len) |i| {
         var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, IMAGE_DATA[i].path);

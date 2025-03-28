@@ -23,6 +23,7 @@ pub const ChatSimState: type = struct {
     vkState: paintVulkanZig.Vk_State,
     fpsLimiter: bool,
     camera: Camera,
+    allocator: std.mem.Allocator,
     pub const TILE_SIZE: u16 = 20;
 };
 
@@ -69,7 +70,8 @@ test "test for memory leaks" {
 }
 
 test "test measure performance" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     var state: ChatSimState = undefined;
     try createGameState(allocator, &state);
@@ -91,7 +93,8 @@ test "test measure performance" {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     const startTime = std.time.microTimestamp();
     try startGame(allocator);
@@ -156,6 +159,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
             .position = .{ .x = 0, .y = 0 },
             .zoom = 1,
         },
+        .allocator = allocator,
     };
     Citizen.randomlyPlace(state);
     try initPaintVulkanAndWindowSdl(state);
@@ -166,8 +170,8 @@ fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     try paintVulkanZig.initVulkan(state);
 }
 
-fn destoryPaintVulkanAndWindowSdl(vkState: *paintVulkanZig.Vk_State) !void {
-    try paintVulkanZig.destroyPaintVulkan(vkState);
+fn destoryPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
+    try paintVulkanZig.destroyPaintVulkan(&state.vkState, state.allocator);
     windowSdlZig.destroyWindowSdl();
 }
 
@@ -232,7 +236,7 @@ fn tick(state: *ChatSimState) !void {
 }
 
 fn destroyGameState(state: *ChatSimState) void {
-    try destoryPaintVulkanAndWindowSdl(&state.vkState);
+    try destoryPaintVulkanAndWindowSdl(state);
     state.citizens.deinit();
     var iterator = state.chunks.valueIterator();
     while (iterator.next()) |chunk| {

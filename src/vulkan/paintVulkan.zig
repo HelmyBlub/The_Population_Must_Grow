@@ -125,7 +125,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     if ((vkState.vertexBufferSize < entityPaintCount or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > entityPaintCount)) {
         vkState.vertexBufferCleanUp[vkState.currentFrame] = vkState.vertexBuffer;
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.vertexBufferMemory;
-        try createVertexBuffer(vkState, entityPaintCount);
+        try createVertexBuffer(vkState, entityPaintCount, state.allocator);
     }
 
     var index: u32 = 0;
@@ -154,34 +154,34 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
 
 pub fn initVulkan(state: *main.ChatSimState) !void {
     const vkState: *Vk_State = &state.vkState;
-    vkState.vertexBufferCleanUp = try std.heap.page_allocator.alloc(?vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.vertexBufferMemoryCleanUp = try std.heap.page_allocator.alloc(?vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.vertexBufferCleanUp = try state.allocator.alloc(?vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.vertexBufferMemoryCleanUp = try state.allocator.alloc(?vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         vkState.vertexBufferCleanUp[i] = null;
         vkState.vertexBufferMemoryCleanUp[i] = null;
     }
 
-    try createInstance(vkState);
+    try createInstance(vkState, state.allocator);
     vkState.surface = @ptrCast(windowSdlZig.getSurfaceForVulkan(@ptrCast(vkState.instance)));
-    vkState.physical_device = try pickPhysicalDevice(vkState.instance, vkState);
+    vkState.physical_device = try pickPhysicalDevice(vkState.instance, vkState, state.allocator);
     try createLogicalDevice(vkState.physical_device, vkState);
-    try createSwapChain(vkState);
-    try createImageViews(vkState);
+    try createSwapChain(vkState, state.allocator);
+    try createImageViews(vkState, state.allocator);
     try createRenderPass(vkState);
     try createDescriptorSetLayout(vkState);
-    try createGraphicsPipeline(vkState);
+    try createGraphicsPipeline(vkState, state.allocator);
     try createColorResources(vkState);
-    try createFramebuffers(vkState);
-    try createCommandPool(vkState);
-    try imageZig.createVulkanTextureImage(vkState);
-    try createTextureImageView(vkState);
+    try createFramebuffers(vkState, state.allocator);
+    try createCommandPool(vkState, state.allocator);
+    try imageZig.createVulkanTextureImage(vkState, state.allocator);
+    try createTextureImageView(vkState, state.allocator);
     try createTextureSampler(vkState);
-    try createVertexBuffer(vkState, state.citizens.items.len);
-    try createUniformBuffers(vkState);
+    try createVertexBuffer(vkState, state.citizens.items.len, state.allocator);
+    try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
-    try createDescriptorSets(vkState);
-    try createCommandBuffers(vkState);
-    try createSyncObjects(vkState);
+    try createDescriptorSets(vkState, state.allocator);
+    try createCommandBuffers(vkState, state.allocator);
+    try createSyncObjects(vkState, state.allocator);
 }
 
 fn createColorResources(vkState: *Vk_State) !void {
@@ -255,8 +255,8 @@ fn createTextureSampler(vkState: *Vk_State) !void {
     std.debug.print("createTextureSampler finished\n", .{});
 }
 
-fn createTextureImageView(vkState: *Vk_State) !void {
-    vkState.textureImageView = try std.heap.page_allocator.alloc(vk.VkImageView, imageZig.IMAGE_DATA.len);
+fn createTextureImageView(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.textureImageView = try allocator.alloc(vk.VkImageView, imageZig.IMAGE_DATA.len);
     for (0..imageZig.IMAGE_DATA.len) |i| {
         vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels[i], vkState);
     }
@@ -354,7 +354,7 @@ pub fn createImage(width: u32, height: u32, mipLevels: u32, numSamples: vk.VkSam
     if (vk.vkBindImageMemory(vkState.logicalDevice, image.*, imageMemory.*, 0) != vk.VK_SUCCESS) return error.bindImageMemory;
 }
 
-fn createDescriptorSets(vkState: *Vk_State) !void {
+fn createDescriptorSets(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     const layouts = [_]vk.VkDescriptorSetLayout{vkState.descriptorSetLayout} ** Vk_State.MAX_FRAMES_IN_FLIGHT;
     const allocInfo: vk.VkDescriptorSetAllocateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -362,7 +362,7 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
         .descriptorSetCount = Vk_State.MAX_FRAMES_IN_FLIGHT,
         .pSetLayouts = &layouts,
     };
-    vkState.descriptorSets = try std.heap.page_allocator.alloc(vk.VkDescriptorSet, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.descriptorSets = try allocator.alloc(vk.VkDescriptorSet, Vk_State.MAX_FRAMES_IN_FLIGHT);
     if (vk.vkAllocateDescriptorSets(vkState.logicalDevice, &allocInfo, @ptrCast(vkState.descriptorSets)) != vk.VK_SUCCESS) return error.allocateDescriptorSets;
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
@@ -372,7 +372,8 @@ fn createDescriptorSets(vkState: *Vk_State) !void {
             .range = @sizeOf(VkCameraData),
         };
 
-        const imageInfo: []vk.VkDescriptorImageInfo = try std.heap.page_allocator.alloc(vk.VkDescriptorImageInfo, imageZig.IMAGE_DATA.len);
+        const imageInfo: []vk.VkDescriptorImageInfo = try allocator.alloc(vk.VkDescriptorImageInfo, imageZig.IMAGE_DATA.len);
+        defer allocator.free(imageInfo);
         for (0..imageZig.IMAGE_DATA.len) |j| {
             imageInfo[j] = .{
                 .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -428,12 +429,12 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
     std.debug.print("createDescriptorPool finished\n", .{});
 }
 
-fn createUniformBuffers(vkState: *Vk_State) !void {
+fn createUniformBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     const bufferSize: vk.VkDeviceSize = @sizeOf(VkCameraData);
 
-    vkState.uniformBuffers = try std.heap.page_allocator.alloc(vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.uniformBuffersMemory = try std.heap.page_allocator.alloc(vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.uniformBuffersMapped = try std.heap.page_allocator.alloc(?*anyopaque, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.uniformBuffers = try allocator.alloc(vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.uniformBuffersMemory = try allocator.alloc(vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.uniformBuffersMapped = try allocator.alloc(?*anyopaque, Vk_State.MAX_FRAMES_IN_FLIGHT);
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         try createBuffer(
@@ -508,9 +509,10 @@ pub fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, propert
     if (vk.vkBindBufferMemory(vkState.logicalDevice, buffer.*, bufferMemory.*, 0) != vk.VK_SUCCESS) return error.bindMemory;
 }
 
-fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
+fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.Allocator) !void {
+    if (vkState.vertexBufferSize != 0) allocator.free(vkState.vertices);
     vkState.vertexBufferSize = entityCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
-    vkState.vertices = try std.heap.page_allocator.alloc(Vertex, vkState.vertexBufferSize);
+    vkState.vertices = try allocator.alloc(Vertex, vkState.vertexBufferSize);
     try createBuffer(
         @sizeOf(Vertex) * vkState.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -522,7 +524,7 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64) !void {
     std.debug.print("createVertexBuffer finished\n", .{});
 }
 
-pub fn destroyPaintVulkan(vkState: *Vk_State) !void {
+pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
@@ -532,13 +534,13 @@ pub fn destroyPaintVulkan(vkState: *Vk_State) !void {
             vkState.vertexBufferMemoryCleanUp[i] = null;
         }
     }
-
     vk.vkDestroyImageView(vkState.logicalDevice, vkState.colorImageView, null);
     vk.vkDestroyImage(vkState.logicalDevice, vkState.colorImage, null);
     vk.vkFreeMemory(vkState.logicalDevice, vkState.colorImageMemory, null);
     for (vkState.swapchain_imageviews) |imgvw| {
         vk.vkDestroyImageView(vkState.logicalDevice, imgvw, null);
     }
+    allocator.free(vkState.swapchain_imageviews);
     for (vkState.framebuffers) |fb| {
         vk.vkDestroyFramebuffer(vkState.logicalDevice, fb, null);
     }
@@ -572,9 +574,28 @@ pub fn destroyPaintVulkan(vkState: *Vk_State) !void {
     vk.vkDestroyDevice(vkState.logicalDevice, null);
     vk.vkDestroySurfaceKHR(vkState.instance, vkState.surface, null);
     vk.vkDestroyInstance(vkState.instance, null);
+    allocator.free(vkState.vertices);
+    allocator.free(vkState.uniformBuffers);
+    allocator.free(vkState.uniformBuffersMemory);
+    allocator.free(vkState.uniformBuffersMapped);
+    allocator.free(vkState.vertexBufferCleanUp);
+    allocator.free(vkState.vertexBufferMemoryCleanUp);
+    allocator.free(vkState.textureImageView);
+    allocator.free(vkState.descriptorSets);
+    allocator.free(vkState.imageAvailableSemaphore);
+    allocator.free(vkState.renderFinishedSemaphore);
+    allocator.free(vkState.inFlightFence);
+    allocator.free(vkState.command_buffer);
+    allocator.free(vkState.framebuffers);
+    allocator.free(vkState.swapchain_info.images);
+    allocator.free(vkState.swapchain_info.support.formats);
+    allocator.free(vkState.swapchain_info.support.presentModes);
+    allocator.free(vkState.textureImage);
+    allocator.free(vkState.textureImageMemory);
+    allocator.free(vkState.mipLevels);
 }
 
-fn createInstance(vkState: *Vk_State) !void {
+fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     var app_info = vk.VkApplicationInfo{
         .sType = vk.VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = null,
@@ -603,7 +624,7 @@ fn createInstance(vkState: *Vk_State) !void {
     instance_create_info.enabledExtensionCount = extension_count;
     instance_create_info.ppEnabledExtensionNames = extensions;
 
-    var extension_list = std.ArrayList([*c]const u8).init(std.heap.page_allocator);
+    var extension_list = std.ArrayList([*c]const u8).init(allocator);
     for (requiredExtensions[0..extension_count]) |ext| {
         try extension_list.append(ext);
     }
@@ -611,6 +632,7 @@ fn createInstance(vkState: *Vk_State) !void {
     try extension_list.append(vk.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     instance_create_info.enabledExtensionCount = @intCast(extension_list.items.len);
     const extensions_ = try extension_list.toOwnedSlice();
+    defer allocator.free(extensions_);
     const pp_enabled_layer_names: [*][*c]const u8 = extensions_.ptr;
     instance_create_info.ppEnabledExtensionNames = pp_enabled_layer_names;
 
@@ -680,7 +702,7 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     vkState.currentFrame = (vkState.currentFrame + 1) % Vk_State.MAX_FRAMES_IN_FLIGHT;
 }
 
-fn createSyncObjects(vkState: *Vk_State) !void {
+fn createSyncObjects(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     var semaphoreInfo = vk.VkSemaphoreCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
@@ -688,9 +710,9 @@ fn createSyncObjects(vkState: *Vk_State) !void {
         .sType = vk.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = vk.VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    vkState.imageAvailableSemaphore = try std.heap.page_allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.renderFinishedSemaphore = try std.heap.page_allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.inFlightFence = try std.heap.page_allocator.alloc(vk.VkFence, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.imageAvailableSemaphore = try allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.renderFinishedSemaphore = try allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.inFlightFence = try allocator.alloc(vk.VkFence, Vk_State.MAX_FRAMES_IN_FLIGHT);
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vk.vkCreateSemaphore(vkState.logicalDevice, &semaphoreInfo, null, &vkState.imageAvailableSemaphore[i]) != vk.VK_SUCCESS or
@@ -756,8 +778,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }
 
-fn createCommandBuffers(vkState: *Vk_State) !void {
-    vkState.command_buffer = try std.heap.page_allocator.alloc(vk.VkCommandBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
+fn createCommandBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.command_buffer = try allocator.alloc(vk.VkCommandBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
 
     var allocInfo = vk.VkCommandBufferAllocateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -769,8 +791,8 @@ fn createCommandBuffers(vkState: *Vk_State) !void {
     std.debug.print("Command Buffer : {any}\n", .{vkState.command_buffer});
 }
 
-fn createCommandPool(vkState: *Vk_State) !void {
-    const queueFamilyIndices = try findQueueFamilies(vkState.physical_device, vkState);
+fn createCommandPool(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    const queueFamilyIndices = try findQueueFamilies(vkState.physical_device, vkState, allocator);
     var poolInfo = vk.VkCommandPoolCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = vk.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -780,8 +802,8 @@ fn createCommandPool(vkState: *Vk_State) !void {
     std.debug.print("Command Pool : {any}\n", .{vkState.command_pool});
 }
 
-fn createFramebuffers(vkState: *Vk_State) !void {
-    vkState.framebuffers = try std.heap.page_allocator.alloc(vk.VkFramebuffer, vkState.swapchain_imageviews.len);
+fn createFramebuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.framebuffers = try allocator.alloc(vk.VkFramebuffer, vkState.swapchain_imageviews.len);
 
     for (vkState.swapchain_imageviews, 0..) |imageView, i| {
         var attachments = [_]vk.VkImageView{ vkState.colorImageView, imageView };
@@ -851,10 +873,13 @@ fn createRenderPass(vkState: *Vk_State) !void {
     std.debug.print("Render Pass Created : {any}\n", .{vkState.render_pass});
 }
 
-fn createGraphicsPipeline(vkState: *Vk_State) !void {
-    const vertShaderCode = try readFile("src/vert.spv");
-    const fragShaderCode = try readFile("src/frag.spv");
-    const geomShaderCode = try readFile("src/geom.spv");
+fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    const vertShaderCode = try readFile("src/vert.spv", allocator);
+    defer allocator.free(vertShaderCode);
+    const fragShaderCode = try readFile("src/frag.spv", allocator);
+    defer allocator.free(fragShaderCode);
+    const geomShaderCode = try readFile("src/geom.spv", allocator);
+    defer allocator.free(geomShaderCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try createShaderModule(fragShaderCode, vkState);
@@ -1006,16 +1031,16 @@ fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
     return shaderModule;
 }
 
-fn createImageViews(vkState: *Vk_State) !void {
-    vkState.swapchain_imageviews = try std.heap.page_allocator.alloc(vk.VkImageView, vkState.swapchain_info.images.len);
+fn createImageViews(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.swapchain_imageviews = try allocator.alloc(vk.VkImageView, vkState.swapchain_info.images.len);
     for (vkState.swapchain_info.images, 0..) |image, i| {
         vkState.swapchain_imageviews[i] = try createImageView(image, vkState.swapchain_info.format.format, 1, vkState);
         std.debug.print("Swapchain ImageView Created : {any}\n", .{vkState.swapchain_imageviews[i]});
     }
 }
 
-fn createSwapChain(vkState: *Vk_State) !void {
-    vkState.swapchain_info.support = try querySwapChainSupport(vkState);
+fn createSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    vkState.swapchain_info.support = try querySwapChainSupport(vkState, allocator);
     vkState.swapchain_info.format = chooseSwapSurfaceFormat(vkState.swapchain_info.support.formats);
     vkState.swapchain_info.present = chooseSwapPresentMode(vkState.swapchain_info.support.presentModes);
     vkState.swapchain_info.extent = chooseSwapExtent(vkState.swapchain_info.support.capabilities);
@@ -1041,7 +1066,7 @@ fn createSwapChain(vkState: *Vk_State) !void {
         .oldSwapchain = null,
     };
 
-    const indices = try findQueueFamilies(vkState.physical_device, vkState);
+    const indices = try findQueueFamilies(vkState.physical_device, vkState, allocator);
     const queueFamilyIndices = [_]u32{ indices.graphicsFamily.?, indices.presentFamily.? };
     if (indices.graphicsFamily != indices.presentFamily) {
         createInfo.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT;
@@ -1055,11 +1080,11 @@ fn createSwapChain(vkState: *Vk_State) !void {
     std.debug.print("Swapchain KHR Created : {any}\n", .{vkState.logicalDevice});
 
     _ = vk.vkGetSwapchainImagesKHR(vkState.logicalDevice, vkState.swapchain, &imageCount, null);
-    vkState.swapchain_info.images = try std.heap.page_allocator.alloc(vk.VkImage, imageCount);
+    vkState.swapchain_info.images = try allocator.alloc(vk.VkImage, imageCount);
     _ = vk.vkGetSwapchainImagesKHR(vkState.logicalDevice, vkState.swapchain, &imageCount, vkState.swapchain_info.images.ptr);
 }
 
-fn querySwapChainSupport(vkState: *Vk_State) !SwapChainSupportDetails {
+fn querySwapChainSupport(vkState: *Vk_State, allocator: std.mem.Allocator) !SwapChainSupportDetails {
     var details = SwapChainSupportDetails{
         .capabilities = undefined,
         .formats = &.{},
@@ -1071,12 +1096,12 @@ fn querySwapChainSupport(vkState: *Vk_State) !SwapChainSupportDetails {
     _ = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkState.physical_device, vkState.surface, &details.capabilities);
     _ = vk.vkGetPhysicalDeviceSurfaceFormatsKHR(vkState.physical_device, vkState.surface, &formatCount, null);
     if (formatCount > 0) {
-        details.formats = try std.heap.page_allocator.alloc(vk.VkSurfaceFormatKHR, formatCount);
+        details.formats = try allocator.alloc(vk.VkSurfaceFormatKHR, formatCount);
         _ = vk.vkGetPhysicalDeviceSurfaceFormatsKHR(vkState.physical_device, vkState.surface, &formatCount, details.formats.ptr);
     }
     _ = vk.vkGetPhysicalDeviceSurfacePresentModesKHR(vkState.physical_device, vkState.surface, &presentModeCount, null);
     if (presentModeCount > 0) {
-        details.presentModes = try std.heap.page_allocator.alloc(vk.VkPresentModeKHR, presentModeCount);
+        details.presentModes = try allocator.alloc(vk.VkPresentModeKHR, presentModeCount);
         _ = vk.vkGetPhysicalDeviceSurfacePresentModesKHR(vkState.physical_device, vkState.surface, &presentModeCount, details.presentModes.ptr);
     }
     return details;
@@ -1117,12 +1142,12 @@ fn chooseSwapExtent(capabilities: vk.VkSurfaceCapabilitiesKHR) vk.VkExtent2D {
     }
 }
 
-pub fn checkValidationLayerSupport() bool {
+fn checkValidationLayerSupport(allocator: std.mem.Allocator) bool {
     var layer_count: u32 = 0;
     _ = vk.vkEnumerateInstanceLayerProperties(&layer_count, null);
 
-    const available_layers = std.heap.page_allocator.alloc(vk.VkLayerProperties, layer_count) catch unreachable;
-    defer std.heap.page_allocator.free(available_layers);
+    const available_layers = allocator.alloc(vk.VkLayerProperties, layer_count) catch unreachable;
+    defer allocator.free(available_layers);
     _ = vk.vkEnumerateInstanceLayerProperties(&layer_count, available_layers.ptr);
 
     std.debug.print("Validation check, searching: \n", .{});
@@ -1185,27 +1210,27 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
     std.debug.print("Queue Obtained : {any}\n", .{vkState.queue});
 }
 
-fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State) !vk.VkPhysicalDevice {
+fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: std.mem.Allocator) !vk.VkPhysicalDevice {
     var device_count: u32 = 0;
     try vkcheck(vk.vkEnumeratePhysicalDevices(instance, &device_count, null), "Failed to enumerate physical devices");
     if (device_count == 0) {
         return error.NoGPUsWithVulkanSupport;
     }
 
-    const devices = try std.heap.page_allocator.alloc(vk.VkPhysicalDevice, device_count);
-    defer std.heap.page_allocator.free(devices);
+    const devices = try allocator.alloc(vk.VkPhysicalDevice, device_count);
+    defer allocator.free(devices);
     try vkcheck(vk.vkEnumeratePhysicalDevices(instance, &device_count, devices.ptr), "Failed to enumerate physical devices");
 
     for (devices) |device| {
-        if (try isDeviceSuitable(device, vkState)) {
+        if (try isDeviceSuitable(device, vkState, allocator)) {
             vkState.msaaSamples = getMaxUsableSampleCount(device);
             return device;
         }
     }
     return error.NoSuitableGPU;
 }
-fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State) !bool {
-    const indices: QueueFamilyIndices = try findQueueFamilies(device, vkState);
+fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !bool {
+    const indices: QueueFamilyIndices = try findQueueFamilies(device, vkState, allocator);
     vkState.graphics_queue_family_idx = indices.graphicsFamily.?;
 
     var supportedFeatures: vk.VkPhysicalDeviceFeatures = undefined;
@@ -1214,7 +1239,7 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State) !bool {
     return indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and supportedFeatures.geometryShader != 0;
 }
 
-fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State) !QueueFamilyIndices {
+fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !QueueFamilyIndices {
     var indices = QueueFamilyIndices{
         .graphicsFamily = null,
         .presentFamily = null,
@@ -1222,8 +1247,8 @@ fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State) !QueueFami
     var queueFamilyCount: u32 = 0;
     vk.vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, null);
 
-    const queueFamilies = try std.heap.page_allocator.alloc(vk.VkQueueFamilyProperties, queueFamilyCount);
-    defer std.heap.page_allocator.free(queueFamilies);
+    const queueFamilies = try allocator.alloc(vk.VkQueueFamilyProperties, queueFamilyCount);
+    defer allocator.free(queueFamilies);
     vk.vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.ptr);
 
     for (queueFamilies, 0..) |queueFamily, i| {
@@ -1258,7 +1283,7 @@ fn vkcheck(result: vk.VkResult, comptime err_msg: []const u8) !void {
     }
 }
 
-fn readFile(filename: []const u8) ![]u8 {
-    const code = try std.fs.cwd().readFileAlloc(std.heap.page_allocator, filename, std.math.maxInt(usize));
+fn readFile(filename: []const u8, allocator: std.mem.Allocator) ![]u8 {
+    const code = try std.fs.cwd().readFileAlloc(allocator, filename, std.math.maxInt(usize));
     return code;
 }
