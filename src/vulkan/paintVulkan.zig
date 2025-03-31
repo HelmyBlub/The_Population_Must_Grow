@@ -59,7 +59,7 @@ pub const Vk_State = struct {
     entityPaintCount: u32 = 0,
     vertices: []Vertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
-    font: fontVulkanZig.VkFont = undefined,
+    font: fontVulkanZig.VkFont = .{},
     const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
@@ -700,13 +700,13 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     try updateUniformBuffer(state);
 
-    if (state.gameTimeMs % 1_000 < 333) {
-        try fontVulkanZig.paintChar('a', .{ .x = 0, .y = 0 }, 50, state);
-    } else if (state.gameTimeMs % 1_000 < 666) {
-        try fontVulkanZig.paintChar('b', .{ .x = 0, .y = 0 }, 50, state);
-    } else {
-        try fontVulkanZig.paintChar('c', .{ .x = 0, .y = 0 }, 50, state);
-    }
+    fontVulkanZig.clear(&vkState.font);
+    const max_len = 20;
+    var buf: [max_len]u8 = undefined;
+    const citizenCounter = try std.fmt.bufPrint(&buf, "{}", .{state.citizens.items.len});
+
+    try fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
+    try fontVulkanZig.paintText(citizenCounter, .{ .x = 0.15, .y = -0.9 }, 50, state);
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);

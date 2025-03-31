@@ -13,6 +13,8 @@ pub const VkFont = struct {
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []FontVertex = undefined,
+    verticeMax: u32 = 100,
+    verticeCountCurrent: u32 = 0,
     mipLevels: u32 = undefined,
     textureImage: vk.VkImage = undefined,
     textureImageMemory: vk.VkDeviceMemory = undefined,
@@ -67,34 +69,27 @@ const FontVertex = struct {
     }
 };
 
-pub fn paintChar(char: u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !void {
-    // height width
-    // image vulkan coordinates go from 0 to 1 for both width and height even though is is not a square
-    // vulkan surface goes from -1 to 1 even though it is not a square
-    // window width goes from 0 to 1600 and height from 0 to 800
-    // paint character A
-    // texX: A is first in image -> texX = 0
-    //    A width is 50pixel in an image width of 1600, pixel height is always 40
-    // texWidth: as for vulkan image width goes from 0 to 1 => texWidth = 50/1600 = 0.03125
-    // size: size in pixels
-    //
-    // in geom shader
-    // width = inTexWidth[0] * inSize[0] * scale[0].x;
-    //       = 0.03125 * 100 * (2 / 1600) =  0.0039
-    // height = inSize[0] * scale[0].y;
-    //        = 100 * (2 / 800)
+pub fn clear(font: *VkFont) void {
+    font.verticeCountCurrent = 0;
+}
 
+pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !void {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
-    charToTexCoords(char, &texX, &texWidth);
-    state.vkState.font.vertices[0] = .{
-        .pos = .{ vulkanSurfacePosition.x, vulkanSurfacePosition.y },
-        .color = .{ 1, 0, 0 },
-        .texX = texX,
-        .texWidth = texWidth,
-        .size = fontSize,
-    };
-    try setupVertexDataForGPU(&state.vkState);
+    var xOffset: f32 = 0;
+    for (chars) |char| {
+        if (state.vkState.font.verticeCountCurrent >= state.vkState.font.verticeMax) break;
+        charToTexCoords(char, &texX, &texWidth);
+        state.vkState.font.vertices[state.vkState.font.verticeCountCurrent] = .{
+            .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
+            .color = .{ 1, 0, 0 },
+            .texX = texX,
+            .texWidth = texWidth,
+            .size = fontSize,
+        };
+        xOffset += texWidth * 2;
+        state.vkState.font.verticeCountCurrent += 1;
+    }
 }
 
 pub fn initFont(state: *main.ChatSimState) !void {
@@ -147,43 +142,146 @@ pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
 
 pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
     const vkState = &state.vkState;
+    try setupVertexDataForGPU(vkState);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.font.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, 1, 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, vkState.font.verticeCountCurrent, 1, 0, 0);
 }
 
 fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
     const fontImageWidth = 1600.0;
+    const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1258 };
+    var index: usize = 0;
     switch (char) {
         'a', 'A' => {
-            texX.* = 0;
-            texWidth.* = 50.0 / fontImageWidth;
+            index = 0;
         },
         'b', 'B' => {
-            texX.* = 50.0 / fontImageWidth;
-            texWidth.* = 38.0 / fontImageWidth;
+            index = 1;
         },
         'c', 'C' => {
-            texX.* = 88.0 / fontImageWidth;
-            texWidth.* = 29.0 / fontImageWidth;
+            index = 2;
         },
         'd', 'D' => {
-            texX.* = 117.0 / fontImageWidth;
-            texWidth.* = 1.0 / fontImageWidth;
+            index = 3;
+        },
+        'e', 'E' => {
+            index = 4;
+        },
+        'f', 'F' => {
+            index = 5;
+        },
+        'g', 'G' => {
+            index = 6;
+        },
+        'h', 'H' => {
+            index = 7;
+        },
+        'i', 'I' => {
+            index = 8;
+        },
+        'j', 'J' => {
+            index = 9;
+        },
+        'k', 'K' => {
+            index = 10;
+        },
+        'l', 'L' => {
+            index = 11;
+        },
+        'm', 'M' => {
+            index = 12;
+        },
+        'n', 'N' => {
+            index = 13;
+        },
+        'o', 'O' => {
+            index = 14;
+        },
+        'p', 'P' => {
+            index = 15;
+        },
+        'q', 'Q' => {
+            index = 16;
+        },
+        'r', 'R' => {
+            index = 17;
+        },
+        's', 'S' => {
+            index = 18;
+        },
+        't', 'T' => {
+            index = 19;
+        },
+        'u', 'U' => {
+            index = 20;
+        },
+        'v', 'V' => {
+            index = 21;
+        },
+        'w', 'W' => {
+            index = 22;
+        },
+        'x', 'X' => {
+            index = 23;
+        },
+        'y', 'Y' => {
+            index = 24;
+        },
+        'z', 'Z' => {
+            index = 25;
+        },
+        '0' => {
+            index = 26;
+        },
+        '1' => {
+            index = 27;
+        },
+        '2' => {
+            index = 28;
+        },
+        '3' => {
+            index = 29;
+        },
+        '4' => {
+            index = 30;
+        },
+        '5' => {
+            index = 31;
+        },
+        '6' => {
+            index = 32;
+        },
+        '7' => {
+            index = 33;
+        },
+        '8' => {
+            index = 34;
+        },
+        '9' => {
+            index = 35;
+        },
+        ':' => {
+            index = 36;
+        },
+        ' ' => {
+            index = 37;
         },
         else => {
             texX.* = 0;
             texWidth.* = 1;
         },
     }
+    texX.* = imageCharSeperatePixels[index] / fontImageWidth;
+    texWidth.* = (imageCharSeperatePixels[index + 1] - imageCharSeperatePixels[index]) / fontImageWidth;
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    vkState.font.vertices = try allocator.alloc(FontVertex, 10);
+    vkState.font.vertices = try allocator.alloc(FontVertex, vkState.font.verticeMax);
     try paintVulkanZig.createBuffer(
-        @sizeOf(FontVertex) * 10,
+        @sizeOf(FontVertex) * vkState.font.verticeMax,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.font.vertexBuffer,
