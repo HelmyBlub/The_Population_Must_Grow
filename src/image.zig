@@ -26,72 +26,76 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/treeFarm.png" },
 };
 
-pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
+pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
     vkState.textureImage = try allocator.alloc(vk.VkImage, IMAGE_DATA.len);
     vkState.textureImageMemory = try allocator.alloc(vk.VkDeviceMemory, IMAGE_DATA.len);
     vkState.mipLevels = try allocator.alloc(u32, IMAGE_DATA.len);
 
     for (0..IMAGE_DATA.len) |i| {
-        var image = try zigimg.Image.fromFilePath(std.heap.page_allocator, IMAGE_DATA[i].path);
-        defer image.deinit();
-        try image.convert(.rgba32);
-
-        var stagingBuffer: vk.VkBuffer = undefined;
-        defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
-        var stagingBufferMemory: vk.VkDeviceMemory = undefined;
-        defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
-        try paintVulkanZig.createBuffer(
-            image.imageByteSize(),
-            vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &stagingBuffer,
-            &stagingBufferMemory,
-            vkState,
-        );
-
-        var data: ?*anyopaque = undefined;
-        if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-        @memcpy(
-            @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
-            @as([*]u8, @ptrCast(image.pixels.asBytes())),
-        );
-        vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
-        const imageWidth: u32 = @intCast(image.width);
-        const imageHeight: u32 = @intCast(image.height);
-        const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
-        vkState.mipLevels[i] = @as(u32, @intFromFloat(log2)) + 1;
-        try paintVulkanZig.createImage(
-            imageWidth,
-            imageHeight,
-            vkState.mipLevels[i],
-            vk.VK_SAMPLE_COUNT_1_BIT,
-            vk.VK_FORMAT_R8G8B8A8_SRGB,
-            vk.VK_IMAGE_TILING_OPTIMAL,
-            vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT | vk.VK_IMAGE_USAGE_TRANSFER_DST_BIT | vk.VK_IMAGE_USAGE_SAMPLED_BIT,
-            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            &vkState.textureImage[i],
-            &vkState.textureImageMemory[i],
-            vkState,
-        );
-
-        try transitionVulkanImageLayout(
-            vkState.textureImage[i],
-            vk.VK_IMAGE_LAYOUT_UNDEFINED,
-            vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            vkState.mipLevels[i],
-            vkState,
-        );
-        try copyBufferToImage(stagingBuffer, vkState.textureImage[i], imageWidth, imageHeight, vkState);
-        try generateVulkanMipmaps(
-            vkState.textureImage[i],
-            vk.VK_FORMAT_R8G8B8A8_SRGB,
-            @intCast(imageWidth),
-            @intCast(imageHeight),
-            vkState.mipLevels[i],
-            vkState,
-        );
+        try createVulkanTextureImage(vkState, allocator, IMAGE_DATA[i].path, &vkState.mipLevels[i], &vkState.textureImage[i], &vkState.textureImageMemory[i]);
     }
     std.debug.print("createVulkanTextureImage finished\n", .{});
+}
+
+pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator, filePath: []const u8, mipLevels: *u32, textureImage: *vk.VkImage, textureImageMemory: *vk.VkDeviceMemory) !void {
+    var image = try zigimg.Image.fromFilePath(allocator, filePath);
+    defer image.deinit();
+    try image.convert(.rgba32);
+
+    var stagingBuffer: vk.VkBuffer = undefined;
+    defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
+    var stagingBufferMemory: vk.VkDeviceMemory = undefined;
+    defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
+    try paintVulkanZig.createBuffer(
+        image.imageByteSize(),
+        vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &stagingBuffer,
+        &stagingBufferMemory,
+        vkState,
+    );
+
+    var data: ?*anyopaque = undefined;
+    if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    @memcpy(
+        @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
+        @as([*]u8, @ptrCast(image.pixels.asBytes())),
+    );
+    vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
+    const imageWidth: u32 = @intCast(image.width);
+    const imageHeight: u32 = @intCast(image.height);
+    const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
+    mipLevels.* = @as(u32, @intFromFloat(log2)) + 1;
+    try paintVulkanZig.createImage(
+        imageWidth,
+        imageHeight,
+        mipLevels.*,
+        vk.VK_SAMPLE_COUNT_1_BIT,
+        vk.VK_FORMAT_R8G8B8A8_SRGB,
+        vk.VK_IMAGE_TILING_OPTIMAL,
+        vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT | vk.VK_IMAGE_USAGE_TRANSFER_DST_BIT | vk.VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        textureImage,
+        textureImageMemory,
+        vkState,
+    );
+
+    try transitionVulkanImageLayout(
+        textureImage.*,
+        vk.VK_IMAGE_LAYOUT_UNDEFINED,
+        vk.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        mipLevels.*,
+        vkState,
+    );
+    try copyBufferToImage(stagingBuffer, textureImage.*, imageWidth, imageHeight, vkState);
+    try generateVulkanMipmaps(
+        textureImage.*,
+        vk.VK_FORMAT_R8G8B8A8_SRGB,
+        @intCast(imageWidth),
+        @intCast(imageHeight),
+        mipLevels.*,
+        vkState,
+    );
 }
 
 fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *paintVulkanZig.Vk_State) !void {

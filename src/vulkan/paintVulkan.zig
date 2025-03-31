@@ -177,9 +177,10 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createColorResources(vkState);
     try createFramebuffers(vkState, state.allocator);
     try createCommandPool(vkState, state.allocator);
-    try imageZig.createVulkanTextureImage(vkState, state.allocator);
+    try imageZig.createVulkanTextureSprites(vkState, state.allocator);
     try createTextureImageView(vkState, state.allocator);
     try createTextureSampler(vkState);
+    try fontVulkanZig.initFont(state);
     try createVertexBuffer(vkState, state.citizens.items.len, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
@@ -268,7 +269,7 @@ fn createTextureImageView(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     std.debug.print("createTextureImageView finished\n", .{});
 }
 
-fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, vkState: *Vk_State) !vk.VkImageView {
+pub fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, vkState: *Vk_State) !vk.VkImageView {
     const viewInfo: vk.VkImageViewCreateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -386,6 +387,13 @@ fn createDescriptorSets(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
                 .sampler = vkState.textureSampler,
             };
         }
+
+        const imageInfoFont: vk.VkDescriptorImageInfo = .{
+            .imageLayout = vk.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .imageView = vkState.font.textureImageView,
+            .sampler = vkState.textureSampler,
+        };
+
         const descriptorWrites = [_]vk.VkWriteDescriptorSet{
             .{
                 .sType = vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -406,6 +414,15 @@ fn createDescriptorSets(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
                 .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = @as(u32, @intCast(imageInfo.len)),
                 .pImageInfo = @ptrCast(imageInfo),
+            },
+            .{
+                .sType = vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = vkState.descriptorSets[i],
+                .dstBinding = 2,
+                .dstArrayElement = 0,
+                .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .pImageInfo = @ptrCast(&imageInfoFont),
             },
         };
         vk.vkUpdateDescriptorSets(vkState.logicalDevice, descriptorWrites.len, &descriptorWrites, 0, null);
@@ -469,8 +486,15 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
         .pImmutableSamplers = null,
         .stageFlags = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
     };
+    const samplerLayoutFontBinding: vk.VkDescriptorSetLayoutBinding = .{
+        .binding = 2,
+        .descriptorCount = 1,
+        .descriptorType = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .pImmutableSamplers = null,
+        .stageFlags = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
+    };
 
-    const bindings = [_]vk.VkDescriptorSetLayoutBinding{ uboLayoutBinding, samplerLayoutBinding };
+    const bindings = [_]vk.VkDescriptorSetLayoutBinding{ uboLayoutBinding, samplerLayoutBinding, samplerLayoutFontBinding };
 
     const layoutInfo: vk.VkDescriptorSetLayoutCreateInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -532,6 +556,7 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.A
 pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
     rectangleVulkanZig.destroyRectangle(vkState, allocator);
+    fontVulkanZig.destroyFont(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -675,6 +700,14 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     try updateUniformBuffer(state);
 
+    if (state.gameTimeMs % 1_000 < 333) {
+        try fontVulkanZig.paintChar('a', .{ .x = 0, .y = 0 }, 50, state);
+    } else if (state.gameTimeMs % 1_000 < 666) {
+        try fontVulkanZig.paintChar('b', .{ .x = 0, .y = 0 }, 50, state);
+    } else {
+        try fontVulkanZig.paintChar('c', .{ .x = 0, .y = 0 }, 50, state);
+    }
+
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);
 
@@ -781,6 +814,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
 
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCount), 1, 0, 0);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
+    try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }

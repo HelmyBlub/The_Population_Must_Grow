@@ -1,7 +1,7 @@
 tasks:
 - make UI
     - text
-        - continue: shader need to be corrected to new files in fontVulkan.zig. Think about putting compiled shaders into own folder
+        - continue: shader need to be corrected to new files in fontVulkan.zig
         - idea steps:
             - new file fontVulkan
                 - similar to rectangle vulkan
@@ -13,6 +13,7 @@ tasks:
         - create my own font? with images or polygons?
             - what options does vulkan have here?
     - rectangles to select which building to place
+        - bug: rectangle and moving
     - citizen counter
 - change:
     - problem: unclear why i can not plant more buildings

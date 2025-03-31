@@ -5,6 +5,7 @@ const vk = @cImport({
 });
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const imageZig = @import("../image.zig");
 
 pub const VkFont = struct {
     pipelineLayout: vk.VkPipelineLayout = undefined,
@@ -12,12 +13,17 @@ pub const VkFont = struct {
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []FontVertex = undefined,
+    mipLevels: u32 = undefined,
+    textureImage: vk.VkImage = undefined,
+    textureImageMemory: vk.VkDeviceMemory = undefined,
+    textureImageView: vk.VkImageView = undefined,
 };
 
 const FontVertex = struct {
     pos: [2]f32,
-    texCords: [2]f32,
-    size: [2]f32,
+    texX: f32,
+    texWidth: f32,
+    size: f32,
     color: [3]f32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -30,7 +36,7 @@ const FontVertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() []vk.VkVertexInputAttributeDescription {
+    fn getAttributeDescriptions() [5]vk.VkVertexInputAttributeDescription {
         const attributeDescriptions = [_]vk.VkVertexInputAttributeDescription{ .{
             .binding = 0,
             .location = 0,
@@ -39,16 +45,21 @@ const FontVertex = struct {
         }, .{
             .binding = 0,
             .location = 1,
-            .format = vk.VK_FORMAT_R32G32_SFLOAT,
-            .offset = @offsetOf(FontVertex, "texCords"),
+            .format = vk.VK_FORMAT_R32_SFLOAT,
+            .offset = @offsetOf(FontVertex, "texX"),
         }, .{
             .binding = 0,
             .location = 2,
-            .format = vk.VK_FORMAT_R32G32_SFLOAT,
-            .offset = @offsetOf(FontVertex, "size"),
+            .format = vk.VK_FORMAT_R32_SFLOAT,
+            .offset = @offsetOf(FontVertex, "texWidth"),
         }, .{
             .binding = 0,
             .location = 3,
+            .format = vk.VK_FORMAT_R32_SFLOAT,
+            .offset = @offsetOf(FontVertex, "size"),
+        }, .{
+            .binding = 0,
+            .location = 4,
             .format = vk.VK_FORMAT_R32G32B32_SFLOAT,
             .offset = @offsetOf(FontVertex, "color"),
         } };
@@ -56,12 +67,59 @@ const FontVertex = struct {
     }
 };
 
+pub fn paintChar(char: u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !void {
+    // height width
+    // image vulkan coordinates go from 0 to 1 for both width and height even though is is not a square
+    // vulkan surface goes from -1 to 1 even though it is not a square
+    // window width goes from 0 to 1600 and height from 0 to 800
+    // paint character A
+    // texX: A is first in image -> texX = 0
+    //    A width is 50pixel in an image width of 1600, pixel height is always 40
+    // texWidth: as for vulkan image width goes from 0 to 1 => texWidth = 50/1600 = 0.03125
+    // size: size in pixels
+    //
+    // in geom shader
+    // width = inTexWidth[0] * inSize[0] * scale[0].x;
+    //       = 0.03125 * 100 * (2 / 1600) =  0.0039
+    // height = inSize[0] * scale[0].y;
+    //        = 100 * (2 / 800)
+
+    var texX: f32 = 0;
+    var texWidth: f32 = 0;
+    charToTexCoords(char, &texX, &texWidth);
+    state.vkState.font.vertices[0] = .{
+        .pos = .{ vulkanSurfacePosition.x, vulkanSurfacePosition.y },
+        .color = .{ 1, 0, 0 },
+        .texX = texX,
+        .texWidth = texWidth,
+        .size = fontSize,
+    };
+    try setupVertexDataForGPU(&state.vkState);
+}
+
 pub fn initFont(state: *main.ChatSimState) !void {
     try createGraphicsPipeline(&state.vkState, state.allocator);
     try createVertexBuffer(&state.vkState, state.allocator);
+    try imageZig.createVulkanTextureImage(
+        &state.vkState,
+        state.allocator,
+        "images/myfont.png",
+        &state.vkState.font.mipLevels,
+        &state.vkState.font.textureImage,
+        &state.vkState.font.textureImageMemory,
+    );
+    state.vkState.font.textureImageView = try paintVulkanZig.createImageView(
+        state.vkState.font.textureImage,
+        vk.VK_FORMAT_R8G8B8A8_SRGB,
+        state.vkState.font.mipLevels,
+        &state.vkState,
+    );
 }
 
 pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) void {
+    vk.vkDestroyImageView(vkState.logicalDevice, vkState.font.textureImageView, null);
+    vk.vkDestroyImage(vkState.logicalDevice, vkState.font.textureImage, null);
+    vk.vkFreeMemory(vkState.logicalDevice, vkState.font.textureImageMemory, null);
     vk.vkDestroyBuffer(vkState.logicalDevice, vkState.font.vertexBuffer, null);
     vk.vkFreeMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.font.graphicsPipeline, null);
@@ -69,15 +127,15 @@ pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocat
     allocator.free(vkState.font.vertices);
 }
 
-// pub fn setupVertices(font: main.font, state: *main.ChatSimState) !void {
-//TODO
-// state.vkState.font.vertices[0] = .{ .pos = .{ font.pos[0].x, font.pos[0].y }, .color = font.color };
-// state.vkState.font.vertices[1] = .{ .pos = .{ font.pos[1].x, font.pos[0].y }, .color = font.color };
-// state.vkState.font.vertices[2] = .{ .pos = .{ font.pos[1].x, font.pos[1].y }, .color = font.color };
-// state.vkState.font.vertices[3] = .{ .pos = .{ font.pos[0].x, font.pos[1].y }, .color = font.color };
-// state.vkState.font.vertices[4] = .{ .pos = .{ font.pos[0].x, font.pos[0].y }, .color = font.color };
-// try setupVertexDataForGPU(&state.vkState);
-// }
+pub fn setupVertices(state: *main.ChatSimState) !void {
+    state.vkState.font.vertices[0] = .{
+        .pos = .{ 0, 0 },
+        .color = .{ 1, 0, 0 },
+        .texCords = .{ 0, 0 },
+        .size = .{ 1, 1 },
+    };
+    try setupVertexDataForGPU(&state.vkState);
+}
 
 pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
@@ -93,7 +151,33 @@ pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.C
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.font.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, 5, 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, 1, 1, 0, 0);
+}
+
+fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
+    const fontImageWidth = 1600.0;
+    switch (char) {
+        'a', 'A' => {
+            texX.* = 0;
+            texWidth.* = 50.0 / fontImageWidth;
+        },
+        'b', 'B' => {
+            texX.* = 50.0 / fontImageWidth;
+            texWidth.* = 38.0 / fontImageWidth;
+        },
+        'c', 'C' => {
+            texX.* = 88.0 / fontImageWidth;
+            texWidth.* = 29.0 / fontImageWidth;
+        },
+        'd', 'D' => {
+            texX.* = 117.0 / fontImageWidth;
+            texWidth.* = 1.0 / fontImageWidth;
+        },
+        else => {
+            texX.* = 0;
+            texWidth.* = 1;
+        },
+    }
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
@@ -110,16 +194,10 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    //TODO correct shader
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/rectangleVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/rectangleFrag.spv", allocator);
-    defer allocator.free(fragShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
-    const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
-
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = vk.VK_SHADER_STAGE_VERTEX_BIT,
@@ -127,6 +205,10 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pName = "main",
     };
 
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontFrag.spv", allocator);
+    defer allocator.free(fragShaderCode);
+    const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
+    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
     const fragShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -134,7 +216,18 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pName = "main",
     };
 
-    const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo };
+    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontGeom.spv", allocator);
+    defer allocator.free(geomShaderCode);
+    const geomShaderModule = try paintVulkanZig.createShaderModule(geomShaderCode, vkState);
+    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
+    const geomShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = vk.VK_SHADER_STAGE_GEOMETRY_BIT,
+        .module = geomShaderModule,
+        .pName = "main",
+    };
+
+    const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
     const bindingDescription = FontVertex.getBindingDescription();
     const attributeDescriptions = FontVertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
