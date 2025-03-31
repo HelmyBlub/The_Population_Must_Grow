@@ -68,7 +68,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
+            if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
                 const mouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
                 const topLeft: main.Position = .{
                     .x = @min(mouseUp.x, state.mouseDown.?.x),
@@ -118,13 +118,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
-            if (event.key.scancode == sdl.SDL_SCANCODE_LEFT) {
+            if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
                 state.camera.position.x -= 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
                 state.camera.position.x += 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_UP) {
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_UP or event.key.scancode == sdl.SDL_SCANCODE_W) {
                 state.camera.position.y -= 100;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN) {
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.camera.position.y += 100;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
                 state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
