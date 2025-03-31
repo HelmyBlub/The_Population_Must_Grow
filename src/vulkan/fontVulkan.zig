@@ -6,6 +6,7 @@ const vk = @cImport({
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
 const imageZig = @import("../image.zig");
+const windowSdlZig = @import("../windowSdl.zig");
 
 pub const VkFont = struct {
     pipelineLayout: vk.VkPipelineLayout = undefined,
@@ -87,7 +88,7 @@ pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSi
             .texWidth = texWidth,
             .size = fontSize,
         };
-        xOffset += texWidth * 2;
+        xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
         state.vkState.font.verticeCountCurrent += 1;
     }
 }

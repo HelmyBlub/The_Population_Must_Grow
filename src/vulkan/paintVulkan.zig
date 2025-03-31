@@ -477,7 +477,7 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
         .binding = 0,
         .descriptorType = vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
-        .stageFlags = vk.VK_SHADER_STAGE_VERTEX_BIT,
+        .stageFlags = vk.VK_SHADER_STAGE_VERTEX_BIT | vk.VK_SHADER_STAGE_GEOMETRY_BIT,
     };
     const samplerLayoutBinding: vk.VkDescriptorSetLayoutBinding = .{
         .binding = 1,

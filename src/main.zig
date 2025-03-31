@@ -214,9 +214,6 @@ fn mainLoop(state: *ChatSimState) !void {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
             std.time.sleep(sleepTime * 1_000);
         }
-        if (state.gameTimeMs % (@as(u32, state.tickIntervalMs) * 600) == 0) {
-            std.debug.print("citizenCounter: {d}\n", .{state.citizens.items.len});
-        }
 
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
