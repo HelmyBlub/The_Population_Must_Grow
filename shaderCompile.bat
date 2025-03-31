@@ -1,10 +1,10 @@
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.vert -o src/vert.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.frag -o src/frag.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.geom -o src/geom.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.vert -o shaders/compiled/vert.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.frag -o shaders/compiled/frag.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.geom -o shaders/compiled/geom.spv
 
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/rectangleShader.vert -o src/rectangleVert.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/rectangleShader.frag -o src/rectangleFrag.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/rectangleShader.vert -o shaders/compiled/rectangleVert.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/rectangleShader.frag -o shaders/compiled/rectangleFrag.spv
 
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.vert -o src/fontVert.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.frag -o src/fontFrag.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.geom -o src/fontGeom.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.vert -o shaders/compiled/fontVert.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.frag -o shaders/compiled/fontFrag.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/fontShader.geom -o shaders/compiled/fontGeom.spv
