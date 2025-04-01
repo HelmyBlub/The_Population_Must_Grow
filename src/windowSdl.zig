@@ -44,17 +44,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
-            if (state.mouseDown != null) {
-                if (state.rectangle == null) {
-                    state.rectangle = .{
-                        .color = .{ 1, 0, 0 },
-                        .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
-                    };
-                }
-                state.rectangle.?.pos[0] = gameMapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
-                state.rectangle.?.pos[1] = mouseWindowPositionToVulkanSurfacePoisition(event.motion.x, event.motion.y);
-                try rectangleVulkanZig.setupVertices(state.rectangle.?, state);
-            }
+            state.currentMouse = .{ .x = event.motion.x, .y = event.motion.y };
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
                 state.camera.zoom *= 1.2;
@@ -119,13 +109,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
-                state.camera.position.x -= 100;
+                state.camera.position.x -= 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
-                state.camera.position.x += 100;
+                state.camera.position.x += 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_UP or event.key.scancode == sdl.SDL_SCANCODE_W) {
-                state.camera.position.y -= 100;
+                state.camera.position.y -= 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
-                state.camera.position.y += 100;
+                state.camera.position.y += 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
                 state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
                 state.buildMode = main.BUILDING_MODE_SINGLE;

@@ -25,6 +25,7 @@ pub const ChatSimState: type = struct {
     camera: Camera,
     allocator: std.mem.Allocator,
     rectangle: ?Rectangle = null,
+    currentMouse: ?Position = null,
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
     pub const TILE_SIZE: u16 = 20;
