@@ -40,6 +40,7 @@ pub const BUILDING_MODE_SINGLE = 0;
 pub const BUILDING_MODE_DRAG_RECTANGLE = 1;
 pub const BUILDING_TYPE_HOUSE = 0;
 pub const BUILDING_TYPE_TREE_FARM = 1;
+pub const BUILDING_TYPE_POTATO_FARM = 2;
 
 pub const MapTree = struct {
     position: Position,
@@ -54,9 +55,17 @@ pub const Building = struct {
     inConstruction: bool = true,
 };
 
+pub const PotatoField = struct {
+    position: Position,
+    planted: bool = false,
+    ///  values from 0 to 1
+    grow: f32 = 0,
+};
+
 pub const MapChunk = struct {
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
+    potatoFields: std.ArrayList(PotatoField),
 };
 
 pub const Camera: type = struct {
@@ -129,6 +138,11 @@ pub fn mapIsTilePositionFree(pos: Position, state: *ChatSimState) bool {
             return false;
         }
     }
+    for (chunk.potatoFields.items) |field| {
+        if (calculateDistance(pos, field.position) < ChatSimState.TILE_SIZE) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -144,6 +158,7 @@ fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var mapChunk: MapChunk = .{
         .buildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
+        .potatoFields = std.ArrayList(PotatoField).init(allocator),
     };
     try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
     try mapChunk.trees.append(.{ .position = .{ .x = ChatSimState.TILE_SIZE, .y = 0 }, .grow = 1 });
@@ -253,6 +268,7 @@ fn destroyGameState(state: *ChatSimState) void {
     while (iterator.next()) |chunk| {
         chunk.buildings.deinit();
         chunk.trees.deinit();
+        chunk.potatoFields.deinit();
     }
     state.chunks.deinit();
 }

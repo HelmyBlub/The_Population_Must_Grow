@@ -116,6 +116,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     if (state.chunks.get("0_0")) |chunk| {
         entityPaintCount += chunk.buildings.items.len;
         entityPaintCount += chunk.trees.items.len;
+        entityPaintCount += chunk.potatoFields.items.len * 2;
     }
     state.vkState.entityPaintCount = @intCast(entityPaintCount);
     // recreate buffer with new size
@@ -152,6 +153,11 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             }
             vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = main.ChatSimState.TILE_SIZE };
             index += 1;
+        }
+        for (chunk.potatoFields.items) |*field| {
+            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = main.ChatSimState.TILE_SIZE };
+            const size: u8 = if (field.grow != 0) @as(u8, @intCast(@divFloor(main.ChatSimState.TILE_SIZE, @as(u8, @intFromFloat(1.0 / field.grow))))) else 0;
+            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
         }
     }
 }

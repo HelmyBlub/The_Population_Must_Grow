@@ -6,8 +6,10 @@ pub const Citizen: type = struct {
     position: Position,
     moveTo: ?Position = null,
     moveSpeed: f16,
+    idle: bool = true,
     buildingIndex: ?usize = null,
     treeIndex: ?usize = null,
+    farmIndex: ?usize = null,
     hasWood: bool = false,
     homePosition: ?Position = null,
 
@@ -25,12 +27,24 @@ pub const Citizen: type = struct {
     }
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
-        if (citizen.buildingIndex != null) {
+        if (citizen.farmIndex) |farmIndex| {
+            if (citizen.moveTo == null) {
+                var chunk = state.chunks.getPtr("0_0").?;
+                const farmTile = &chunk.potatoFields.items[farmIndex];
+                if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                    farmTile.planted = true;
+                    citizen.farmIndex = null;
+                    citizen.idle = true;
+                } else {
+                    citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                }
+            }
+        } else if (citizen.buildingIndex != null) {
             var chunk = state.chunks.getPtr("0_0").?;
-            if (citizen.treeIndex == null and citizen.hasWood == false) {
-                findFastestTreeAndMoveTo(citizen, state);
-            } else if (citizen.treeIndex != null and citizen.hasWood == false) {
-                if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
+            if (citizen.moveTo == null) {
+                if (citizen.treeIndex == null and citizen.hasWood == false) {
+                    findFastestTreeAndMoveTo(citizen, state);
+                } else if (citizen.treeIndex != null and citizen.hasWood == false) {
                     citizen.hasWood = true;
                     var tree = &chunk.trees.items[citizen.treeIndex.?];
                     tree.grow = 0;
@@ -39,15 +53,14 @@ pub const Citizen: type = struct {
                     const targetBuilding = chunk.buildings.items[citizen.buildingIndex.?];
                     citizen.moveTo = .{ .x = targetBuilding.position.x, .y = targetBuilding.position.y };
                     return;
-                }
-            } else if (citizen.treeIndex == null and citizen.hasWood == true) {
-                if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
+                } else if (citizen.treeIndex == null and citizen.hasWood == true) {
                     citizen.hasWood = false;
                     citizen.treeIndex = null;
                     var building: *main.Building = &chunk.buildings.items[citizen.buildingIndex.?];
                     building.inConstruction = false;
                     citizen.buildingIndex = null;
                     citizen.moveTo = null;
+                    citizen.idle = true;
                     if (building.type == main.BUILDING_TYPE_HOUSE) {
                         var newCitizen = main.Citizen.createCitizen();
                         newCitizen.position = citizen.position;
@@ -89,10 +102,13 @@ pub const Citizen: type = struct {
                 return;
             }
         }
-        if (citizen.moveTo != null) {
-            const direction: f32 = main.calculateDirection(citizen.position, citizen.moveTo.?);
+        if (citizen.moveTo) |moveTo| {
+            const direction: f32 = main.calculateDirection(citizen.position, moveTo);
             citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
             citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
+            if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
+                citizen.moveTo = null;
+            }
         }
     }
 
@@ -108,7 +124,7 @@ pub const Citizen: type = struct {
         var closestCitizen: ?*Citizen = null;
         var shortestDistance: f32 = 0;
         for (state.citizens.items) |*citizen| {
-            if (citizen.buildingIndex != null) continue;
+            if (!citizen.idle) continue;
             const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
             if (closestCitizen == null or shortestDistance > tempDistance) {
                 closestCitizen = citizen;

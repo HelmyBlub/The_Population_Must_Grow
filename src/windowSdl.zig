@@ -74,14 +74,28 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                         if (main.mapIsTilePositionFree(position, state) == false) continue;
                         const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
-                            if (citizen.buildingIndex != null) continue;
-                            citizen.buildingIndex = chunk.buildings.items.len;
-                            const newBuilding: main.Building = .{
-                                .position = position,
-                                .type = state.currentBuildingType,
-                            };
-                            try chunk.buildings.append(newBuilding);
-                            try state.chunks.put("0_0", chunk);
+                            if (state.currentBuildingType == main.BUILDING_TYPE_HOUSE) {
+                                if (citizen.buildingIndex != null) continue;
+                                citizen.buildingIndex = chunk.buildings.items.len;
+                                citizen.idle = false;
+                                citizen.moveTo = null;
+                                const newBuilding: main.Building = .{
+                                    .position = position,
+                                    .type = state.currentBuildingType,
+                                };
+                                try chunk.buildings.append(newBuilding);
+                                try state.chunks.put("0_0", chunk);
+                            } else if (state.currentBuildingType == main.BUILDING_TYPE_POTATO_FARM) {
+                                if (citizen.farmIndex != null) continue;
+                                citizen.farmIndex = chunk.potatoFields.items.len;
+                                citizen.idle = false;
+                                citizen.moveTo = null;
+                                const newPotatoField: main.PotatoField = .{
+                                    .position = position,
+                                };
+                                try chunk.potatoFields.append(newPotatoField);
+                                try state.chunks.put("0_0", chunk);
+                            }
                         } else {
                             break :placeLoop;
                         }
@@ -99,6 +113,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 if (freeCitizen) |citizen| {
                     if (citizen.buildingIndex != null) continue;
                     citizen.buildingIndex = chunk.buildings.items.len;
+                    citizen.idle = false;
+                    citizen.moveTo = null;
                     const newBuilding: main.Building = .{
                         .position = position,
                         .type = state.currentBuildingType,
@@ -126,6 +142,9 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.buildMode = main.BUILDING_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
                 state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
+                state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
+                state.currentBuildingType = main.BUILDING_TYPE_POTATO_FARM;
                 state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {

@@ -12,6 +12,8 @@ pub const IMAGE_HOUSE = 2;
 pub const IMAGE_WHITE_RECTANGLE = 3;
 pub const IMAGE_GREEN_RECTANGLE = 4;
 pub const IMAGE_TREE_FARM = 5;
+pub const IMAGE_FARM_FIELD = 6;
+pub const IMAGE_POTATO_PLANT = 7;
 
 pub const ImageData = struct {
     path: []const u8,
@@ -24,6 +26,8 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/whiteRectangle.png" },
     .{ .path = "images/greenRectangle.png" },
     .{ .path = "images/treeFarm.png" },
+    .{ .path = "images/farmField.png" },
+    .{ .path = "images/potatoPlant.png" },
 };
 
 pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
