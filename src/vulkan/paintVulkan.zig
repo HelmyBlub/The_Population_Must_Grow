@@ -701,12 +701,9 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     try updateUniformBuffer(state);
 
     fontVulkanZig.clear(&vkState.font);
-    const max_len = 20;
-    var buf: [max_len]u8 = undefined;
-    const citizenCounter = try std.fmt.bufPrint(&buf, "{}", .{state.citizens.items.len});
 
-    try fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
-    try fontVulkanZig.paintText(citizenCounter, .{ .x = 0.15, .y = -0.9 }, 50, state);
+    const vulkanWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
+    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + vulkanWidth, .y = -0.9 }, 50, state);
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);

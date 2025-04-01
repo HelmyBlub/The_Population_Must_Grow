@@ -13,7 +13,7 @@ pub const Citizen: type = struct {
     pub fn createCitizen() Citizen {
         return Citizen{
             .position = .{ .x = 0, .y = 0 },
-            .moveSpeed = 0.5,
+            .moveSpeed = 2.0,
         };
     }
 

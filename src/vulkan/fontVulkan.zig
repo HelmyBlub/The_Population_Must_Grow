@@ -74,7 +74,8 @@ pub fn clear(font: *VkFont) void {
     font.verticeCountCurrent = 0;
 }
 
-pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !void {
+/// returns vulkan surface width of text
+pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f32 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     var xOffset: f32 = 0;
@@ -91,6 +92,33 @@ pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSi
         xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
         state.vkState.font.verticeCountCurrent += 1;
     }
+    return xOffset;
+}
+
+pub fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
+    const max_len = 20;
+    var buf: [max_len]u8 = undefined;
+    const numberAsString = try std.fmt.bufPrint(&buf, "{}", .{number});
+    var texX: f32 = 0;
+    var texWidth: f32 = 0;
+    var xOffset: f32 = 0;
+    const spacingPosition = (numberAsString.len + 2) % 3;
+    const spacing = 20 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
+    for (numberAsString, 0..) |char, i| {
+        if (state.vkState.font.verticeCountCurrent >= state.vkState.font.verticeMax) break;
+        charToTexCoords(char, &texX, &texWidth);
+        state.vkState.font.vertices[state.vkState.font.verticeCountCurrent] = .{
+            .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
+            .color = .{ 1, 0, 0 },
+            .texX = texX,
+            .texWidth = texWidth,
+            .size = fontSize,
+        };
+        xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
+        if (i % 3 == spacingPosition) xOffset += spacing;
+        state.vkState.font.verticeCountCurrent += 1;
+    }
+    return xOffset;
 }
 
 pub fn initFont(state: *main.ChatSimState) !void {

@@ -1,10 +1,13 @@
 tasks:
 - make UI
     - text
-        - continue: mapping all characters to my image in fontVulkan.zig
+        - continue: make citizen counter work with different window sizes
+        - draw big number with some space after each 3 digits
         - idea steps:
             - want to be able to assign color per code. How would the image need to look like if color does not matter for the image?
         - display fps
+        - cpu usage
+        - graphics card usage
         - display citizen counter
         - create my own font? with images or polygons?
             - what options does vulkan have here?
