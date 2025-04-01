@@ -68,11 +68,12 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
                 const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
                 var chunk = state.chunks.get("0_0").?;
-                for (0..width) |x| {
+                placeLoop: for (0..width) |x| {
                     for (0..height) |y| {
                         const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
                         if (main.mapIsTilePositionFree(position, state) == false) continue;
-                        for (state.citizens.items) |*citizen| {
+                        const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
+                        if (freeCitizen) |citizen| {
                             if (citizen.buildingIndex != null) continue;
                             citizen.buildingIndex = chunk.buildings.items.len;
                             const newBuilding: main.Building = .{
@@ -81,7 +82,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                             };
                             try chunk.buildings.append(newBuilding);
                             try state.chunks.put("0_0", chunk);
-                            break;
+                        } else {
+                            break :placeLoop;
                         }
                     }
                 }
@@ -93,7 +95,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 if (main.mapIsTilePositionFree(position, state) == false) return;
                 var chunk = state.chunks.get("0_0").?;
-                for (state.citizens.items) |*citizen| {
+                const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
+                if (freeCitizen) |citizen| {
                     if (citizen.buildingIndex != null) continue;
                     citizen.buildingIndex = chunk.buildings.items.len;
                     const newBuilding: main.Building = .{
@@ -102,7 +105,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     };
                     try chunk.buildings.append(newBuilding);
                     try state.chunks.put("0_0", chunk);
-                    break;
                 }
             } else if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);

@@ -1,10 +1,4 @@
 tasks:
-- make UI
-    - steps based on zoom
-    - rectangles to select which building to place
-        - bug: rectangle and moving
-    - citizen counter
-
 - change citzen build behavior:
     - change: not first free citizen, but closest citizen for build job
     - consider growing trees as wood source
