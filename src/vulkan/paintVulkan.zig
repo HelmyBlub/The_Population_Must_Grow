@@ -702,8 +702,8 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
 
     fontVulkanZig.clear(&vkState.font);
 
-    const citizenTextWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
-    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + citizenTextWidth, .y = -0.9 }, 50, state);
+    const citizenTextWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, 50, state);
+    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
 
     const fpsTextWidth = fontVulkanZig.paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
     _ = try fontVulkanZig.paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);

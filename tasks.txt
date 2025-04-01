@@ -1,8 +1,9 @@
 tasks:
-- change citzen build behavior:
-    - change: not first free citizen, but closest citizen for build job
-    - consider growing trees as wood source
-    - improve logic for performance
+- citizen spawn where they live
+- citizen stay where they live
+- performance:
+    - should i consider performance now?
+        - not yet clear what the features will be, so improving performance might be bad for coding speed in future?
 - think about how to effectivly use multi core programming for main game logic
     - do not forget simd vector stuff
 
@@ -14,7 +15,7 @@ Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter
 - game idea:
-    - city builder extreme
+    - city builder extreme fast
     - i have citizens. Each citizen just needs a home and food
         - citizens can be chatters
     - i as the player can:

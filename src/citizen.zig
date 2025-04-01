@@ -9,6 +9,7 @@ pub const Citizen: type = struct {
     buildingIndex: ?usize = null,
     treeIndex: ?usize = null,
     hasWood: bool = false,
+    homePosition: ?Position = null,
 
     pub fn createCitizen() Citizen {
         return Citizen{
@@ -18,18 +19,12 @@ pub const Citizen: type = struct {
     }
 
     pub fn citizensMove(state: *main.ChatSimState) !void {
-        var spawnCounter: u32 = 0;
-        for (state.citizens.items) |*citizen| {
-            const result = try citizenMove(citizen, state);
-            if (result) spawnCounter += 1;
-        }
-        for (0..spawnCounter) |_| {
-            const newCitizen = main.Citizen.createCitizen();
-            try state.citizens.append(newCitizen);
+        for (0..state.citizens.items.len) |i| {
+            try citizenMove(&state.citizens.items[i], state);
         }
     }
 
-    pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !bool {
+    pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
         if (citizen.buildingIndex != null) {
             var chunk = state.chunks.getPtr("0_0").?;
             if (citizen.treeIndex == null and citizen.hasWood == false) {
@@ -43,7 +38,7 @@ pub const Citizen: type = struct {
                     citizen.treeIndex = null;
                     const targetBuilding = chunk.buildings.items[citizen.buildingIndex.?];
                     citizen.moveTo = .{ .x = targetBuilding.position.x, .y = targetBuilding.position.y };
-                    return false;
+                    return;
                 }
             } else if (citizen.treeIndex == null and citizen.hasWood == true) {
                 if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
@@ -54,7 +49,11 @@ pub const Citizen: type = struct {
                     citizen.buildingIndex = null;
                     citizen.moveTo = null;
                     if (building.type == main.BUILDING_TYPE_HOUSE) {
-                        return true;
+                        var newCitizen = main.Citizen.createCitizen();
+                        newCitizen.position = citizen.position;
+                        newCitizen.homePosition = newCitizen.position;
+                        try state.citizens.append(newCitizen);
+                        return;
                     } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
                         for (0..5) |i| {
                             for (0..5) |j| {
@@ -70,17 +69,24 @@ pub const Citizen: type = struct {
                                 try chunk.trees.append(newTree);
                             }
                         }
-                        return false;
+                        return;
                     }
                 }
             }
         } else if (citizen.moveTo == null) {
             const rand = std.crypto.random;
-            citizen.moveTo = .{ .x = rand.float(f32) * 400.0 - 200.0, .y = rand.float(f32) * 400.0 - 200.0 };
+            citizen.moveTo = .{
+                .x = rand.float(f32) * 400.0 - 200.0,
+                .y = rand.float(f32) * 400.0 - 200.0,
+            };
+            if (citizen.homePosition) |pos| {
+                citizen.moveTo.?.x += pos.x;
+                citizen.moveTo.?.y += pos.y;
+            }
         } else {
             if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
                 citizen.moveTo = null;
-                return false;
+                return;
             }
         }
         if (citizen.moveTo != null) {
@@ -88,7 +94,6 @@ pub const Citizen: type = struct {
             citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
             citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
         }
-        return false;
     }
 
     pub fn randomlyPlace(state: *main.ChatSimState) void {
