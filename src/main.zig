@@ -25,6 +25,8 @@ pub const ChatSimState: type = struct {
     camera: Camera,
     allocator: std.mem.Allocator,
     rectangle: ?Rectangle = null,
+    fpsCounter: f32 = 60,
+    cpuPerCent: ?f32 = null,
     pub const TILE_SIZE: u16 = 20;
 };
 
@@ -66,7 +68,7 @@ pub const Position: type = struct {
     y: f32,
 };
 
-var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null; //10_000_000;
+var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
 
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
@@ -209,11 +211,16 @@ fn mainLoop(state: *ChatSimState) !void {
         try paintVulkanZig.setupVerticesForCitizens(state);
         try paintVulkanZig.setupVertexDataForGPU(&state.vkState);
         try paintVulkanZig.drawFrame(state);
+        const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         if (state.fpsLimiter) {
-            const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
+            if (state.gameTimeMs % (@as(u32, state.tickIntervalMs) * 60) == 0) {
+                state.cpuPerCent = 1.0 - @as(f32, @floatFromInt(sleepTime)) / @as(f32, @floatFromInt(state.paintIntervalMs)) / 1000.0;
+            }
             std.time.sleep(sleepTime * 1_000);
         }
+        const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - startTime))));
+        state.fpsCounter = state.fpsCounter * 0.8 + @as(f32, @floatFromInt(thisFrameFps)) * 0.2;
 
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {

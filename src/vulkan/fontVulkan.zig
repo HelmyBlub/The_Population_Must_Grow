@@ -181,7 +181,7 @@ pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.C
 
 fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
     const fontImageWidth = 1600.0;
-    const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1258 };
+    const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1282, 1302 };
     var index: usize = 0;
     switch (char) {
         'a', 'A' => {
@@ -295,8 +295,11 @@ fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
         ':' => {
             index = 36;
         },
-        ' ' => {
+        '%' => {
             index = 37;
+        },
+        ' ' => {
+            index = 38;
         },
         else => {
             texX.* = 0;

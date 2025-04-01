@@ -1,12 +1,9 @@
 tasks:
 - make UI
     - text
-        - continue: make citizen counter work with different window sizes
-        - draw big number with some space after each 3 digits
-        - idea steps:
-            - want to be able to assign color per code. How would the image need to look like if color does not matter for the image?
         - display fps
         - cpu usage
+            - i want an indication how long my cpu will keep up
         - graphics card usage
         - display citizen counter
         - create my own font? with images or polygons?

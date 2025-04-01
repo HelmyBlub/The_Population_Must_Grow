@@ -702,8 +702,17 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
 
     fontVulkanZig.clear(&vkState.font);
 
-    const vulkanWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
-    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + vulkanWidth, .y = -0.9 }, 50, state);
+    const citizenTextWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.9 }, 50, state);
+    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + citizenTextWidth, .y = -0.9 }, 50, state);
+
+    const fpsTextWidth = fontVulkanZig.paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
+    _ = try fontVulkanZig.paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
+
+    if (state.cpuPerCent) |cpuPerCent| {
+        var cpuTextWidth = fontVulkanZig.paintText("CPU: ", .{ .x = 0.7, .y = -0.99 }, 25, state);
+        cpuTextWidth += try fontVulkanZig.paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
+        _ = fontVulkanZig.paintText("%", .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
+    }
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);
