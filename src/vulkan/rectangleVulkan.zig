@@ -93,7 +93,7 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
         &vkState.rectangle.vertexBufferMemory,
         vkState,
     );
-    std.debug.print("rectnalge createVertexBuffer finished\n", .{});
+    std.debug.print("rectangle createVertexBuffer finished\n", .{});
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {

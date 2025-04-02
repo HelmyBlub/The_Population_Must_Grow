@@ -10,8 +10,11 @@ pub const Citizen: type = struct {
     buildingIndex: ?usize = null,
     treeIndex: ?usize = null,
     farmIndex: ?usize = null,
+    potatoIndex: ?usize = null,
     hasWood: bool = false,
     homePosition: ?Position = null,
+    foodLevel: f32 = 1,
+    deadUntil: ?u32 = null,
 
     pub fn createCitizen() Citizen {
         return Citizen{
@@ -20,14 +23,38 @@ pub const Citizen: type = struct {
         };
     }
 
-    pub fn citizensMove(state: *main.ChatSimState) !void {
+    pub fn citizensTick(state: *main.ChatSimState) !void {
         for (0..state.citizens.items.len) |i| {
-            try citizenMove(&state.citizens.items[i], state);
+            const citizen: *Citizen = &state.citizens.items[i];
+            if (citizen.deadUntil) |deadUntil| {
+                if (state.gameTimeMs > deadUntil) {
+                    citizen.deadUntil = null;
+                    citizen.foodLevel = 1;
+                }
+            } else {
+                foodTick(citizen, state);
+                try citizenMove(citizen, state);
+            }
         }
     }
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
-        if (citizen.farmIndex) |farmIndex| {
+        if (citizen.potatoIndex) |potatoIndex| {
+            if (citizen.moveTo == null) {
+                var chunk = state.chunks.getPtr("0_0").?;
+                const farmTile = &chunk.potatoFields.items[potatoIndex];
+                if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                    if (farmTile.grow >= 1) {
+                        farmTile.grow = 0;
+                        farmTile.citizenOnTheWay -= 1;
+                        citizen.potatoIndex = null;
+                        citizen.foodLevel += 0.5;
+                    }
+                } else {
+                    citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                }
+            }
+        } else if (citizen.farmIndex) |farmIndex| {
             if (citizen.moveTo == null) {
                 var chunk = state.chunks.getPtr("0_0").?;
                 const farmTile = &chunk.potatoFields.items[farmIndex];
@@ -134,6 +161,37 @@ pub const Citizen: type = struct {
         return closestCitizen;
     }
 };
+
+fn foodTick(citizen: *Citizen, state: *main.ChatSimState) void {
+    citizen.foodLevel -= 1.0 / 60.0 / 60.0;
+    if (citizen.foodLevel > 0.5 or citizen.potatoIndex != null) return;
+    const chunk = state.chunks.getPtr("0_0").?;
+    if (findClosestFreePotato(citizen.position, state)) |potatoIndex| {
+        const potato = &chunk.potatoFields.items[potatoIndex];
+        potato.citizenOnTheWay += 1;
+        citizen.potatoIndex = potatoIndex;
+        citizen.moveTo = null;
+    } else if (citizen.foodLevel <= 0) {
+        citizen.deadUntil = state.gameTimeMs + 60_000;
+        if (citizen.homePosition) |pos| citizen.position = pos;
+        std.debug.print("citizen starved to death\n", .{});
+    }
+}
+
+pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimState) ?usize {
+    var shortestDistance: f32 = 0;
+    var index: ?usize = null;
+    const chunk = state.chunks.getPtr("0_0").?;
+    for (chunk.potatoFields.items, 0..) |*potatoField, i| {
+        if (!potatoField.planted or potatoField.citizenOnTheWay >= 2) continue;
+        const tempDistance: f32 = main.calculateDistance(targetPosition, potatoField.position) + (1.0 - potatoField.grow + @as(f32, @floatFromInt(potatoField.citizenOnTheWay))) * 40.0;
+        if (index == null or shortestDistance > tempDistance) {
+            shortestDistance = tempDistance;
+            index = i;
+        }
+    }
+    return index;
+}
 
 fn findFastestTreeAndMoveTo(citizen: *Citizen, state: *main.ChatSimState) void {
     const chunk = state.chunks.getPtr("0_0").?;

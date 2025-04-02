@@ -156,8 +156,10 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         }
         for (chunk.potatoFields.items) |*field| {
             vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = main.ChatSimState.TILE_SIZE };
-            const size: u8 = if (field.grow != 0) @as(u8, @intCast(@divFloor(main.ChatSimState.TILE_SIZE, @as(u8, @intFromFloat(1.0 / field.grow))))) else 0;
+            index += 1;
+            const size: u8 = @intFromFloat(main.ChatSimState.TILE_SIZE * field.grow);
             vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
+            index += 1;
         }
     }
 }
@@ -556,7 +558,6 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.A
         &vkState.vertexBufferMemory,
         vkState,
     );
-    std.debug.print("createVertexBuffer finished\n", .{});
 }
 
 pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !void {

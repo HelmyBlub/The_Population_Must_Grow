@@ -1,6 +1,6 @@
 tasks:
 - features:
-    - continue: bug: plating potato farm not visible, but might be there already
+    - continue: bug: planting potato farm not visible, but might be there already
     - food: potato
         - citizens need food
         - farm field tile building

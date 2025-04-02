@@ -57,6 +57,7 @@ pub const Building = struct {
 
 pub const PotatoField = struct {
     position: Position,
+    citizenOnTheWay: u8 = 0,
     planted: bool = false,
     ///  values from 0 to 1
     grow: f32 = 0,
@@ -249,14 +250,19 @@ fn mainLoop(state: *ChatSimState) !void {
 
 fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
-    try Citizen.citizensMove(state);
+    try Citizen.citizensTick(state);
 
-    //trees
     const chunk = state.chunks.getPtr("0_0").?;
     for (chunk.trees.items) |*tree| {
         if (tree.grow < 1) {
             tree.grow += 1.0 / 60.0 / 10.0;
             if (tree.grow > 1) tree.grow = 1;
+        }
+    }
+    for (chunk.potatoFields.items) |*potatoField| {
+        if (potatoField.grow < 1 and potatoField.planted) {
+            potatoField.grow += 1.0 / 60.0 / 10.0;
+            if (potatoField.grow > 1) potatoField.grow = 1;
         }
     }
 }
