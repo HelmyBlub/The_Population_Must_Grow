@@ -1,6 +1,7 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
 pub const Citizen = @import("citizen.zig").Citizen;
+const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
 const sdl = @cImport({
@@ -11,9 +12,9 @@ const sdl = @cImport({
 
 pub const ChatSimState: type = struct {
     citizens: std.ArrayList(Citizen),
-    chunks: std.StringHashMap(MapChunk),
-    currentBuildingType: u8 = BUILDING_TYPE_HOUSE,
-    buildMode: u8 = BUILDING_MODE_SINGLE,
+    map: mapZig.GameMap,
+    currentBuildingType: u8 = mapZig.BUILDING_TYPE_HOUSE,
+    buildMode: u8 = mapZig.BUILDING_MODE_SINGLE,
     mouseDown: ?Position = null,
     gameSpeed: f32,
     paintIntervalMs: u8,
@@ -28,45 +29,11 @@ pub const ChatSimState: type = struct {
     currentMouse: ?Position = null,
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
-    pub const TILE_SIZE: u16 = 20;
 };
 
 pub const Rectangle = struct {
     pos: [2]Position,
     color: [3]f32,
-};
-
-pub const BUILDING_MODE_SINGLE = 0;
-pub const BUILDING_MODE_DRAG_RECTANGLE = 1;
-pub const BUILDING_TYPE_HOUSE = 0;
-pub const BUILDING_TYPE_TREE_FARM = 1;
-pub const BUILDING_TYPE_POTATO_FARM = 2;
-
-pub const MapTree = struct {
-    position: Position,
-    citizenOnTheWay: bool = false,
-    ///  values from 0 to 1
-    grow: f32,
-};
-
-pub const Building = struct {
-    type: u8,
-    position: Position,
-    inConstruction: bool = true,
-};
-
-pub const PotatoField = struct {
-    position: Position,
-    citizenOnTheWay: u8 = 0,
-    planted: bool = false,
-    ///  values from 0 to 1
-    grow: f32 = 0,
-};
-
-pub const MapChunk = struct {
-    trees: std.ArrayList(MapTree),
-    buildings: std.ArrayList(Building),
-    potatoFields: std.ArrayList(PotatoField),
 };
 
 pub const Camera: type = struct {
@@ -122,29 +89,9 @@ pub fn main() !void {
 
 pub fn mapPositionToTilePosition(pos: Position) Position {
     return Position{
-        .x = @round(pos.x / ChatSimState.TILE_SIZE) * ChatSimState.TILE_SIZE,
-        .y = @round(pos.y / ChatSimState.TILE_SIZE) * ChatSimState.TILE_SIZE,
+        .x = @round(pos.x / mapZig.GameMap.TILE_SIZE) * mapZig.GameMap.TILE_SIZE,
+        .y = @round(pos.y / mapZig.GameMap.TILE_SIZE) * mapZig.GameMap.TILE_SIZE,
     };
-}
-
-pub fn mapIsTilePositionFree(pos: Position, state: *ChatSimState) bool {
-    const chunk = state.chunks.get("0_0").?;
-    for (chunk.buildings.items) |building| {
-        if (calculateDistance(pos, building.position) < ChatSimState.TILE_SIZE) {
-            return false;
-        }
-    }
-    for (chunk.trees.items) |tree| {
-        if (calculateDistance(pos, tree.position) < ChatSimState.TILE_SIZE) {
-            return false;
-        }
-    }
-    for (chunk.potatoFields.items) |field| {
-        if (calculateDistance(pos, field.position) < ChatSimState.TILE_SIZE) {
-            return false;
-        }
-    }
-    return true;
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
@@ -155,24 +102,14 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
 
 fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
-    var chunks = std.StringHashMap(MapChunk).init(allocator);
-    var mapChunk: MapChunk = .{
-        .buildings = std.ArrayList(Building).init(allocator),
-        .trees = std.ArrayList(MapTree).init(allocator),
-        .potatoFields = std.ArrayList(PotatoField).init(allocator),
-    };
-    try mapChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
-    try mapChunk.trees.append(.{ .position = .{ .x = ChatSimState.TILE_SIZE, .y = 0 }, .grow = 1 });
-    try mapChunk.trees.append(.{ .position = .{ .x = ChatSimState.TILE_SIZE, .y = ChatSimState.TILE_SIZE }, .grow = 1 });
-
-    try chunks.put("0_0", mapChunk);
+    const map: mapZig.GameMap = try mapZig.createMap(allocator);
     for (0..1) |_| {
         try citizensList.append(Citizen.createCitizen());
     }
 
     state.* = .{
         .citizens = citizensList,
-        .chunks = chunks,
+        .map = map,
         .gameSpeed = 1,
         .paintIntervalMs = 16,
         .tickIntervalMs = 16,
@@ -252,17 +189,19 @@ fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
     try Citizen.citizensTick(state);
 
-    const chunk = state.chunks.getPtr("0_0").?;
-    for (chunk.trees.items) |*tree| {
-        if (tree.grow < 1) {
-            tree.grow += 1.0 / 60.0 / 10.0;
-            if (tree.grow > 1) tree.grow = 1;
+    for (state.map.activeChunkKeys.items) |chunkKey| {
+        const chunk = state.map.chunks.getPtr(chunkKey).?;
+        for (chunk.trees.items) |*tree| {
+            if (tree.grow < 1) {
+                tree.grow += 1.0 / 60.0 / 10.0;
+                if (tree.grow > 1) tree.grow = 1;
+            }
         }
-    }
-    for (chunk.potatoFields.items) |*potatoField| {
-        if (potatoField.grow < 1 and potatoField.planted) {
-            potatoField.grow += 1.0 / 60.0 / 10.0;
-            if (potatoField.grow > 1) potatoField.grow = 1;
+        for (chunk.potatoFields.items) |*potatoField| {
+            if (potatoField.grow < 1 and potatoField.planted) {
+                potatoField.grow += 1.0 / 60.0 / 10.0;
+                if (potatoField.grow > 1) potatoField.grow = 1;
+            }
         }
     }
 }
@@ -270,13 +209,14 @@ fn tick(state: *ChatSimState) !void {
 fn destroyGameState(state: *ChatSimState) void {
     try destoryPaintVulkanAndWindowSdl(state);
     state.citizens.deinit();
-    var iterator = state.chunks.valueIterator();
+    var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
         chunk.buildings.deinit();
         chunk.trees.deinit();
         chunk.potatoFields.deinit();
     }
-    state.chunks.deinit();
+    state.map.chunks.deinit();
+    state.map.activeChunkKeys.deinit();
 }
 
 fn printOutSomeData(state: *ChatSimState) void {

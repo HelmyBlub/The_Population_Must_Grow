@@ -1,5 +1,6 @@
 const std = @import("std");
 const imageZig = @import("../image.zig");
+const mapZig = @import("../map.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 const vk = @cImport({
     @cDefine("VK_USE_PLATFORM_WIN32_KHR", "1");
@@ -113,7 +114,7 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCount = state.citizens.items.len;
-    if (state.chunks.get("0_0")) |chunk| {
+    if (state.map.chunks.get("0_0")) |chunk| {
         entityPaintCount += chunk.buildings.items.len;
         entityPaintCount += chunk.trees.items.len;
         entityPaintCount += chunk.potatoFields.items.len * 2;
@@ -135,29 +136,29 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
 
     var index: u32 = 0;
     for (state.citizens.items) |*citizen| {
-        vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = main.ChatSimState.TILE_SIZE };
+        vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
         index += 1;
     }
-    if (state.chunks.get("0_0")) |chunk| {
+    if (state.map.chunks.get("0_0")) |chunk| {
         for (chunk.trees.items) |*tree| {
-            const size: u8 = @intFromFloat(main.ChatSimState.TILE_SIZE * tree.grow);
+            const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
             vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
             index += 1;
         }
         for (chunk.buildings.items) |*building| {
             var imageIndex: u8 = 0;
-            if (building.type == main.BUILDING_TYPE_HOUSE) {
+            if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                 imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
-            } else if (building.type == main.BUILDING_TYPE_TREE_FARM) {
+            } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
                 imageIndex = if (building.inConstruction) imageZig.IMAGE_GREEN_RECTANGLE else imageZig.IMAGE_TREE_FARM;
             }
-            vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = main.ChatSimState.TILE_SIZE };
+            vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
             index += 1;
         }
         for (chunk.potatoFields.items) |*field| {
-            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = main.ChatSimState.TILE_SIZE };
+            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
             index += 1;
-            const size: u8 = @intFromFloat(main.ChatSimState.TILE_SIZE * field.grow);
+            const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
             vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
             index += 1;
         }
@@ -804,7 +805,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
             .extent = vkState.swapchain_info.extent,
         },
         .clearValueCount = 1,
-        .pClearValues = &[_]vk.VkClearValue{.{ .color = vk.VkClearColorValue{ .float32 = [_]f32{ 0.0, 0.0, 0.0, 1.0 } } }},
+        .pClearValues = &[_]vk.VkClearValue{.{ .color = vk.VkClearColorValue{ .float32 = [_]f32{ 63.0 / 256.0, 155.0 / 256.0, 11.0 / 256.0, 1.0 } } }},
     };
     vk.vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, vk.VK_SUBPASS_CONTENTS_INLINE);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphics_pipeline);

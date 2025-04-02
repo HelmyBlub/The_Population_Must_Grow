@@ -6,6 +6,7 @@ const sdl = @cImport({
 });
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
+const mapZig = @import("map.zig");
 
 const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -58,43 +59,43 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
+            if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
                 const mouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
                 const topLeft: main.Position = .{
                     .x = @min(mouseUp.x, state.mouseDown.?.x),
                     .y = @min(mouseUp.y, state.mouseDown.?.y),
                 };
-                const tileSizeFloat: f32 = @floatFromInt(main.ChatSimState.TILE_SIZE);
+                const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
                 const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
                 const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
-                var chunk = state.chunks.get("0_0").?;
+                var chunk = state.map.chunks.get("0_0").?;
                 placeLoop: for (0..width) |x| {
                     for (0..height) |y| {
                         const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
-                        if (main.mapIsTilePositionFree(position, state) == false) continue;
+                        if (try mapZig.mapIsTilePositionFree(position, state) == false) continue;
                         const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
-                            if (state.currentBuildingType == main.BUILDING_TYPE_HOUSE) {
+                            if (state.currentBuildingType == mapZig.BUILDING_TYPE_HOUSE) {
                                 if (citizen.buildingIndex != null) continue;
                                 citizen.buildingIndex = chunk.buildings.items.len;
                                 citizen.idle = false;
                                 citizen.moveTo = null;
-                                const newBuilding: main.Building = .{
+                                const newBuilding: mapZig.Building = .{
                                     .position = position,
                                     .type = state.currentBuildingType,
                                 };
                                 try chunk.buildings.append(newBuilding);
-                                try state.chunks.put("0_0", chunk);
-                            } else if (state.currentBuildingType == main.BUILDING_TYPE_POTATO_FARM) {
+                                try state.map.chunks.put("0_0", chunk);
+                            } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_POTATO_FARM) {
                                 if (citizen.farmIndex != null) continue;
                                 citizen.farmIndex = chunk.potatoFields.items.len;
                                 citizen.idle = false;
                                 citizen.moveTo = null;
-                                const newPotatoField: main.PotatoField = .{
+                                const newPotatoField: mapZig.PotatoField = .{
                                     .position = position,
                                 };
                                 try chunk.potatoFields.append(newPotatoField);
-                                try state.chunks.put("0_0", chunk);
+                                try state.map.chunks.put("0_0", chunk);
                             }
                         } else {
                             break :placeLoop;
@@ -105,24 +106,24 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             state.mouseDown = null;
             state.rectangle = null;
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            if (state.buildMode == main.BUILDING_MODE_SINGLE) {
+            if (state.buildMode == mapZig.BUILDING_MODE_SINGLE) {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
-                if (main.mapIsTilePositionFree(position, state) == false) return;
-                var chunk = state.chunks.get("0_0").?;
+                if (try mapZig.mapIsTilePositionFree(position, state) == false) return;
+                var chunk = state.map.chunks.get("0_0").?;
                 const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                 if (freeCitizen) |citizen| {
                     if (citizen.buildingIndex != null) continue;
                     citizen.buildingIndex = chunk.buildings.items.len;
                     citizen.idle = false;
                     citizen.moveTo = null;
-                    const newBuilding: main.Building = .{
+                    const newBuilding: mapZig.Building = .{
                         .position = position,
                         .type = state.currentBuildingType,
                     };
                     try chunk.buildings.append(newBuilding);
-                    try state.chunks.put("0_0", chunk);
+                    try state.map.chunks.put("0_0", chunk);
                 }
-            } else if (state.buildMode == main.BUILDING_MODE_DRAG_RECTANGLE) {
+            } else if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE) {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
@@ -135,17 +136,17 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.camera.position.y += 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
-                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
-                state.buildMode = main.BUILDING_MODE_SINGLE;
+                state.currentBuildingType = mapZig.BUILDING_TYPE_HOUSE;
+                state.buildMode = mapZig.BUILDING_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
-                state.currentBuildingType = main.BUILDING_TYPE_TREE_FARM;
-                state.buildMode = main.BUILDING_MODE_SINGLE;
+                state.currentBuildingType = mapZig.BUILDING_TYPE_TREE_FARM;
+                state.buildMode = mapZig.BUILDING_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
-                state.currentBuildingType = main.BUILDING_TYPE_HOUSE;
-                state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
+                state.currentBuildingType = mapZig.BUILDING_TYPE_HOUSE;
+                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
-                state.currentBuildingType = main.BUILDING_TYPE_POTATO_FARM;
-                state.buildMode = main.BUILDING_MODE_DRAG_RECTANGLE;
+                state.currentBuildingType = mapZig.BUILDING_TYPE_POTATO_FARM;
+                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
