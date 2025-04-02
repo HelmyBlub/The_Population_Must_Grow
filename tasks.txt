@@ -1,17 +1,5 @@
 tasks:
 - features:
-    - continue: bug: planting potato farm not visible, but might be there already
-    - food: potato
-        - citizens need food
-        - farm field tile building
-            - similar to rectangle, mark an area for farm fields
-                - area will be used by citizens to grow food
-                - citizens will need to visit each tile and plant a seed. 
-                - plant will grow over time like tree
-                - when finished -> citizen can to cut plant for food/potato
-        - citizens when hungry search food
-        - without food -> starve to death
-            - respawn after time from building
     - infinite map
         - grass tiles instead of black background
             - maybe just green rectangle per chunk

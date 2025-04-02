@@ -184,6 +184,7 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
     const chunk = state.chunks.getPtr("0_0").?;
     for (chunk.potatoFields.items, 0..) |*potatoField, i| {
         if (!potatoField.planted or potatoField.citizenOnTheWay >= 2) continue;
+        if (potatoField.citizenOnTheWay > 0 and potatoField.grow < 1) continue;
         const tempDistance: f32 = main.calculateDistance(targetPosition, potatoField.position) + (1.0 - potatoField.grow + @as(f32, @floatFromInt(potatoField.citizenOnTheWay))) * 40.0;
         if (index == null or shortestDistance > tempDistance) {
             shortestDistance = tempDistance;
