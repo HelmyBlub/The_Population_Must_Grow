@@ -8,7 +8,7 @@ const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
 
-const WindowData = struct {
+pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
     widthFloat: f32 = 1600,
     heightFloat: f32 = 800,
@@ -68,7 +68,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
                 const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
                 const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
-                var chunk = state.map.chunks.get("0_0").?;
+                var chunk = state.map.chunks.get(0).?;
                 placeLoop: for (0..width) |x| {
                     for (0..height) |y| {
                         const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
@@ -76,8 +76,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                         const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
                             if (state.currentBuildingType == mapZig.BUILDING_TYPE_HOUSE) {
-                                if (citizen.buildingIndex != null) continue;
-                                citizen.buildingIndex = chunk.buildings.items.len;
+                                if (citizen.buildingPosition != null) continue;
+                                citizen.buildingPosition = position;
                                 citizen.idle = false;
                                 citizen.moveTo = null;
                                 const newBuilding: mapZig.Building = .{
@@ -85,7 +85,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     .type = state.currentBuildingType,
                                 };
                                 try chunk.buildings.append(newBuilding);
-                                try state.map.chunks.put("0_0", chunk);
+                                try state.map.chunks.put(0, chunk);
                             } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_POTATO_FARM) {
                                 if (citizen.farmIndex != null) continue;
                                 citizen.farmIndex = chunk.potatoFields.items.len;
@@ -95,7 +95,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     .position = position,
                                 };
                                 try chunk.potatoFields.append(newPotatoField);
-                                try state.map.chunks.put("0_0", chunk);
+                                try state.map.chunks.put(0, chunk);
                             }
                         } else {
                             break :placeLoop;
@@ -109,11 +109,11 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             if (state.buildMode == mapZig.BUILDING_MODE_SINGLE) {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 if (try mapZig.mapIsTilePositionFree(position, state) == false) return;
-                var chunk = state.map.chunks.get("0_0").?;
+                var chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(position, state);
                 const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                 if (freeCitizen) |citizen| {
-                    if (citizen.buildingIndex != null) continue;
-                    citizen.buildingIndex = chunk.buildings.items.len;
+                    if (citizen.buildingPosition != null) continue;
+                    citizen.buildingPosition = position;
                     citizen.idle = false;
                     citizen.moveTo = null;
                     const newBuilding: mapZig.Building = .{
@@ -121,7 +121,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                         .type = state.currentBuildingType,
                     };
                     try chunk.buildings.append(newBuilding);
-                    try state.map.chunks.put("0_0", chunk);
                 }
             } else if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE) {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);

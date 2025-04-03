@@ -8,8 +8,8 @@ pub const Citizen: type = struct {
     moveTo: ?Position = null,
     moveSpeed: f16,
     idle: bool = true,
-    buildingIndex: ?usize = null,
-    treeIndex: ?usize = null,
+    buildingPosition: ?main.Position = null,
+    treePosition: ?main.Position = null,
     farmIndex: ?usize = null,
     potatoIndex: ?usize = null,
     hasWood: bool = false,
@@ -42,75 +42,78 @@ pub const Citizen: type = struct {
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
         if (citizen.potatoIndex) |potatoIndex| {
             if (citizen.moveTo == null) {
-                var chunk = state.map.chunks.getPtr("0_0").?;
-                const farmTile = &chunk.potatoFields.items[potatoIndex];
-                if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
-                    if (farmTile.grow >= 1) {
-                        farmTile.grow = 0;
-                        farmTile.citizenOnTheWay -= 1;
-                        citizen.potatoIndex = null;
-                        citizen.foodLevel += 0.5;
+                var chunk = state.map.chunks.getPtr(mapZig.getKeyForChunkXY(0, 0)).?;
+                if (chunk.potatoFields.items.len > potatoIndex) {
+                    const farmTile = &chunk.potatoFields.items[potatoIndex];
+                    if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                        if (farmTile.grow >= 1) {
+                            farmTile.grow = 0;
+                            farmTile.citizenOnTheWay -= 1;
+                            citizen.potatoIndex = null;
+                            citizen.foodLevel += 0.5;
+                        }
+                    } else {
+                        citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                     }
-                } else {
-                    citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                 }
             }
         } else if (citizen.farmIndex) |farmIndex| {
             if (citizen.moveTo == null) {
-                var chunk = state.map.chunks.getPtr("0_0").?;
-                const farmTile = &chunk.potatoFields.items[farmIndex];
-                if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
-                    farmTile.planted = true;
-                    citizen.farmIndex = null;
-                    citizen.idle = true;
-                } else {
-                    citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                var chunk = state.map.chunks.getPtr(mapZig.getKeyForChunkXY(0, 0)).?;
+                if (chunk.potatoFields.items.len > farmIndex) {
+                    const farmTile = &chunk.potatoFields.items[farmIndex];
+                    if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                        farmTile.planted = true;
+                        citizen.farmIndex = null;
+                        citizen.idle = true;
+                    } else {
+                        citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                    }
                 }
             }
-        } else if (citizen.buildingIndex != null) {
-            var chunk = state.map.chunks.getPtr("0_0").?;
+        } else if (citizen.buildingPosition != null) {
             if (citizen.moveTo == null) {
-                if (citizen.treeIndex == null and citizen.hasWood == false) {
-                    findFastestTreeAndMoveTo(citizen, state);
-                } else if (citizen.treeIndex != null and citizen.hasWood == false) {
-                    citizen.hasWood = true;
-                    var tree = &chunk.trees.items[citizen.treeIndex.?];
-                    tree.grow = 0;
-                    tree.citizenOnTheWay = false;
-                    citizen.treeIndex = null;
-                    const targetBuilding = chunk.buildings.items[citizen.buildingIndex.?];
-                    citizen.moveTo = .{ .x = targetBuilding.position.x, .y = targetBuilding.position.y };
-                    return;
-                } else if (citizen.treeIndex == null and citizen.hasWood == true) {
+                if (citizen.treePosition == null and citizen.hasWood == false) {
+                    try findFastestTreeAndMoveTo(citizen, citizen.buildingPosition.?, state);
+                } else if (citizen.treePosition != null and citizen.hasWood == false) {
+                    if (try mapZig.getTreeOnPosition(citizen.position, state)) |tree| {
+                        citizen.hasWood = true;
+                        tree.grow = 0;
+                        tree.citizenOnTheWay = false;
+                        citizen.treePosition = null;
+                        citizen.moveTo = citizen.buildingPosition;
+                        return;
+                    }
+                } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     citizen.hasWood = false;
-                    citizen.treeIndex = null;
-                    var building: *mapZig.Building = &chunk.buildings.items[citizen.buildingIndex.?];
-                    building.inConstruction = false;
-                    citizen.buildingIndex = null;
+                    citizen.treePosition = null;
+                    citizen.buildingPosition = null;
                     citizen.moveTo = null;
                     citizen.idle = true;
-                    if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                        var newCitizen = main.Citizen.createCitizen();
-                        newCitizen.position = citizen.position;
-                        newCitizen.homePosition = newCitizen.position;
-                        try state.citizens.append(newCitizen);
-                        return;
-                    } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
-                        for (0..5) |i| {
-                            for (0..5) |j| {
-                                const position: main.Position = .{
-                                    .x = building.position.x + (@as(f32, @floatFromInt(i)) - 2) * 20,
-                                    .y = building.position.y + (@as(f32, @floatFromInt(j)) - 2) * 20,
-                                };
-                                if (try mapZig.mapIsTilePositionFree(position, state) == false) continue;
-                                const newTree: mapZig.MapTree = .{
-                                    .position = position,
-                                    .grow = 0,
-                                };
-                                try chunk.trees.append(newTree);
+                    if (try mapZig.getBuildingOnPosition(citizen.position, state)) |building| {
+                        building.inConstruction = false;
+                        if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                            var newCitizen = main.Citizen.createCitizen();
+                            newCitizen.position = citizen.position;
+                            newCitizen.homePosition = newCitizen.position;
+                            try state.citizens.append(newCitizen);
+                            return;
+                        } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
+                            for (0..5) |i| {
+                                for (0..5) |j| {
+                                    const position: main.Position = .{
+                                        .x = building.position.x + (@as(f32, @floatFromInt(i)) - 2) * 20,
+                                        .y = building.position.y + (@as(f32, @floatFromInt(j)) - 2) * 20,
+                                    };
+                                    const newTree: mapZig.MapTree = .{
+                                        .position = position,
+                                        .grow = 0,
+                                    };
+                                    try mapZig.placeTree(newTree, state);
+                                }
                             }
+                            return;
                         }
-                        return;
                     }
                 }
             }
@@ -166,7 +169,7 @@ pub const Citizen: type = struct {
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) void {
     citizen.foodLevel -= 1.0 / 60.0 / 60.0;
     if (citizen.foodLevel > 0.5 or citizen.potatoIndex != null) return;
-    const chunk = state.map.chunks.getPtr("0_0").?;
+    const chunk = state.map.chunks.getPtr(mapZig.getKeyForChunkXY(0, 0)).?;
     if (findClosestFreePotato(citizen.position, state)) |potatoIndex| {
         const potato = &chunk.potatoFields.items[potatoIndex];
         potato.citizenOnTheWay += 1;
@@ -182,7 +185,7 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) void {
 pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimState) ?usize {
     var shortestDistance: f32 = 0;
     var index: ?usize = null;
-    const chunk = state.map.chunks.getPtr("0_0").?;
+    const chunk = state.map.chunks.getPtr(mapZig.getKeyForChunkXY(0, 0)).?;
     for (chunk.potatoFields.items, 0..) |*potatoField, i| {
         if (!potatoField.planted or potatoField.citizenOnTheWay >= 2) continue;
         if (potatoField.citizenOnTheWay > 0 and potatoField.grow < 1) continue;
@@ -195,24 +198,34 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
     return index;
 }
 
-fn findFastestTreeAndMoveTo(citizen: *Citizen, state: *main.ChatSimState) void {
-    const chunk = state.map.chunks.getPtr("0_0").?;
-    const targetPosition: main.Position = chunk.buildings.items[citizen.buildingIndex.?].position;
+fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: *main.ChatSimState) !void {
     var closestTree: ?*mapZig.MapTree = null;
-    var closestTreeIndex: usize = 0;
     var fastestDistance: f32 = 0;
-    for (chunk.trees.items, 0..) |*tree, i| {
-        if (tree.grow < 1 or tree.citizenOnTheWay) continue;
-        const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
-        if (closestTree == null or fastestDistance > tempDistance) {
-            closestTree = tree;
-            closestTreeIndex = i;
-            fastestDistance = tempDistance;
+    const citizenChunk = mapZig.getChunkXyForPosition(citizen.position);
+    var iterations: u8 = 0;
+    while (closestTree == null and iterations < 4) {
+        const loops = iterations * 2 + 1;
+        for (0..loops) |x| {
+            for (0..loops) |y| {
+                if (x != 0 or x != loops - 1 or y != 0 or y != loops - 1) continue;
+                const chunkX: i32 = citizenChunk.chunkX + @as(i32, @intCast(x));
+                const chunkY: i32 = citizenChunk.chunkX + @as(i32, @intCast(y));
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
+                for (chunk.trees.items) |*tree| {
+                    if (tree.grow < 1 or tree.citizenOnTheWay) continue;
+                    const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
+                    if (closestTree == null or fastestDistance > tempDistance) {
+                        closestTree = tree;
+                        fastestDistance = tempDistance;
+                    }
+                }
+            }
         }
+        iterations += 1;
     }
     if (closestTree != null) {
-        citizen.treeIndex = closestTreeIndex;
+        citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
-        citizen.moveTo = .{ .x = closestTree.?.position.x, .y = closestTree.?.position.y };
+        citizen.moveTo = closestTree.?.position;
     }
 }

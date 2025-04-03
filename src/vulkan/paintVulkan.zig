@@ -114,10 +114,18 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCount = state.citizens.items.len;
-    if (state.map.chunks.get("0_0")) |chunk| {
-        entityPaintCount += chunk.buildings.items.len;
-        entityPaintCount += chunk.trees.items.len;
-        entityPaintCount += chunk.potatoFields.items.len * 2;
+    const chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
+    for (0..chunkVisible.columns) |x| {
+        for (0..chunkVisible.rows) |y| {
+            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
+                chunkVisible.left + @as(i32, @intCast(x)),
+                chunkVisible.top + @as(i32, @intCast(y)),
+                state,
+            );
+            entityPaintCount += chunk.buildings.items.len;
+            entityPaintCount += chunk.trees.items.len;
+            entityPaintCount += chunk.potatoFields.items.len * 2;
+        }
     }
     state.vkState.entityPaintCount = @intCast(entityPaintCount);
     // recreate buffer with new size
@@ -139,28 +147,35 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
         index += 1;
     }
-    if (state.map.chunks.get("0_0")) |chunk| {
-        for (chunk.trees.items) |*tree| {
-            const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
-            vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
-            index += 1;
-        }
-        for (chunk.buildings.items) |*building| {
-            var imageIndex: u8 = 0;
-            if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
-            } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
-                imageIndex = if (building.inConstruction) imageZig.IMAGE_GREEN_RECTANGLE else imageZig.IMAGE_TREE_FARM;
+    for (0..chunkVisible.columns) |x| {
+        for (0..chunkVisible.rows) |y| {
+            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
+                chunkVisible.left + @as(i32, @intCast(x)),
+                chunkVisible.top + @as(i32, @intCast(y)),
+                state,
+            );
+            for (chunk.trees.items) |*tree| {
+                const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
+                vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
+                index += 1;
             }
-            vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
-            index += 1;
-        }
-        for (chunk.potatoFields.items) |*field| {
-            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
-            index += 1;
-            const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
-            vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
-            index += 1;
+            for (chunk.buildings.items) |*building| {
+                var imageIndex: u8 = 0;
+                if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                    imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
+                } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
+                    imageIndex = if (building.inConstruction) imageZig.IMAGE_GREEN_RECTANGLE else imageZig.IMAGE_TREE_FARM;
+                }
+                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                index += 1;
+            }
+            for (chunk.potatoFields.items) |*field| {
+                vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
+                index += 1;
+                const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
+                vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
+                index += 1;
+            }
         }
     }
 }

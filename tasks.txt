@@ -1,5 +1,5 @@
 tasks:
-- continue: changing to use chunks, build working but lots of stuff to do
+- performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 - infinite map
     - chunks
         - generate chunks when required

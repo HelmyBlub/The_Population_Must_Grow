@@ -55,28 +55,28 @@ test "test for memory leaks" {
     // testing allocator will fail test if something is not deallocated
 }
 
-test "test measure performance" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    var state: ChatSimState = undefined;
-    try createGameState(allocator, &state);
-    defer destroyGameState(&state);
-    SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
-    for (0..10_000) |_| {
-        try state.citizens.append(Citizen.createCitizen());
-    }
-    Citizen.randomlyPlace(&state);
-    state.fpsLimiter = false;
-    state.gameSpeed = 1;
+// test "test measure performance" {
+//     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+//     defer _ = gpa.deinit();
+//     const allocator = gpa.allocator();
+//     var state: ChatSimState = undefined;
+//     try createGameState(allocator, &state);
+//     defer destroyGameState(&state);
+//     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
+//     for (0..10_000) |_| {
+//         try state.citizens.append(Citizen.createCitizen());
+//     }
+//     Citizen.randomlyPlace(&state);
+//     state.fpsLimiter = false;
+//     state.gameSpeed = 1;
 
-    const startTime = std.time.microTimestamp();
-    try mainLoop(&state);
-    const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
-    const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divFloor(frames * 1_000_000, timePassed);
-    std.debug.print("FPS: {d}", .{fps});
-}
+//     const startTime = std.time.microTimestamp();
+//     try mainLoop(&state);
+//     const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
+//     const timePassed = std.time.microTimestamp() - startTime;
+//     const fps = @divFloor(frames * 1_000_000, timePassed);
+//     std.debug.print("FPS: {d}", .{fps});
+// }
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
@@ -100,7 +100,7 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     return @sqrt(diffX * diffX + diffY * diffY);
 }
 
-fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
+pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     var citizensList = std.ArrayList(Citizen).init(allocator);
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
     for (0..1) |_| {
@@ -206,7 +206,7 @@ fn tick(state: *ChatSimState) !void {
     }
 }
 
-fn destroyGameState(state: *ChatSimState) void {
+pub fn destroyGameState(state: *ChatSimState) void {
     try destoryPaintVulkanAndWindowSdl(state);
     state.citizens.deinit();
     var iterator = state.map.chunks.valueIterator();
