@@ -209,7 +209,8 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
             for (0..loops) |y| {
                 if (x != 0 or x != loops - 1 or y != 0 or y != loops - 1) continue;
                 const chunkX: i32 = citizenChunk.chunkX + @as(i32, @intCast(x));
-                const chunkY: i32 = citizenChunk.chunkX + @as(i32, @intCast(y));
+                const chunkY: i32 = citizenChunk.chunkY + @as(i32, @intCast(y));
+                std.debug.print("checkedChunk: {d}, {d}, {}\n", .{ chunkX, chunkY, citizenChunk });
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
                 for (chunk.trees.items) |*tree| {
                     if (tree.grow < 1 or tree.citizenOnTheWay) continue;
@@ -227,5 +228,6 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
         citizen.moveTo = closestTree.?.position;
+        std.debug.print("tree: {}, target: {}, citizen: {}\n", .{ citizen.treePosition.?, targetPosition, citizen.position });
     }
 }

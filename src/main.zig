@@ -55,36 +55,34 @@ test "test for memory leaks" {
     // testing allocator will fail test if something is not deallocated
 }
 
-// test "test measure performance" {
-//     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-//     defer _ = gpa.deinit();
-//     const allocator = gpa.allocator();
-//     var state: ChatSimState = undefined;
-//     try createGameState(allocator, &state);
-//     defer destroyGameState(&state);
-//     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
-//     for (0..10_000) |_| {
-//         try state.citizens.append(Citizen.createCitizen());
-//     }
-//     Citizen.randomlyPlace(&state);
-//     state.fpsLimiter = false;
-//     state.gameSpeed = 1;
+test "test measure performance" {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+    var state: ChatSimState = undefined;
+    try createGameState(allocator, &state);
+    defer destroyGameState(&state);
+    SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
+    for (0..10_000) |_| {
+        try state.citizens.append(Citizen.createCitizen());
+    }
+    Citizen.randomlyPlace(&state);
+    state.fpsLimiter = false;
+    state.gameSpeed = 1;
 
-//     const startTime = std.time.microTimestamp();
-//     try mainLoop(&state);
-//     const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
-//     const timePassed = std.time.microTimestamp() - startTime;
-//     const fps = @divFloor(frames * 1_000_000, timePassed);
-//     std.debug.print("FPS: {d}", .{fps});
-// }
+    const startTime = std.time.microTimestamp();
+    try mainLoop(&state);
+    const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
+    const timePassed = std.time.microTimestamp() - startTime;
+    const fps = @divFloor(frames * 1_000_000, timePassed);
+    std.debug.print("FPS: {d}", .{fps});
+}
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    const startTime = std.time.microTimestamp();
     try startGame(allocator);
-    std.debug.print("time: {d}\n", .{std.time.microTimestamp() - startTime});
 }
 
 pub fn mapPositionToTilePosition(pos: Position) Position {
