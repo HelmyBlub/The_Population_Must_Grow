@@ -68,10 +68,16 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
                 const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
                 const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
-                var chunk = state.map.chunks.get(0).?;
+                var currentChunkXY: mapZig.ChunkXY = undefined;
+                var chunk: *mapZig.MapChunk = undefined;
                 placeLoop: for (0..width) |x| {
                     for (0..height) |y| {
                         const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
+                        const loopChunk = mapZig.getChunkXyForPosition(position);
+                        if (loopChunk.chunkX != currentChunkXY.chunkX or loopChunk.chunkY != currentChunkXY.chunkY) {
+                            currentChunkXY = loopChunk;
+                            chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.chunkX, currentChunkXY.chunkY, state);
+                        }
                         if (try mapZig.mapIsTilePositionFree(position, state) == false) continue;
                         const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
@@ -85,17 +91,15 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     .type = state.currentBuildingType,
                                 };
                                 try chunk.buildings.append(newBuilding);
-                                try state.map.chunks.put(0, chunk);
                             } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_POTATO_FARM) {
-                                if (citizen.farmIndex != null) continue;
-                                citizen.farmIndex = chunk.potatoFields.items.len;
+                                if (citizen.farmPosition != null) continue;
+                                citizen.farmPosition = position;
                                 citizen.idle = false;
                                 citizen.moveTo = null;
                                 const newPotatoField: mapZig.PotatoField = .{
                                     .position = position,
                                 };
-                                try chunk.potatoFields.append(newPotatoField);
-                                try state.map.chunks.put(0, chunk);
+                                try mapZig.placePotatoField(newPotatoField, state);
                             }
                         } else {
                             break :placeLoop;

@@ -35,6 +35,7 @@ pub const MapTree = struct {
     citizenOnTheWay: bool = false,
     ///  values from 0 to 1
     grow: f32 = 0,
+    regrow: bool = false,
 };
 
 pub const Building = struct {
@@ -133,6 +134,34 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !void {
     if (!try mapIsTilePositionFree(tree.position, state)) return;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
+    if (tree.regrow) {
+        try addTickPosition(chunk.chunkX, chunk.chunkY, state);
+    }
+}
+
+pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !void {
+    if (!try mapIsTilePositionFree(potatoField.position, state)) return;
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
+    try chunk.potatoFields.append(potatoField);
+    try addTickPosition(chunk.chunkX, chunk.chunkY, state);
+}
+
+fn addTickPosition(chunkX: i32, chunkY: i32, state: *main.ChatSimState) !void {
+    const newKey = getKeyForChunkXY(chunkX, chunkY);
+    for (state.map.activeChunkKeys.items) |key| {
+        if (newKey == key) return;
+    }
+    try state.map.activeChunkKeys.append(newKey);
+}
+
+pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?*PotatoField {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    for (chunk.potatoFields.items) |*field| {
+        if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
+            return field;
+        }
+    }
+    return null;
 }
 
 pub fn getTreeOnPosition(position: main.Position, state: *main.ChatSimState) !?*MapTree {
