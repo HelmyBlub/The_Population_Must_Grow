@@ -64,9 +64,9 @@ test "test measure performance" {
     defer destroyGameState(&state);
     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
     for (0..10_000) |_| {
-        try mapZig.placeCitizen(Citizen.createCitizen());
+        try mapZig.placeCitizen(Citizen.createCitizen(), &state);
     }
-    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(0, 0, state));
+    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(0, 0, &state));
     state.fpsLimiter = false;
     state.gameSpeed = 1;
 
