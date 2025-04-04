@@ -70,7 +70,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
                 var currentChunkXY: mapZig.ChunkXY = undefined;
                 var chunk: *mapZig.MapChunk = undefined;
-                placeLoop: for (0..width) |x| {
+                for (0..width) |x| {
                     for (0..height) |y| {
                         const position: main.Position = main.mapPositionToTilePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
                         const loopChunk = mapZig.getChunkXyForPosition(position);
@@ -101,8 +101,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                 };
                                 try mapZig.placePotatoField(newPotatoField, state);
                             }
-                        } else {
-                            break :placeLoop;
                         }
                     }
                 }

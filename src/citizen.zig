@@ -121,15 +121,7 @@ pub const Citizen: type = struct {
                 }
             }
         } else if (citizen.moveTo == null) {
-            const rand = std.crypto.random;
-            citizen.moveTo = .{
-                .x = rand.float(f32) * 400.0 - 200.0,
-                .y = rand.float(f32) * 400.0 - 200.0,
-            };
-            if (citizen.homePosition) |pos| {
-                citizen.moveTo.?.x += pos.x;
-                citizen.moveTo.?.y += pos.y;
-            }
+            setRandomMoveTo(citizen);
         } else {
             if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
                 citizen.moveTo = null;
@@ -189,7 +181,7 @@ pub const Citizen: type = struct {
 
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     citizen.foodLevel -= 1.0 / 60.0 / 60.0;
-    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null) return;
+    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.moveTo != null) return;
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
         potato.citizenOnTheWay += 1;
         citizen.potatoPosition = potato.position;
@@ -266,5 +258,19 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
         citizen.moveTo = closestTree.?.position;
+    } else {
+        setRandomMoveTo(citizen);
+    }
+}
+
+fn setRandomMoveTo(citizen: *Citizen) void {
+    const rand = std.crypto.random;
+    citizen.moveTo = .{
+        .x = rand.float(f32) * 400.0 - 200.0,
+        .y = rand.float(f32) * 400.0 - 200.0,
+    };
+    if (citizen.homePosition) |pos| {
+        citizen.moveTo.?.x += pos.x;
+        citizen.moveTo.?.y += pos.y;
     }
 }
