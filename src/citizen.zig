@@ -24,9 +24,9 @@ pub const Citizen: type = struct {
         };
     }
 
-    pub fn citizensTick(state: *main.ChatSimState) !void {
-        for (0..state.citizens.items.len) |i| {
-            const citizen: *Citizen = &state.citizens.items[i];
+    pub fn citizensTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+        for (0..chunk.citizens.items.len) |i| {
+            const citizen: *Citizen = &chunk.citizens.items[i];
             if (citizen.deadUntil) |deadUntil| {
                 if (state.gameTimeMs > deadUntil) {
                     citizen.deadUntil = null;
@@ -98,7 +98,7 @@ pub const Citizen: type = struct {
                             var newCitizen = main.Citizen.createCitizen();
                             newCitizen.position = citizen.position;
                             newCitizen.homePosition = newCitizen.position;
-                            try state.citizens.append(newCitizen);
+                            try mapZig.placeCitizen(newCitizen, state);
                             return;
                         } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
                             for (0..5) |i| {
@@ -146,24 +146,42 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn randomlyPlace(state: *main.ChatSimState) void {
+    pub fn randomlyPlace(chunk: *mapZig.MapChunk) void {
         const rand = std.crypto.random;
-        for (state.citizens.items) |*citizen| {
+        for (chunk.citizens.items) |*citizen| {
             citizen.position.x = rand.float(f32) * 400.0 - 200.0;
             citizen.position.y = rand.float(f32) * 400.0 - 200.0;
         }
     }
 
-    pub fn findClosestFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) ?*Citizen {
+    pub fn findClosestFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) !?*Citizen {
         var closestCitizen: ?*Citizen = null;
         var shortestDistance: f32 = 0;
-        for (state.citizens.items) |*citizen| {
-            if (!citizen.idle) continue;
-            const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
-            if (closestCitizen == null or shortestDistance > tempDistance) {
-                closestCitizen = citizen;
-                shortestDistance = tempDistance;
+
+        var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
+        var iteration: u8 = 0;
+        const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+        while (closestCitizen == null and iteration < maxIterations) {
+            const loops = iteration * 2 + 1;
+            for (0..loops) |x| {
+                for (0..loops) |y| {
+                    if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
+                    const chunkX: i32 = topLeftChunk.chunkX + @as(i32, @intCast(x));
+                    const chunkY: i32 = topLeftChunk.chunkY + @as(i32, @intCast(y));
+                    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
+                    for (chunk.citizens.items) |*citizen| {
+                        if (!citizen.idle) continue;
+                        const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
+                        if (closestCitizen == null or shortestDistance > tempDistance) {
+                            closestCitizen = citizen;
+                            shortestDistance = tempDistance;
+                        }
+                    }
+                }
             }
+            iteration += 1;
+            topLeftChunk.chunkX -= 1;
+            topLeftChunk.chunkY -= 1;
         }
         return closestCitizen;
     }

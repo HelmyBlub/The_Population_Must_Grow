@@ -28,6 +28,7 @@ pub const MapChunk = struct {
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
     potatoFields: std.ArrayList(PotatoField),
+    citizens: std.ArrayList(main.Citizen),
 };
 
 pub const MapTree = struct {
@@ -139,6 +140,13 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !void {
     }
 }
 
+pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
+    state.citizenCounter += 1;
+    try chunk.citizens.append(citizen);
+    try addTickPosition(chunk.chunkX, chunk.chunkY, state);
+}
+
 pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !void {
     if (!try mapIsTilePositionFree(potatoField.position, state)) return;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
@@ -218,6 +226,7 @@ fn createChunk(chunkX: i32, chunkY: i32, allocator: std.mem.Allocator) !MapChunk
         .buildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
+        .citizens = std.ArrayList(main.Citizen).init(allocator),
     };
 
     for (0..GameMap.CHUNK_LENGTH) |x| {
@@ -249,6 +258,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .buildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
+        .citizens = std.ArrayList(main.Citizen).init(allocator),
     };
     try spawnChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE, .y = 0 }, .grow = 1 });

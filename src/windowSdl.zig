@@ -79,7 +79,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                             chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.chunkX, currentChunkXY.chunkY, state);
                         }
                         if (try mapZig.mapIsTilePositionFree(position, state) == false) continue;
-                        const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
+                        const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
                             if (state.currentBuildingType == mapZig.BUILDING_TYPE_HOUSE) {
                                 if (citizen.buildingPosition != null) continue;
@@ -114,7 +114,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 if (try mapZig.mapIsTilePositionFree(position, state) == false) return;
                 var chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(position, state);
-                const freeCitizen = main.Citizen.findClosestFreeCitizen(position, state);
+                const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                 if (freeCitizen) |citizen| {
                     if (citizen.buildingPosition != null) continue;
                     citizen.buildingPosition = position;

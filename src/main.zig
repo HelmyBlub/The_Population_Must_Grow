@@ -11,7 +11,6 @@ const sdl = @cImport({
 });
 
 pub const ChatSimState: type = struct {
-    citizens: std.ArrayList(Citizen),
     map: mapZig.GameMap,
     currentBuildingType: u8 = mapZig.BUILDING_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILDING_MODE_SINGLE,
@@ -29,6 +28,7 @@ pub const ChatSimState: type = struct {
     currentMouse: ?Position = null,
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
+    citizenCounter: u32 = 0,
 };
 
 pub const Rectangle = struct {
@@ -64,9 +64,9 @@ test "test measure performance" {
     defer destroyGameState(&state);
     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
     for (0..10_000) |_| {
-        try state.citizens.append(Citizen.createCitizen());
+        try mapZig.placeCitizen(Citizen.createCitizen());
     }
-    Citizen.randomlyPlace(&state);
+    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(0, 0, state));
     state.fpsLimiter = false;
     state.gameSpeed = 1;
 
@@ -99,14 +99,9 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
 }
 
 pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
-    var citizensList = std.ArrayList(Citizen).init(allocator);
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
-    for (0..1) |_| {
-        try citizensList.append(Citizen.createCitizen());
-    }
 
     state.* = .{
-        .citizens = citizensList,
         .map = map,
         .gameSpeed = 1,
         .paintIntervalMs = 16,
@@ -121,7 +116,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         },
         .allocator = allocator,
     };
-    Citizen.randomlyPlace(state);
+    try mapZig.placeCitizen(Citizen.createCitizen(), state);
     try initPaintVulkanAndWindowSdl(state);
 }
 
@@ -179,16 +174,17 @@ fn mainLoop(state: *ChatSimState) !void {
             if (totalPassedTime > duration) state.gameEnd = true;
         }
     }
-    printOutSomeData(state);
     std.debug.print("finished\n", .{});
 }
 
 fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
-    try Citizen.citizensTick(state);
 
-    for (state.map.activeChunkKeys.items) |chunkKey| {
+    for (0..state.map.activeChunkKeys.items.len) |i| {
+        const chunkKey = state.map.activeChunkKeys.items[i];
+        try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 20);
         const chunk = state.map.chunks.getPtr(chunkKey).?;
+        try Citizen.citizensTick(chunk, state);
         for (chunk.trees.items) |*tree| {
             if (tree.grow < 1) {
                 tree.grow += 1.0 / 60.0 / 10.0;
@@ -206,20 +202,15 @@ fn tick(state: *ChatSimState) !void {
 
 pub fn destroyGameState(state: *ChatSimState) void {
     try destoryPaintVulkanAndWindowSdl(state);
-    state.citizens.deinit();
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
         chunk.buildings.deinit();
         chunk.trees.deinit();
         chunk.potatoFields.deinit();
+        chunk.citizens.deinit();
     }
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();
-}
-
-fn printOutSomeData(state: *ChatSimState) void {
-    const oneCitizen = state.citizens.getLast();
-    std.debug.print("someData: x:{d}, y:{d}\n", .{ oneCitizen.position.x, oneCitizen.position.y });
 }
 
 pub fn calculateDirection(start: Position, end: Position) f32 {

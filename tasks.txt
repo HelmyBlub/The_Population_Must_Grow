@@ -1,8 +1,8 @@
 tasks:
-- performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 - infinite map
     - chunks
         - citizens in chunks
+        - on build dont stop iterating rectangle when no citizen found as no is based on distance
 
 - features:
     - infinite map
@@ -12,13 +12,15 @@ tasks:
     - upgrade building:
         - house -> more citizens per house
     - change tree farm -> like potato field -> pace regrow tree to tiles
-    - demolish buildings
+    - demolish buildings/trees
+    - be able to place buildings over trees
     - copy paste buildings
     - animations?
     - walking pathes?
     - decoration?
 
 - performance and multicore when all features implemented
+- performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first

@@ -113,7 +113,7 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
-    var entityPaintCount = state.citizens.items.len;
+    var entityPaintCount: usize = 0;
     const chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
@@ -122,6 +122,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 chunkVisible.top + @as(i32, @intCast(y)),
                 state,
             );
+            entityPaintCount += chunk.citizens.items.len;
             entityPaintCount += chunk.buildings.items.len;
             entityPaintCount += chunk.trees.items.len;
             entityPaintCount += chunk.potatoFields.items.len * 2;
@@ -143,10 +144,6 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     }
 
     var index: u32 = 0;
-    for (state.citizens.items) |*citizen| {
-        vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
-        index += 1;
-    }
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -154,6 +151,10 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 chunkVisible.top + @as(i32, @intCast(y)),
                 state,
             );
+            for (chunk.citizens.items) |*citizen| {
+                vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
+                index += 1;
+            }
             for (chunk.trees.items) |*tree| {
                 const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
                 vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
@@ -205,7 +206,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createTextureImageView(vkState, state.allocator);
     try createTextureSampler(vkState);
     try fontVulkanZig.initFont(state);
-    try createVertexBuffer(vkState, state.citizens.items.len, state.allocator);
+    try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
     try createDescriptorSets(vkState, state.allocator);
@@ -726,7 +727,7 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     fontVulkanZig.clear(&vkState.font);
 
     const citizenTextWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, 50, state);
-    _ = try fontVulkanZig.paintNumber(@intCast(state.citizens.items.len), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
+    _ = try fontVulkanZig.paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
 
     const fpsTextWidth = fontVulkanZig.paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
     _ = try fontVulkanZig.paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
