@@ -2,38 +2,19 @@ tasks:
 - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 - infinite map
     - chunks
-        - generate chunks when required
-            - required when camera is over chunk
-            - when citizens searches closest tree 
-            - use perlin noise for tree placement
         - citizens in chunks
-        - all logic needs to correctly iterate chunks
-            - tick each tree, potato plant, citizens
-            - when clicking, clicked into which chunk
-            - painting, selecting all sprites to paint
-    - open questions
-        - 
-        - citizens in chunk or not? yes
-            - each citizens needs to tick
-            - find citizens by proximity
-            - if in chunks and moving, don't update twice
 
 - features:
     - infinite map
-        - grass tiles instead of black background
-            - maybe just green rectangle per chunk
-        - generate map where player looks
-            - limit by some distance to existing citizens
-                - should be allowed to build with distance to each other
-                - but should not result in getting lost
-        - tree do not regrow by themselves
-            - without tree farm, citizens need to seach further and further
-        - citizens have view distance, if no wood/tree in sight they need to randomly search
+        - citizens, if no wood/tree in sight they need to randomly search
+            - instead of each tick checking again
+        - if citizen does not find food, search instead of each tick scanning everything
     - upgrade building:
         - house -> more citizens per house
-        - tree farm -> more trees around tree farm
+    - change tree farm -> like potato field -> pace regrow tree to tiles
     - demolish buildings
-
+    - copy paste buildings
+    - animations?
     - walking pathes?
     - decoration?
 

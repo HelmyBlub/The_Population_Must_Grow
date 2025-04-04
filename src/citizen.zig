@@ -187,9 +187,10 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
     var shortestDistance: f32 = 0;
     var resultPotatoField: ?*mapZig.PotatoField = null;
     var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
-    var iterations: u8 = 0;
-    while (resultPotatoField == null and iterations < 5) {
-        const loops = iterations * 2 + 1;
+    var iteration: u8 = 0;
+    const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+    while (resultPotatoField == null and iteration < maxIterations) {
+        const loops = iteration * 2 + 1;
         for (0..loops) |x| {
             for (0..loops) |y| {
                 if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
@@ -207,7 +208,7 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
                 }
             }
         }
-        iterations += 1;
+        iteration += 1;
         topLeftChunk.chunkX -= 1;
         topLeftChunk.chunkY -= 1;
     }
@@ -219,9 +220,10 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
     var closestTree: ?*mapZig.MapTree = null;
     var fastestDistance: f32 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
-    var iterations: u8 = 0;
-    while (closestTree == null and iterations < 5) {
-        const loops = iterations * 2 + 1;
+    var iteration: u8 = 0;
+    const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+    while (closestTree == null and iteration < maxIterations) {
+        const loops = iteration * 2 + 1;
         for (0..loops) |x| {
             for (0..loops) |y| {
                 if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
@@ -238,7 +240,7 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
                 }
             }
         }
-        iterations += 1;
+        iteration += 1;
         topLeftChunk.chunkX -= 1;
         topLeftChunk.chunkY -= 1;
     }

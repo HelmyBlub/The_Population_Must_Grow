@@ -5,7 +5,7 @@ const windowSdlZig = @import("windowSdl.zig");
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
     activeChunkKeys: std.ArrayList(u64),
-    pub const CHUNK_LENGTH: u8 = 8;
+    pub const CHUNK_LENGTH: u8 = 16;
     pub const TILE_SIZE: u16 = 20;
     pub const CHUNK_SIZE: u16 = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
     pub const MAX_CHUNKS_ROWS_COLUMNS: u32 = 10_000;
