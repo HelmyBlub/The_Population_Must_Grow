@@ -1,14 +1,9 @@
 tasks:
-- infinite map
-    - on build dont stop iterating rectangle when no citizen found as no is based on distance
-    - citizens, if no wood/tree in sight they need to randomly search
-        - instead of each tick checking again
-    - if citizen does not find food, search instead of each tick scanning everything
+- change tree farm -> like potato field -> pace regrow tree to tiles
 
 - features:
     - upgrade building:
         - house -> more citizens per house
-    - change tree farm -> like potato field -> pace regrow tree to tiles
     - demolish buildings/trees
     - be able to place buildings over trees
     - copy paste buildings

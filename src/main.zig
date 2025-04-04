@@ -186,7 +186,7 @@ fn tick(state: *ChatSimState) !void {
         const chunk = state.map.chunks.getPtr(chunkKey).?;
         try Citizen.citizensTick(chunk, state);
         for (chunk.trees.items) |*tree| {
-            if (tree.grow < 1) {
+            if (tree.grow < 1 and tree.planted) {
                 tree.grow += 1.0 / 60.0 / 10.0;
                 if (tree.grow > 1) tree.grow = 1;
             }

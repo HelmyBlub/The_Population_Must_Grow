@@ -156,16 +156,19 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 index += 1;
             }
             for (chunk.trees.items) |*tree| {
-                const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
-                vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageZig.IMAGE_TREE, .size = size };
+                var size: u8 = mapZig.GameMap.TILE_SIZE;
+                var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
+                if (tree.planted) {
+                    size = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
+                    imageIndex = imageZig.IMAGE_TREE;
+                }
+                vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size };
                 index += 1;
             }
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = 0;
                 if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                     imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
-                } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
-                    imageIndex = if (building.inConstruction) imageZig.IMAGE_GREEN_RECTANGLE else imageZig.IMAGE_TREE_FARM;
                 }
                 vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
                 index += 1;

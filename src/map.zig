@@ -36,6 +36,7 @@ pub const MapTree = struct {
     citizenOnTheWay: bool = false,
     ///  values from 0 to 1
     grow: f32 = 0,
+    planted: bool = true,
     regrow: bool = false,
 };
 
@@ -48,7 +49,7 @@ pub const Building = struct {
 pub const PotatoField = struct {
     position: main.Position,
     citizenOnTheWay: u8 = 0,
-    planted: bool = false,
+    planted: bool = true,
     ///  values from 0 to 1
     grow: f32 = 0,
 };

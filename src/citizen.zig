@@ -100,23 +100,19 @@ pub const Citizen: type = struct {
                             newCitizen.homePosition = newCitizen.position;
                             try mapZig.placeCitizen(newCitizen, state);
                             return;
-                        } else if (building.type == mapZig.BUILDING_TYPE_TREE_FARM) {
-                            for (0..5) |i| {
-                                for (0..5) |j| {
-                                    const position: main.Position = .{
-                                        .x = building.position.x + (@as(f32, @floatFromInt(i)) - 2) * 20,
-                                        .y = building.position.y + (@as(f32, @floatFromInt(j)) - 2) * 20,
-                                    };
-                                    const newTree: mapZig.MapTree = .{
-                                        .position = position,
-                                        .grow = 0,
-                                        .regrow = true,
-                                    };
-                                    try mapZig.placeTree(newTree, state);
-                                }
-                            }
-                            return;
                         }
+                    }
+                }
+            }
+        } else if (citizen.treePosition != null) {
+            if (citizen.moveTo == null) {
+                if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |tree| {
+                    if (main.calculateDistance(citizen.position, tree.position) < mapZig.GameMap.TILE_SIZE) {
+                        tree.planted = true;
+                        citizen.treePosition = null;
+                        citizen.idle = true;
+                    } else {
+                        citizen.moveTo = tree.position;
                     }
                 }
             }

@@ -100,6 +100,17 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     .position = position,
                                 };
                                 try mapZig.placePotatoField(newPotatoField, state);
+                            } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_TREE_FARM) {
+                                if (citizen.treePosition != null) continue;
+                                citizen.treePosition = position;
+                                citizen.idle = false;
+                                citizen.moveTo = null;
+                                const newTree: mapZig.MapTree = .{
+                                    .position = position,
+                                    .planted = false,
+                                    .regrow = true,
+                                };
+                                try mapZig.placeTree(newTree, state);
                             }
                         }
                     }
@@ -141,7 +152,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.buildMode = mapZig.BUILDING_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildingType = mapZig.BUILDING_TYPE_TREE_FARM;
-                state.buildMode = mapZig.BUILDING_MODE_SINGLE;
+                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
                 state.currentBuildingType = mapZig.BUILDING_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
