@@ -55,12 +55,18 @@ pub fn destroyRectangle(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Al
     allocator.free(vkState.rectangle.vertices);
 }
 
-pub fn setupVertices(rectangle: main.Rectangle, state: *main.ChatSimState) !void {
-    state.vkState.rectangle.vertices[0] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
-    state.vkState.rectangle.vertices[1] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[0].y }, .color = rectangle.color };
-    state.vkState.rectangle.vertices[2] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[1].y }, .color = rectangle.color };
-    state.vkState.rectangle.vertices[3] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[1].y }, .color = rectangle.color };
-    state.vkState.rectangle.vertices[4] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimState) !void {
+    for (rectangles, 0..) |optRectangle, i| {
+        if (optRectangle) |rectangle| {
+            state.vkState.rectangle.vertices[i * 5] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[i * 5 + 1] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[i * 5 + 2] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[i * 5 + 3] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[i * 5 + 4] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+        } else {
+            break;
+        }
+    }
     try setupVertexDataForGPU(&state.vkState);
 }
 
@@ -73,8 +79,8 @@ pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
 }
 
 pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
-    const vertexCount: u16 = if (state.rectangle == null) 0 else 5;
-    if (vertexCount == 0) return;
+    if (state.rectangles[0] == null) return;
+    const vertexCount: u16 = if (state.rectangles[1] == null) 5 else 10;
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.rectangle.vertexBuffer};

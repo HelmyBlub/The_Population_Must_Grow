@@ -73,6 +73,7 @@ pub const BUILD_TYPE_HOUSE = 0;
 pub const BUILD_TYPE_TREE_FARM = 1;
 pub const BUILD_TYPE_POTATO_FARM = 2;
 pub const BUILD_TYPE_DEMOLISH = 3;
+pub const BUILD_TYPE_COPY_PASTE = 4;
 
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     var map: GameMap = .{
@@ -212,6 +213,33 @@ pub fn getTilePositionBuildable(position: main.Position, state: *main.ChatSimSta
     return true;
 }
 
+pub fn mapPositionToTilePosition(pos: main.Position) main.Position {
+    return main.Position{
+        .x = @round(pos.x / GameMap.TILE_SIZE) * GameMap.TILE_SIZE,
+        .y = @round(pos.y / GameMap.TILE_SIZE) * GameMap.TILE_SIZE,
+    };
+}
+
+pub fn mapPositionToTileMiddlePosition(pos: main.Position) main.Position {
+    return main.Position{
+        .x = @round((pos.x - GameMap.TILE_SIZE / 2) / GameMap.TILE_SIZE) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2,
+        .y = @round((pos.y - GameMap.TILE_SIZE / 2) / GameMap.TILE_SIZE) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2,
+    };
+}
+
+pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
+    var width: u32 = 0;
+    var height: u32 = 0;
+    windowSdlZig.getWindowSize(&width, &height);
+    const widthFloat = @as(f32, @floatFromInt(width));
+    const heightFloat = @as(f32, @floatFromInt(height));
+
+    return main.Position{
+        .x = ((x - camera.position.x) * camera.zoom + widthFloat / 2) / widthFloat * 2 - 1,
+        .y = ((y - camera.position.y) * camera.zoom + heightFloat / 2) / heightFloat * 2 - 1,
+    };
+}
+
 pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
     if (!try getTilePositionBuildable(tree.position, state, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
@@ -329,8 +357,8 @@ fn createChunk(chunkX: i32, chunkY: i32, allocator: std.mem.Allocator) !MapChunk
             if (random < 0.1) {
                 const tree = MapTree{
                     .position = .{
-                        .x = @floatFromInt((chunkX * GameMap.CHUNK_LENGTH + @as(i32, @intCast(x))) * GameMap.TILE_SIZE),
-                        .y = @floatFromInt((chunkY * GameMap.CHUNK_LENGTH + @as(i32, @intCast(y))) * GameMap.TILE_SIZE),
+                        .x = @floatFromInt((chunkX * GameMap.CHUNK_LENGTH + @as(i32, @intCast(x))) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
+                        .y = @floatFromInt((chunkY * GameMap.CHUNK_LENGTH + @as(i32, @intCast(y))) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
                     },
                     .grow = 1.0,
                 };
@@ -350,9 +378,10 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
     };
-    try spawnChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE, .y = 0 }, .grow = 1 });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE, .y = GameMap.TILE_SIZE }, .grow = 1 });
+    const halveTileSize = GameMap.TILE_SIZE / 2;
+    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
+    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .grow = 1 });
+    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .grow = 1 });
     var citizen = main.Citizen.createCitizen();
     citizen.homePosition = .{ .x = 0, .y = 0 };
     try spawnChunk.citizens.append(citizen);

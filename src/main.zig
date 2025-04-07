@@ -24,16 +24,23 @@ pub const ChatSimState: type = struct {
     fpsLimiter: bool,
     camera: Camera,
     allocator: std.mem.Allocator,
-    rectangle: ?Rectangle = null,
+    rectangles: [2]?VulkanRectangle = .{ null, null },
+    copyAreaRectangle: ?MapRectangle = null,
     currentMouse: ?Position = null,
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
 };
 
-pub const Rectangle = struct {
+pub const VulkanRectangle = struct {
     pos: [2]Position,
     color: [3]f32,
+};
+
+pub const MapRectangle = struct {
+    pos: Position,
+    width: f32,
+    height: f32,
 };
 
 pub const Camera: type = struct {
@@ -85,13 +92,6 @@ pub fn main() !void {
     try startGame(allocator);
 }
 
-pub fn mapPositionToTilePosition(pos: Position) Position {
-    return Position{
-        .x = @round(pos.x / mapZig.GameMap.TILE_SIZE) * mapZig.GameMap.TILE_SIZE,
-        .y = @round(pos.y / mapZig.GameMap.TILE_SIZE) * mapZig.GameMap.TILE_SIZE,
-    };
-}
-
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     const diffX = pos1.x - pos2.x;
     const diffY = pos1.y - pos2.y;
@@ -119,6 +119,64 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
     };
     try mapZig.addTickPosition(0, 0, state);
     try initPaintVulkanAndWindowSdl(state);
+}
+
+pub fn setupRectangleData(state: *ChatSimState) void {
+    if (state.copyAreaRectangle) |copyAreaRectangle| {
+        state.rectangles[1] = .{
+            .color = .{ 1, 0, 0 },
+            .pos = .{
+                mapZig.mapPositionToVulkanSurfacePoisition(copyAreaRectangle.pos.x, copyAreaRectangle.pos.y, state.camera),
+                mapZig.mapPositionToVulkanSurfacePoisition(copyAreaRectangle.pos.x + copyAreaRectangle.width, copyAreaRectangle.pos.y + copyAreaRectangle.height, state.camera),
+            },
+        };
+    } else {
+        state.rectangles[1] = null;
+    }
+    if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
+        if (state.currentBuildingType == mapZig.BUILD_TYPE_COPY_PASTE) {
+            if (state.copyAreaRectangle) |copyAreaRectangle| {
+                const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.currentMouse.?.x, state.currentMouse.?.y, state.camera);
+                const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
+                const mapTopLeftTile: Position = .{
+                    .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
+                    .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
+                };
+                const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
+                const vulkanBottomRight: Position = mapZig.mapPositionToVulkanSurfacePoisition(
+                    mapTopLeftTile.x + copyAreaRectangle.width,
+                    mapTopLeftTile.y + copyAreaRectangle.height,
+                    state.camera,
+                );
+                state.rectangles[0] = .{
+                    .color = .{ 1, 0, 0 },
+                    .pos = .{ vulkanTopleft, vulkanBottomRight },
+                };
+            } else {
+                if (state.mouseDown != null and state.currentMouse != null) {
+                    if (state.rectangles[0] == null) {
+                        state.rectangles[0] = .{
+                            .color = .{ 1, 0, 0 },
+                            .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
+                        };
+                    }
+                    state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
+                    state.rectangles[0].?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
+                }
+            }
+        } else {
+            if (state.mouseDown != null and state.currentMouse != null) {
+                if (state.rectangles[0] == null) {
+                    state.rectangles[0] = .{
+                        .color = .{ 1, 0, 0 },
+                        .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
+                    };
+                }
+                state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
+                state.rectangles[0].?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
+            }
+        }
+    }
 }
 
 fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {

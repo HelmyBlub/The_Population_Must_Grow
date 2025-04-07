@@ -740,17 +740,8 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
         cpuTextWidth += try fontVulkanZig.paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
         _ = fontVulkanZig.paintText("%", .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
     }
-    if (state.mouseDown != null and state.currentMouse != null) {
-        if (state.rectangle == null) {
-            state.rectangle = .{
-                .color = .{ 1, 0, 0 },
-                .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
-            };
-        }
-        state.rectangle.?.pos[0] = windowSdlZig.gameMapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
-        state.rectangle.?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
-        try rectangleVulkanZig.setupVertices(state.rectangle.?, state);
-    }
+    main.setupRectangleData(state);
+    try rectangleVulkanZig.setupVertices(&state.rectangles, state);
 
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);

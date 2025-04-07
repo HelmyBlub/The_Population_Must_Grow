@@ -1,8 +1,9 @@
 tasks:
 - bug: building finish without citizens close to it?
 - features:
-    - demolish buildings/trees
     - copy paste buildings
+        - drag selection area, keep rectangle around it when selected
+        - second rectangle when deciding where to place
     - change build limit
         - anoying to always reselect area to build
     - upgrade building:
