@@ -1,5 +1,4 @@
 tasks:
-- bug: building finish without citizens close to it?
 - features:
     - change build limit
         - anoying to always reselect area to build

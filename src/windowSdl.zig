@@ -256,6 +256,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
             if (state.copyAreaRectangle != null and state.currentBuildingType != mapZig.BUILD_TYPE_COPY_PASTE) {
                 state.copyAreaRectangle = null;
+                state.mouseDown = null;
+                state.rectangles[0] = null;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
