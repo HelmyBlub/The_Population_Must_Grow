@@ -103,20 +103,24 @@ pub const Citizen: type = struct {
                     citizen.treePosition = null;
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
-                        if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
-                            citizen.hasWood = false;
-                            citizen.treePosition = null;
-                            citizen.buildingPosition = null;
-                            citizen.moveTo = null;
-                            citizen.idle = true;
-                            building.inConstruction = false;
-                            if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                                var newCitizen = main.Citizen.createCitizen();
-                                newCitizen.position = buildingPosition;
-                                newCitizen.homePosition = newCitizen.position;
-                                try mapZig.placeCitizen(newCitizen, state);
-                                return;
+                        if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE) {
+                            if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
+                                citizen.hasWood = false;
+                                citizen.treePosition = null;
+                                citizen.buildingPosition = null;
+                                citizen.moveTo = null;
+                                citizen.idle = true;
+                                building.inConstruction = false;
+                                if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                                    var newCitizen = main.Citizen.createCitizen();
+                                    newCitizen.position = buildingPosition;
+                                    newCitizen.homePosition = newCitizen.position;
+                                    try mapZig.placeCitizen(newCitizen, state);
+                                    return;
+                                }
                             }
+                        } else {
+                            citizen.moveTo = buildingPosition;
                         }
                     } else {
                         citizen.hasWood = false;

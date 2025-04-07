@@ -254,6 +254,9 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.currentBuildingType = mapZig.BUILD_TYPE_DEMOLISH;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             }
+            if (state.copyAreaRectangle != null and state.currentBuildingType != mapZig.BUILD_TYPE_COPY_PASTE) {
+                state.copyAreaRectangle = null;
+            }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
