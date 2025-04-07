@@ -1,9 +1,6 @@
 tasks:
 - bug: building finish without citizens close to it?
 - features:
-    - be able to place buildings over initial trees
-        - be able to place building over tree
-        - building will not be build until tree gone
     - demolish buildings/trees
     - copy paste buildings
     - change build limit

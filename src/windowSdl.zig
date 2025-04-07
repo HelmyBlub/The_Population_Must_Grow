@@ -59,7 +59,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
+            if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
                 const mouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
                 const topLeft: main.Position = .{
                     .x = @min(mouseUp.x, state.mouseDown.?.x),
@@ -78,9 +78,14 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                             currentChunkXY = loopChunk;
                             chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.chunkX, currentChunkXY.chunkY, state);
                         }
+                        if (state.currentBuildingType == mapZig.BUILD_TYPE_DEMOLISH) {
+                            try mapZig.demolishAnythingOnPosition(position, state);
+                            continue;
+                        }
+
                         const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
-                            if (state.currentBuildingType == mapZig.BUILDING_TYPE_HOUSE) {
+                            if (state.currentBuildingType == mapZig.BUILD_TYPE_HOUSE) {
                                 if (citizen.buildingPosition != null) continue;
                                 const newBuilding: mapZig.Building = .{
                                     .position = position,
@@ -91,7 +96,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     citizen.idle = false;
                                     citizen.moveTo = null;
                                 }
-                            } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_POTATO_FARM) {
+                            } else if (state.currentBuildingType == mapZig.BUILD_TYPE_POTATO_FARM) {
                                 if (citizen.farmPosition != null) continue;
                                 const newPotatoField: mapZig.PotatoField = .{
                                     .position = position,
@@ -102,7 +107,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                                     citizen.idle = false;
                                     citizen.moveTo = null;
                                 }
-                            } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_TREE_FARM) {
+                            } else if (state.currentBuildingType == mapZig.BUILD_TYPE_TREE_FARM) {
                                 if (citizen.treePosition != null) continue;
                                 const newTree: mapZig.MapTree = .{
                                     .position = position,
@@ -122,7 +127,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             state.mouseDown = null;
             state.rectangle = null;
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            if (state.buildMode == mapZig.BUILDING_MODE_SINGLE) {
+            if (state.buildMode == mapZig.BUILD_MODE_SINGLE) {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                 if (freeCitizen) |citizen| {
@@ -137,7 +142,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                         citizen.moveTo = null;
                     }
                 }
-            } else if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE) {
+            } else if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
@@ -150,17 +155,20 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.camera.position.y += 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
-                state.currentBuildingType = mapZig.BUILDING_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILDING_MODE_SINGLE;
+                state.currentBuildingType = mapZig.BUILD_TYPE_HOUSE;
+                state.buildMode = mapZig.BUILD_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
-                state.currentBuildingType = mapZig.BUILDING_TYPE_TREE_FARM;
-                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
+                state.currentBuildingType = mapZig.BUILD_TYPE_TREE_FARM;
+                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
-                state.currentBuildingType = mapZig.BUILDING_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
+                state.currentBuildingType = mapZig.BUILD_TYPE_HOUSE;
+                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
-                state.currentBuildingType = mapZig.BUILDING_TYPE_POTATO_FARM;
-                state.buildMode = mapZig.BUILDING_MODE_DRAG_RECTANGLE;
+                state.currentBuildingType = mapZig.BUILD_TYPE_POTATO_FARM;
+                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_9) {
+                state.currentBuildingType = mapZig.BUILD_TYPE_DEMOLISH;
+                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});

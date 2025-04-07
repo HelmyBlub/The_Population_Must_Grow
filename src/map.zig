@@ -66,11 +66,13 @@ const VisibleChunksData = struct {
     columns: usize,
 };
 
-pub const BUILDING_MODE_SINGLE = 0;
-pub const BUILDING_MODE_DRAG_RECTANGLE = 1;
+pub const BUILD_MODE_SINGLE = 0;
+pub const BUILD_MODE_DRAG_RECTANGLE = 1;
 pub const BUILDING_TYPE_HOUSE = 0;
-pub const BUILDING_TYPE_TREE_FARM = 1;
-pub const BUILDING_TYPE_POTATO_FARM = 2;
+pub const BUILD_TYPE_HOUSE = 0;
+pub const BUILD_TYPE_TREE_FARM = 1;
+pub const BUILD_TYPE_POTATO_FARM = 2;
+pub const BUILD_TYPE_DEMOLISH = 3;
 
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     var map: GameMap = .{
@@ -110,6 +112,45 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkX: i32, chunkY: i32, state: *
 pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *main.ChatSimState) !*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
     return getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
+}
+
+pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimState) !void {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    for (chunk.buildings.items, 0..) |building, i| {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+            if (state.citizenCounter <= 1 and !building.inConstruction) {
+                return;
+            }
+            var found = false;
+            if (!building.inConstruction) {
+                for (chunk.citizens.items, 0..) |citizen, j| {
+                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                        _ = chunk.citizens.swapRemove(j);
+                        state.citizenCounter -= 1;
+                        found = true;
+                        break;
+                    }
+                }
+            } else {
+                found = true; //does not have a citizen to remove
+            }
+
+            if (found) _ = chunk.buildings.swapRemove(i);
+            return;
+        }
+    }
+    for (chunk.trees.items, 0..) |tree, i| {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+            _ = chunk.trees.swapRemove(i);
+            return;
+        }
+    }
+    for (chunk.potatoFields.items, 0..) |field, i| {
+        if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
+            _ = chunk.potatoFields.swapRemove(i);
+            return;
+        }
+    }
 }
 
 pub fn mapIsTilePositionFree(position: main.Position, state: *main.ChatSimState) !bool {
@@ -203,7 +244,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
     return true;
 }
 
-fn addTickPosition(chunkX: i32, chunkY: i32, state: *main.ChatSimState) !void {
+pub fn addTickPosition(chunkX: i32, chunkY: i32, state: *main.ChatSimState) !void {
     const newKey = getKeyForChunkXY(chunkX, chunkY);
     for (state.map.activeChunkKeys.items) |key| {
         if (newKey == key) return;
@@ -312,6 +353,9 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
     try spawnChunk.buildings.append(.{ .position = .{ .x = 0, .y = 0 }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE, .y = 0 }, .grow = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE, .y = GameMap.TILE_SIZE }, .grow = 1 });
+    var citizen = main.Citizen.createCitizen();
+    citizen.homePosition = .{ .x = 0, .y = 0 };
+    try spawnChunk.citizens.append(citizen);
     return spawnChunk;
 }
 

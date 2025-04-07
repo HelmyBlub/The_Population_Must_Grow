@@ -12,8 +12,8 @@ const sdl = @cImport({
 
 pub const ChatSimState: type = struct {
     map: mapZig.GameMap,
-    currentBuildingType: u8 = mapZig.BUILDING_TYPE_HOUSE,
-    buildMode: u8 = mapZig.BUILDING_MODE_SINGLE,
+    currentBuildingType: u8 = mapZig.BUILD_TYPE_HOUSE,
+    buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
     mouseDown: ?Position = null,
     gameSpeed: f32,
     paintIntervalMs: u8,
@@ -110,13 +110,14 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         .gameEnd = false,
         .vkState = .{},
         .fpsLimiter = true,
+        .citizenCounter = 1,
         .camera = .{
             .position = .{ .x = 0, .y = 0 },
             .zoom = 1,
         },
         .allocator = allocator,
     };
-    try mapZig.placeCitizen(Citizen.createCitizen(), state);
+    try mapZig.addTickPosition(0, 0, state);
     try initPaintVulkanAndWindowSdl(state);
 }
 

@@ -53,6 +53,8 @@ pub const Citizen: type = struct {
                     } else {
                         citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                     }
+                } else {
+                    citizen.potatoPosition = null;
                 }
             }
         } else if (citizen.farmPosition) |farmPosition| {
@@ -67,12 +69,22 @@ pub const Citizen: type = struct {
                     } else {
                         citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                     }
+                } else {
+                    citizen.farmPosition = null;
+                    citizen.idle = true;
                 }
             }
         } else if (citizen.buildingPosition) |buildingPosition| {
             if (citizen.moveTo == null) {
                 if (citizen.treePosition == null and citizen.hasWood == false) {
                     try findFastestTreeAndMoveTo(citizen, buildingPosition, state);
+                    if (citizen.treePosition == null and try mapZig.getBuildingOnPosition(buildingPosition, state) == null) {
+                        citizen.hasWood = false;
+                        citizen.treePosition = null;
+                        citizen.buildingPosition = null;
+                        citizen.moveTo = null;
+                        citizen.idle = true;
+                    }
                 } else if (citizen.treePosition != null and citizen.hasWood == false) {
                     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.treePosition.?, state);
                     for (chunk.trees.items, 0..) |*tree, i| {
@@ -88,6 +100,7 @@ pub const Citizen: type = struct {
                             return;
                         }
                     }
+                    citizen.treePosition = null;
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
                         if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
@@ -99,12 +112,18 @@ pub const Citizen: type = struct {
                             building.inConstruction = false;
                             if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                                 var newCitizen = main.Citizen.createCitizen();
-                                newCitizen.position = citizen.position;
+                                newCitizen.position = buildingPosition;
                                 newCitizen.homePosition = newCitizen.position;
                                 try mapZig.placeCitizen(newCitizen, state);
                                 return;
                             }
                         }
+                    } else {
+                        citizen.hasWood = false;
+                        citizen.treePosition = null;
+                        citizen.buildingPosition = null;
+                        citizen.moveTo = null;
+                        citizen.idle = true;
                     }
                 }
             }
@@ -118,6 +137,9 @@ pub const Citizen: type = struct {
                     } else {
                         citizen.moveTo = tree.position;
                     }
+                } else {
+                    citizen.treePosition = null;
+                    citizen.idle = true;
                 }
             }
         } else if (citizen.moveTo == null) {
