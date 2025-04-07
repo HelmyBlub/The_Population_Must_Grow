@@ -59,18 +59,20 @@ pub const Citizen: type = struct {
             if (citizen.moveTo == null) {
                 if (try mapZig.getPotatoFieldOnPosition(farmPosition, state)) |farmTile| {
                     if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
-                        farmTile.planted = true;
-                        citizen.farmPosition = null;
-                        citizen.idle = true;
+                        if (try mapZig.canBuildOrWaitForTreeCutdown(farmPosition, state)) {
+                            farmTile.planted = true;
+                            citizen.farmPosition = null;
+                            citizen.idle = true;
+                        }
                     } else {
                         citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                     }
                 }
             }
-        } else if (citizen.buildingPosition != null) {
+        } else if (citizen.buildingPosition) |buildingPosition| {
             if (citizen.moveTo == null) {
                 if (citizen.treePosition == null and citizen.hasWood == false) {
-                    try findFastestTreeAndMoveTo(citizen, citizen.buildingPosition.?, state);
+                    try findFastestTreeAndMoveTo(citizen, buildingPosition, state);
                 } else if (citizen.treePosition != null and citizen.hasWood == false) {
                     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.treePosition.?, state);
                     for (chunk.trees.items, 0..) |*tree, i| {
@@ -79,7 +81,7 @@ pub const Citizen: type = struct {
                             tree.grow = 0;
                             tree.citizenOnTheWay = false;
                             citizen.treePosition = null;
-                            citizen.moveTo = citizen.buildingPosition;
+                            citizen.moveTo = buildingPosition;
                             if (!tree.regrow) {
                                 _ = chunk.trees.swapRemove(i);
                             }
@@ -87,19 +89,21 @@ pub const Citizen: type = struct {
                         }
                     }
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
-                    if (try mapZig.getBuildingOnPosition(citizen.buildingPosition.?, state)) |building| {
-                        citizen.hasWood = false;
-                        citizen.treePosition = null;
-                        citizen.buildingPosition = null;
-                        citizen.moveTo = null;
-                        citizen.idle = true;
-                        building.inConstruction = false;
-                        if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                            var newCitizen = main.Citizen.createCitizen();
-                            newCitizen.position = citizen.position;
-                            newCitizen.homePosition = newCitizen.position;
-                            try mapZig.placeCitizen(newCitizen, state);
-                            return;
+                    if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
+                        if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
+                            citizen.hasWood = false;
+                            citizen.treePosition = null;
+                            citizen.buildingPosition = null;
+                            citizen.moveTo = null;
+                            citizen.idle = true;
+                            building.inConstruction = false;
+                            if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                                var newCitizen = main.Citizen.createCitizen();
+                                newCitizen.position = citizen.position;
+                                newCitizen.homePosition = newCitizen.position;
+                                try mapZig.placeCitizen(newCitizen, state);
+                                return;
+                            }
                         }
                     }
                 }

@@ -78,39 +78,42 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                             currentChunkXY = loopChunk;
                             chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.chunkX, currentChunkXY.chunkY, state);
                         }
-                        if (try mapZig.mapIsTilePositionFree(position, state) == false) continue;
                         const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                         if (freeCitizen) |citizen| {
                             if (state.currentBuildingType == mapZig.BUILDING_TYPE_HOUSE) {
                                 if (citizen.buildingPosition != null) continue;
-                                citizen.buildingPosition = position;
-                                citizen.idle = false;
-                                citizen.moveTo = null;
                                 const newBuilding: mapZig.Building = .{
                                     .position = position,
                                     .type = state.currentBuildingType,
                                 };
-                                try chunk.buildings.append(newBuilding);
+                                if (try mapZig.placeBuilding(newBuilding, state)) {
+                                    citizen.buildingPosition = position;
+                                    citizen.idle = false;
+                                    citizen.moveTo = null;
+                                }
                             } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_POTATO_FARM) {
                                 if (citizen.farmPosition != null) continue;
-                                citizen.farmPosition = position;
-                                citizen.idle = false;
-                                citizen.moveTo = null;
                                 const newPotatoField: mapZig.PotatoField = .{
                                     .position = position,
+                                    .planted = false,
                                 };
-                                try mapZig.placePotatoField(newPotatoField, state);
+                                if (try mapZig.placePotatoField(newPotatoField, state)) {
+                                    citizen.farmPosition = position;
+                                    citizen.idle = false;
+                                    citizen.moveTo = null;
+                                }
                             } else if (state.currentBuildingType == mapZig.BUILDING_TYPE_TREE_FARM) {
                                 if (citizen.treePosition != null) continue;
-                                citizen.treePosition = position;
-                                citizen.idle = false;
-                                citizen.moveTo = null;
                                 const newTree: mapZig.MapTree = .{
                                     .position = position,
                                     .planted = false,
                                     .regrow = true,
                                 };
-                                try mapZig.placeTree(newTree, state);
+                                if (try mapZig.placeTree(newTree, state)) {
+                                    citizen.treePosition = position;
+                                    citizen.idle = false;
+                                    citizen.moveTo = null;
+                                }
                             }
                         }
                     }
@@ -121,19 +124,18 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (state.buildMode == mapZig.BUILDING_MODE_SINGLE) {
                 const position = main.mapPositionToTilePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
-                if (try mapZig.mapIsTilePositionFree(position, state) == false) return;
-                var chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(position, state);
                 const freeCitizen = try main.Citizen.findClosestFreeCitizen(position, state);
                 if (freeCitizen) |citizen| {
                     if (citizen.buildingPosition != null) continue;
-                    citizen.buildingPosition = position;
-                    citizen.idle = false;
-                    citizen.moveTo = null;
                     const newBuilding: mapZig.Building = .{
                         .position = position,
                         .type = state.currentBuildingType,
                     };
-                    try chunk.buildings.append(newBuilding);
+                    if (try mapZig.placeBuilding(newBuilding, state)) {
+                        citizen.buildingPosition = position;
+                        citizen.idle = false;
+                        citizen.moveTo = null;
+                    }
                 }
             } else if (state.buildMode == mapZig.BUILDING_MODE_DRAG_RECTANGLE) {
                 state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);

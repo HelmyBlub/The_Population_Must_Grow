@@ -1,14 +1,16 @@
 tasks:
-- change tree farm -> like potato field -> pace regrow tree to tiles
-
+- bug: building finish without citizens close to it?
 - features:
-    - upgrade building:
-        - house -> more citizens per house
+    - be able to place buildings over initial trees
+        - be able to place building over tree
+        - building will not be build until tree gone
     - demolish buildings/trees
-    - be able to place buildings over trees
     - copy paste buildings
     - change build limit
         - anoying to always reselect area to build
+    - upgrade building:
+        - house -> more citizens per house
+            - 2x2 small houses to 1 bigger house for 8 citizen capacity
     - animations?
     - walking pathes?
     - decoration?

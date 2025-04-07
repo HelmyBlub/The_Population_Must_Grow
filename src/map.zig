@@ -112,33 +112,73 @@ pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *
     return getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
 }
 
-pub fn mapIsTilePositionFree(pos: main.Position, state: *main.ChatSimState) !bool {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(pos, state);
+pub fn mapIsTilePositionFree(position: main.Position, state: *main.ChatSimState) !bool {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.buildings.items) |building| {
-        if (main.calculateDistance(pos, building.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             return false;
         }
     }
     for (chunk.trees.items) |tree| {
-        if (main.calculateDistance(pos, tree.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             return false;
         }
     }
     for (chunk.potatoFields.items) |field| {
-        if (main.calculateDistance(pos, field.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
             return false;
         }
     }
     return true;
 }
 
-pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !void {
-    if (!try mapIsTilePositionFree(tree.position, state)) return;
+pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSimState) !bool {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    for (chunk.trees.items, 0..) |tree, i| {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+            if (tree.citizenOnTheWay) return false;
+            _ = chunk.trees.swapRemove(i);
+            return true;
+        }
+    }
+    return true;
+}
+
+pub fn getTilePositionBuildable(position: main.Position, state: *main.ChatSimState, setExistingTreeRegrow: bool) !bool {
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    for (chunk.buildings.items) |building| {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+            return false;
+        }
+    }
+    for (chunk.potatoFields.items) |field| {
+        if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
+            return false;
+        }
+    }
+    for (chunk.trees.items) |*tree| {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+            if (!tree.regrow) {
+                if (setExistingTreeRegrow) {
+                    tree.regrow = true;
+                } else {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
+    if (!try getTilePositionBuildable(tree.position, state, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
     if (tree.regrow) {
         try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     }
+    return true;
 }
 
 pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
@@ -148,11 +188,19 @@ pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
 }
 
-pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !void {
-    if (!try mapIsTilePositionFree(potatoField.position, state)) return;
+pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
+    if (!try getTilePositionBuildable(potatoField.position, state, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
+    return true;
+}
+
+pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
+    if (!try getTilePositionBuildable(building.position, state, false)) return false;
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
+    try chunk.buildings.append(building);
+    return true;
 }
 
 fn addTickPosition(chunkX: i32, chunkY: i32, state: *main.ChatSimState) !void {
