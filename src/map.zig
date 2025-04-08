@@ -292,8 +292,15 @@ pub fn mapTileXyToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) mai
 
 pub fn mapPositionToTileXy(position: main.Position) TileXY {
     return TileXY{
-        .tileX = @intFromFloat(position.x / GameMap.TILE_SIZE),
-        .tileY = @intFromFloat(position.y / GameMap.TILE_SIZE),
+        .tileX = @intFromFloat(@floor(position.x / GameMap.TILE_SIZE)),
+        .tileY = @intFromFloat(@floor(position.y / GameMap.TILE_SIZE)),
+    };
+}
+
+pub fn mapPositionToTileXyBottomRight(position: main.Position) TileXY {
+    return TileXY{
+        .tileX = @intFromFloat(@ceil(position.x / GameMap.TILE_SIZE)),
+        .tileY = @intFromFloat(@ceil(position.y / GameMap.TILE_SIZE)),
     };
 }
 

@@ -126,13 +126,16 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
                 .x = @min(mapMouseUp.x, state.mapMouseDown.?.x),
                 .y = @min(mapMouseUp.y, state.mapMouseDown.?.y),
             };
-            const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
-            const width: usize = @intFromFloat(@ceil(@abs(state.mapMouseDown.?.x - mapMouseUp.x) / tileSizeFloat));
-            const height: usize = @intFromFloat(@ceil(@abs(state.mapMouseDown.?.y - mapMouseUp.y) / tileSizeFloat));
+            const bottomRight: main.Position = .{
+                .x = @max(mapMouseUp.x, state.mapMouseDown.?.x),
+                .y = @max(mapMouseUp.y, state.mapMouseDown.?.y),
+            };
+            const tileXy = mapZig.mapPositionToTileXy(topLeft);
+            const tileXyBottomRight = mapZig.mapPositionToTileXyBottomRight(bottomRight);
             const tileRectangle: mapZig.MapTileRectangle = .{
-                .tileXY = mapZig.mapPositionToTileXy(topLeft),
-                .columnCount = @intCast(width),
-                .rowCount = @intCast(height),
+                .tileXY = tileXy,
+                .columnCount = @intCast(tileXyBottomRight.tileX - tileXy.tileX),
+                .rowCount = @intCast(tileXyBottomRight.tileY - tileXy.tileY),
             };
             if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE) {
                 if (state.copyAreaRectangle != null) return;
