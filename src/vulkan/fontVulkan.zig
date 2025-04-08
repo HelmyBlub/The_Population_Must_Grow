@@ -151,16 +151,6 @@ pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocat
     allocator.free(vkState.font.vertices);
 }
 
-pub fn setupVertices(state: *main.ChatSimState) !void {
-    state.vkState.font.vertices[0] = .{
-        .pos = .{ 0, 0 },
-        .color = .{ 1, 0, 0 },
-        .texCords = .{ 0, 0 },
-        .size = .{ 1, 1 },
-    };
-    try setupVertexDataForGPU(&state.vkState);
-}
-
 pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
     if (vk.vkMapMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;

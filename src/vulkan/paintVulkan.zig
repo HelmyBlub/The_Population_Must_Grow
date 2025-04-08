@@ -735,6 +735,9 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     const fpsTextWidth = fontVulkanZig.paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
     _ = try fontVulkanZig.paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
 
+    const timeTextWidth = fontVulkanZig.paintText("Time: ", .{ .x = -0.49, .y = -0.99 }, 25, state);
+    _ = try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = -0.49 + timeTextWidth, .y = -0.99 }, 25, state);
+
     if (state.cpuPerCent) |cpuPerCent| {
         var cpuTextWidth = fontVulkanZig.paintText("CPU: ", .{ .x = 0.7, .y = -0.99 }, 25, state);
         cpuTextWidth += try fontVulkanZig.paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
