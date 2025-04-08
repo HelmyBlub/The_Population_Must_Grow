@@ -1,10 +1,9 @@
 tasks:
-- bug: check bottom right of selection rectangle
-    - for example: delete top left corner behaves different to bottom right
-- bug: rectangle and chunk borders
-    - i placed area with "3"-Tool. One column was missing and moved left? x_xxx
-- bug: on zoom in tree look like they disapear
-    - i guess i don't paint all visible citizens because they can be far away from their chunk
+- change rectangle select to stick to tile corners
+    - bug: check bottom right of selection rectangle
+        - for example: delete top left corner behaves different to bottom right
+    - bug: rectangle and chunk borders
+        - i placed area with "3"-Tool. One column was missing and moved left? x_xxx
 - features:
     - upgrade building:
         - house -> more citizens per house

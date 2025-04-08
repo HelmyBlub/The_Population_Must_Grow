@@ -66,6 +66,23 @@ pub const ChunkXY = struct {
     chunkY: i32,
 };
 
+pub const TileXY = struct {
+    tileX: i32,
+    tileY: i32,
+};
+
+pub const MapRectangle = struct {
+    pos: main.Position,
+    width: f32,
+    height: f32,
+};
+
+pub const MapTileRectangle = struct {
+    tileXY: TileXY,
+    columnCount: u32,
+    rowCount: u32,
+};
+
 const VisibleChunksData = struct {
     top: i32,
     left: i32,
@@ -254,6 +271,32 @@ pub fn mapPositionToTileMiddlePosition(pos: main.Position) main.Position {
     };
 }
 
+pub fn mapTileXyToTileMiddlePosition(tileXY: TileXY) main.Position {
+    return main.Position{
+        .x = @floatFromInt(tileXY.tileX * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
+        .y = @floatFromInt(tileXY.tileY * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
+    };
+}
+
+pub fn mapTileXyToTilePosition(tileXY: TileXY) main.Position {
+    return main.Position{
+        .x = @floatFromInt(tileXY.tileX * GameMap.TILE_SIZE),
+        .y = @floatFromInt(tileXY.tileY * GameMap.TILE_SIZE),
+    };
+}
+
+pub fn mapTileXyToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.Position {
+    const mapPosition = mapTileXyToTilePosition(tileXY);
+    return mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, camera);
+}
+
+pub fn mapPositionToTileXy(position: main.Position) TileXY {
+    return TileXY{
+        .tileX = @intFromFloat(position.x / GameMap.TILE_SIZE),
+        .tileY = @intFromFloat(position.y / GameMap.TILE_SIZE),
+    };
+}
+
 pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
     var width: u32 = 0;
     var height: u32 = 0;
@@ -339,6 +382,57 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
         }
     }
     return null;
+}
+
+pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountColumns: u32, tileCountRows: u32, state: *main.ChatSimState) !void {
+    std.debug.print("copyPaste: from: {}, to: {}, columns: {d}, rows: {d}\n", .{ fromTopLeftTileXY, toTopLeftTileXY, tileCountColumns, tileCountRows });
+    const fromTopLeftTileMiddle = mapTileXyToTileMiddlePosition(fromTopLeftTileXY);
+    const targetTopLeftTileMiddle = mapTileXyToTileMiddlePosition(toTopLeftTileXY);
+    for (0..tileCountColumns) |x| {
+        nextTile: for (0..tileCountRows) |y| {
+            const sourcePosition: main.Position = .{
+                .x = fromTopLeftTileMiddle.x + @as(f32, @floatFromInt(x * GameMap.TILE_SIZE)),
+                .y = fromTopLeftTileMiddle.y + @as(f32, @floatFromInt(y * GameMap.TILE_SIZE)),
+            };
+            const chunk = try getChunkAndCreateIfNotExistsForPosition(sourcePosition, state);
+            const targetPosition: main.Position = .{
+                .x = targetTopLeftTileMiddle.x + @as(f32, @floatFromInt(x * GameMap.TILE_SIZE)),
+                .y = targetTopLeftTileMiddle.y + @as(f32, @floatFromInt(y * GameMap.TILE_SIZE)),
+            };
+            for (chunk.buildings.items) |building| {
+                if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
+                    const newBuilding: Building = .{
+                        .position = targetPosition,
+                        .inConstruction = true,
+                        .type = building.type,
+                    };
+                    _ = try placeBuilding(newBuilding, state);
+                    continue :nextTile;
+                }
+            }
+            for (chunk.trees.items) |tree| {
+                if (main.calculateDistance(sourcePosition, tree.position) < GameMap.TILE_SIZE and tree.regrow) {
+                    const newTree: MapTree = .{
+                        .position = targetPosition,
+                        .regrow = true,
+                        .planted = false,
+                    };
+                    _ = try placeTree(newTree, state);
+                    continue :nextTile;
+                }
+            }
+            for (chunk.potatoFields.items) |potatoField| {
+                if (main.calculateDistance(sourcePosition, potatoField.position) < GameMap.TILE_SIZE) {
+                    const newPotatoField: PotatoField = .{
+                        .position = targetPosition,
+                        .planted = false,
+                    };
+                    _ = try placePotatoField(newPotatoField, state);
+                    continue :nextTile;
+                }
+            }
+        }
+    }
 }
 
 pub fn getKeyForPosition(position: main.Position) !u64 {

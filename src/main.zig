@@ -12,9 +12,9 @@ const sdl = @cImport({
 
 pub const ChatSimState: type = struct {
     map: mapZig.GameMap,
-    currentBuildingType: u8 = mapZig.BUILD_TYPE_HOUSE,
+    currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
-    mouseDown: ?Position = null,
+    mapMouseDown: ?Position = null,
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
@@ -25,7 +25,7 @@ pub const ChatSimState: type = struct {
     camera: Camera,
     allocator: std.mem.Allocator,
     rectangles: [2]?VulkanRectangle = .{ null, null },
-    copyAreaRectangle: ?MapRectangle = null,
+    copyAreaRectangle: ?mapZig.MapTileRectangle = null,
     currentMouse: ?Position = null,
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
@@ -35,12 +35,6 @@ pub const ChatSimState: type = struct {
 pub const VulkanRectangle = struct {
     pos: [2]Position,
     color: [3]f32,
-};
-
-pub const MapRectangle = struct {
-    pos: Position,
-    width: f32,
-    height: f32,
 };
 
 pub const Camera: type = struct {
@@ -126,53 +120,47 @@ pub fn setupRectangleData(state: *ChatSimState) void {
         state.rectangles[1] = .{
             .color = .{ 1, 0, 0 },
             .pos = .{
-                mapZig.mapPositionToVulkanSurfacePoisition(copyAreaRectangle.pos.x, copyAreaRectangle.pos.y, state.camera),
-                mapZig.mapPositionToVulkanSurfacePoisition(copyAreaRectangle.pos.x + copyAreaRectangle.width, copyAreaRectangle.pos.y + copyAreaRectangle.height, state.camera),
+                mapZig.mapTileXyToVulkanSurfacePosition(copyAreaRectangle.tileXY, state.camera),
+                mapZig.mapTileXyToVulkanSurfacePosition(
+                    .{
+                        .tileX = copyAreaRectangle.tileXY.tileX + @as(i32, @intCast(copyAreaRectangle.columnCount)),
+                        .tileY = copyAreaRectangle.tileXY.tileY + @as(i32, @intCast(copyAreaRectangle.rowCount)),
+                    },
+                    state.camera,
+                ),
             },
         };
     } else {
         state.rectangles[1] = null;
     }
     if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
-        if (state.currentBuildingType == mapZig.BUILD_TYPE_COPY_PASTE) {
-            if (state.copyAreaRectangle) |copyAreaRectangle| {
-                const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.currentMouse.?.x, state.currentMouse.?.y, state.camera);
-                const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
-                const mapTopLeftTile: Position = .{
-                    .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
-                    .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
-                };
-                const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
-                const vulkanBottomRight: Position = mapZig.mapPositionToVulkanSurfacePoisition(
-                    mapTopLeftTile.x + copyAreaRectangle.width,
-                    mapTopLeftTile.y + copyAreaRectangle.height,
-                    state.camera,
-                );
-                state.rectangles[0] = .{
-                    .color = .{ 1, 0, 0 },
-                    .pos = .{ vulkanTopleft, vulkanBottomRight },
-                };
-            } else {
-                if (state.mouseDown != null and state.currentMouse != null) {
-                    if (state.rectangles[0] == null) {
-                        state.rectangles[0] = .{
-                            .color = .{ 1, 0, 0 },
-                            .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
-                        };
-                    }
-                    state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
-                    state.rectangles[0].?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
-                }
-            }
+        if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
+            const copyAreaRectangle = state.copyAreaRectangle.?;
+            const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.currentMouse.?.x, state.currentMouse.?.y, state.camera);
+            const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
+            const mapTopLeftTile: Position = .{
+                .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
+                .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
+            };
+            const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
+            const vulkanBottomRight: Position = mapZig.mapPositionToVulkanSurfacePoisition(
+                mapTopLeftTile.x + @as(f32, @floatFromInt(copyAreaRectangle.columnCount * mapZig.GameMap.TILE_SIZE)),
+                mapTopLeftTile.y + @as(f32, @floatFromInt(copyAreaRectangle.rowCount * mapZig.GameMap.TILE_SIZE)),
+                state.camera,
+            );
+            state.rectangles[0] = .{
+                .color = .{ 1, 0, 0 },
+                .pos = .{ vulkanTopleft, vulkanBottomRight },
+            };
         } else {
-            if (state.mouseDown != null and state.currentMouse != null) {
+            if (state.mapMouseDown != null and state.currentMouse != null) {
                 if (state.rectangles[0] == null) {
                     state.rectangles[0] = .{
                         .color = .{ 1, 0, 0 },
                         .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
                     };
                 }
-                state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mouseDown.?.x, state.mouseDown.?.y, state.camera);
+                state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mapMouseDown.?.x, state.mapMouseDown.?.y, state.camera);
                 state.rectangles[0].?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
             }
         }

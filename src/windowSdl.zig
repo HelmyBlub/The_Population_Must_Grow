@@ -44,6 +44,7 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
 pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
+        if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) try handleBuildModeRectangle(&event, state);
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.currentMouse = .{ .x = event.motion.x, .y = event.motion.y };
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
@@ -59,132 +60,15 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE and state.mouseDown != null) {
-                const mouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
-                const topLeft: main.Position = .{
-                    .x = @min(mouseUp.x, state.mouseDown.?.x),
-                    .y = @min(mouseUp.y, state.mouseDown.?.y),
-                };
-                const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
-                const width: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.x - mouseUp.x) / tileSizeFloat));
-                const height: usize = @intFromFloat(@ceil(@abs(state.mouseDown.?.y - mouseUp.y) / tileSizeFloat));
-                var currentChunkXY: mapZig.ChunkXY = undefined;
-                if (state.currentBuildingType == mapZig.BUILD_TYPE_COPY_PASTE) {
-                    if (event.button.button == 1) {
-                        if (state.copyAreaRectangle != null) return;
-                        const position = mapZig.mapPositionToTilePosition(topLeft);
-                        state.copyAreaRectangle = .{
-                            .pos = position,
-                            .height = @floatFromInt(height * mapZig.GameMap.TILE_SIZE),
-                            .width = @floatFromInt(width * mapZig.GameMap.TILE_SIZE),
-                        };
-                    } else {
-                        state.mouseDown = null;
-                        state.copyAreaRectangle = null;
-                        state.rectangles[0] = null;
-                    }
-                    return;
-                }
-                var chunk: *mapZig.MapChunk = undefined;
-                for (0..width) |x| {
-                    for (0..height) |y| {
-                        const position: main.Position = mapZig.mapPositionToTileMiddlePosition(.{ .x = topLeft.x + @as(f32, @floatFromInt(x)) * tileSizeFloat, .y = topLeft.y + @as(f32, @floatFromInt(y)) * tileSizeFloat });
-                        const loopChunk = mapZig.getChunkXyForPosition(position);
-                        if (loopChunk.chunkX != currentChunkXY.chunkX or loopChunk.chunkY != currentChunkXY.chunkY) {
-                            currentChunkXY = loopChunk;
-                            chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.chunkX, currentChunkXY.chunkY, state);
-                        }
-                        if (state.currentBuildingType == mapZig.BUILD_TYPE_DEMOLISH) {
-                            try mapZig.demolishAnythingOnPosition(position, state);
-                            continue;
-                        }
-
-                        if (state.currentBuildingType == mapZig.BUILD_TYPE_HOUSE) {
-                            const newBuilding: mapZig.Building = .{
-                                .position = position,
-                                .type = state.currentBuildingType,
-                            };
-                            _ = try mapZig.placeBuilding(newBuilding, state);
-                        } else if (state.currentBuildingType == mapZig.BUILD_TYPE_POTATO_FARM) {
-                            const newPotatoField: mapZig.PotatoField = .{
-                                .position = position,
-                                .planted = false,
-                            };
-                            _ = try mapZig.placePotatoField(newPotatoField, state);
-                        } else if (state.currentBuildingType == mapZig.BUILD_TYPE_TREE_FARM) {
-                            const newTree: mapZig.MapTree = .{
-                                .position = position,
-                                .planted = false,
-                                .regrow = true,
-                            };
-                            _ = try mapZig.placeTree(newTree, state);
-                        }
-                    }
-                }
-            }
-            state.mouseDown = null;
-            state.rectangles[0] = null;
+            state.mapMouseDown = null;
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (state.buildMode == mapZig.BUILD_MODE_SINGLE) {
                 const position = mapZig.mapPositionToTileMiddlePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 const newBuilding: mapZig.Building = .{
                     .position = position,
-                    .type = state.currentBuildingType,
+                    .type = state.currentBuildType,
                 };
                 _ = try mapZig.placeBuilding(newBuilding, state);
-            } else if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
-                if (state.currentBuildingType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
-                    if (event.button.button != 1) return;
-                    const mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
-                    const targetTopLeftTileMiddle = mapZig.mapPositionToTileMiddlePosition(mapTargetTopLeft);
-                    for (0..@intFromFloat(state.copyAreaRectangle.?.width / mapZig.GameMap.TILE_SIZE)) |x| {
-                        nextTile: for (0..@intFromFloat(state.copyAreaRectangle.?.height / mapZig.GameMap.TILE_SIZE)) |y| {
-                            const sourcePosition: main.Position = .{
-                                .x = state.copyAreaRectangle.?.pos.x + @as(f32, @floatFromInt(x * mapZig.GameMap.TILE_SIZE)) + mapZig.GameMap.TILE_SIZE / 2,
-                                .y = state.copyAreaRectangle.?.pos.y + @as(f32, @floatFromInt(y * mapZig.GameMap.TILE_SIZE)) + mapZig.GameMap.TILE_SIZE / 2,
-                            };
-                            const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(sourcePosition, state);
-                            const targetPosition: main.Position = .{
-                                .x = targetTopLeftTileMiddle.x + @as(f32, @floatFromInt(x * mapZig.GameMap.TILE_SIZE)),
-                                .y = targetTopLeftTileMiddle.y + @as(f32, @floatFromInt(y * mapZig.GameMap.TILE_SIZE)),
-                            };
-                            for (chunk.buildings.items) |building| {
-                                if (main.calculateDistance(sourcePosition, building.position) < mapZig.GameMap.TILE_SIZE) {
-                                    const newBuilding: mapZig.Building = .{
-                                        .position = targetPosition,
-                                        .inConstruction = true,
-                                        .type = building.type,
-                                    };
-                                    _ = try mapZig.placeBuilding(newBuilding, state);
-                                    continue :nextTile;
-                                }
-                            }
-                            for (chunk.trees.items) |tree| {
-                                if (main.calculateDistance(sourcePosition, tree.position) < mapZig.GameMap.TILE_SIZE and tree.regrow) {
-                                    const newTree: mapZig.MapTree = .{
-                                        .position = targetPosition,
-                                        .regrow = true,
-                                        .planted = false,
-                                    };
-                                    _ = try mapZig.placeTree(newTree, state);
-                                    continue :nextTile;
-                                }
-                            }
-                            for (chunk.potatoFields.items) |potatoField| {
-                                if (main.calculateDistance(sourcePosition, potatoField.position) < mapZig.GameMap.TILE_SIZE) {
-                                    const newPotatoField: mapZig.PotatoField = .{
-                                        .position = targetPosition,
-                                        .planted = false,
-                                    };
-                                    _ = try mapZig.placePotatoField(newPotatoField, state);
-                                    continue :nextTile;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    state.mouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
-                }
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
@@ -196,32 +80,126 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.camera.position.y += 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_HOUSE;
+                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_TREE_FARM;
+                state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_HOUSE;
+                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_POTATO_FARM;
+                state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_5) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_COPY_PASTE;
+                state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_9) {
-                state.currentBuildingType = mapZig.BUILD_TYPE_DEMOLISH;
+                state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             }
-            if (state.copyAreaRectangle != null and state.currentBuildingType != mapZig.BUILD_TYPE_COPY_PASTE) {
+            if (state.copyAreaRectangle != null and state.currentBuildType != mapZig.BUILD_TYPE_COPY_PASTE) {
                 state.copyAreaRectangle = null;
-                state.mouseDown = null;
+                state.mapMouseDown = null;
                 state.rectangles[0] = null;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
+        }
+    }
+}
+
+fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
+    if (state.buildMode != mapZig.BUILD_MODE_DRAG_RECTANGLE) return;
+
+    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
+        if (event.button.button != 1) {
+            state.mapMouseDown = null;
+            state.copyAreaRectangle = null;
+            state.rectangles[0] = null;
+            return;
+        }
+        if (state.mapMouseDown != null) {
+            const mapMouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            const topLeft: main.Position = .{
+                .x = @min(mapMouseUp.x, state.mapMouseDown.?.x),
+                .y = @min(mapMouseUp.y, state.mapMouseDown.?.y),
+            };
+            const tileSizeFloat: f32 = @floatFromInt(mapZig.GameMap.TILE_SIZE);
+            const width: usize = @intFromFloat(@ceil(@abs(state.mapMouseDown.?.x - mapMouseUp.x) / tileSizeFloat));
+            const height: usize = @intFromFloat(@ceil(@abs(state.mapMouseDown.?.y - mapMouseUp.y) / tileSizeFloat));
+            const tileRectangle: mapZig.MapTileRectangle = .{
+                .tileXY = mapZig.mapPositionToTileXy(topLeft),
+                .columnCount = @intCast(width),
+                .rowCount = @intCast(height),
+            };
+            if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE) {
+                if (state.copyAreaRectangle != null) return;
+                state.copyAreaRectangle = tileRectangle;
+                return;
+            }
+
+            try handleRectangleAreaAction(tileRectangle, state);
+        }
+        state.mapMouseDown = null;
+        state.rectangles[0] = null;
+    } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
+            if (event.button.button != 1) return;
+            const mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
+            try mapZig.copyFromTo(
+                state.copyAreaRectangle.?.tileXY,
+                mapZig.mapPositionToTileXy(mapTargetTopLeft),
+                state.copyAreaRectangle.?.columnCount,
+                state.copyAreaRectangle.?.rowCount,
+                state,
+            );
+        } else {
+            state.mapMouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+        }
+    }
+}
+
+fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
+    var chunk: *mapZig.MapChunk = undefined;
+    var currentChunkXY: ?mapZig.ChunkXY = null;
+    for (0..mapTileRectangle.columnCount) |x| {
+        for (0..mapTileRectangle.rowCount) |y| {
+            const position: main.Position = mapZig.mapTileXyToTileMiddlePosition(.{
+                .tileX = mapTileRectangle.tileXY.tileX + @as(i32, @intCast(x)),
+                .tileY = mapTileRectangle.tileXY.tileY + @as(i32, @intCast(y)),
+            });
+            const loopChunk = mapZig.getChunkXyForPosition(position);
+            if (currentChunkXY == null or loopChunk.chunkX != currentChunkXY.?.chunkX or loopChunk.chunkY != currentChunkXY.?.chunkY) {
+                currentChunkXY = loopChunk;
+                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?.chunkX, currentChunkXY.?.chunkY, state);
+            }
+            if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
+                try mapZig.demolishAnythingOnPosition(position, state);
+                continue;
+            }
+
+            if (state.currentBuildType == mapZig.BUILD_TYPE_HOUSE) {
+                const newBuilding: mapZig.Building = .{
+                    .position = position,
+                    .type = state.currentBuildType,
+                };
+                _ = try mapZig.placeBuilding(newBuilding, state);
+            } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {
+                const newPotatoField: mapZig.PotatoField = .{
+                    .position = position,
+                    .planted = false,
+                };
+                _ = try mapZig.placePotatoField(newPotatoField, state);
+            } else if (state.currentBuildType == mapZig.BUILD_TYPE_TREE_FARM) {
+                const newTree: mapZig.MapTree = .{
+                    .position = position,
+                    .planted = false,
+                    .regrow = true,
+                };
+                _ = try mapZig.placeTree(newTree, state);
+            }
         }
     }
 }
