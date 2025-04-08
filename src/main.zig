@@ -256,6 +256,39 @@ fn tick(state: *ChatSimState) !void {
                 if (potatoField.grow > 1) potatoField.grow = 1;
             }
         }
+
+        var iterator = chunk.buildOrders.items.len;
+        while (iterator > 0) {
+            iterator -= 1;
+            const buildOrder = chunk.buildOrders.items[iterator];
+            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder, state);
+            if (optMapObject) |mapObject| {
+                if (try Citizen.findClosestFreeCitizen(buildOrder, state)) |freeCitizen| {
+                    switch (mapObject) {
+                        mapZig.MapObject.building => |building| {
+                            freeCitizen.buildingPosition = building.position;
+                            freeCitizen.idle = false;
+                            freeCitizen.moveTo = null;
+                            _ = chunk.buildOrders.pop();
+                        },
+                        mapZig.MapObject.potatoField => |potatoField| {
+                            freeCitizen.farmPosition = potatoField.position;
+                            freeCitizen.idle = false;
+                            freeCitizen.moveTo = null;
+                            _ = chunk.buildOrders.pop();
+                        },
+                        mapZig.MapObject.tree => |tree| {
+                            freeCitizen.treePosition = tree.position;
+                            freeCitizen.idle = false;
+                            freeCitizen.moveTo = null;
+                            _ = chunk.buildOrders.pop();
+                        },
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -267,6 +300,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.trees.deinit();
         chunk.potatoFields.deinit();
         chunk.citizens.deinit();
+        chunk.buildOrders.deinit();
     }
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();

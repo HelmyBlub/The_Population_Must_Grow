@@ -77,7 +77,7 @@ pub const Citizen: type = struct {
         } else if (citizen.buildingPosition) |buildingPosition| {
             if (citizen.moveTo == null) {
                 if (citizen.treePosition == null and citizen.hasWood == false) {
-                    try findFastestTreeAndMoveTo(citizen, buildingPosition, state);
+                    try findAndSetFastestTree(citizen, buildingPosition, state);
                     if (citizen.treePosition == null and try mapZig.getBuildingOnPosition(buildingPosition, state) == null) {
                         citizen.hasWood = false;
                         citizen.treePosition = null;
@@ -87,22 +87,34 @@ pub const Citizen: type = struct {
                     }
                 } else if (citizen.treePosition != null and citizen.hasWood == false) {
                     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.treePosition.?, state);
-                    for (chunk.trees.items, 0..) |*tree, i| {
-                        if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
-                            citizen.hasWood = true;
-                            tree.grow = 0;
-                            tree.citizenOnTheWay = false;
-                            citizen.treePosition = null;
-                            citizen.moveTo = buildingPosition;
-                            if (!tree.regrow) {
-                                _ = chunk.trees.swapRemove(i);
+                    if (main.calculateDistance(citizen.treePosition.?, citizen.position) < mapZig.GameMap.TILE_SIZE) {
+                        for (chunk.trees.items, 0..) |*tree, i| {
+                            if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
+                                citizen.hasWood = true;
+                                tree.grow = 0;
+                                tree.citizenOnTheWay = false;
+                                citizen.treePosition = null;
+                                citizen.moveTo = buildingPosition;
+                                if (!tree.regrow) {
+                                    _ = chunk.trees.swapRemove(i);
+                                }
+                                return;
                             }
-                            return;
                         }
+                        citizen.treePosition = null;
+                    } else {
+                        citizen.moveTo = citizen.treePosition;
                     }
-                    citizen.treePosition = null;
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
+                        if (building.inConstruction == false) {
+                            citizen.hasWood = false;
+                            citizen.treePosition = null;
+                            citizen.buildingPosition = null;
+                            citizen.moveTo = null;
+                            citizen.idle = true;
+                            return;
+                        }
                         if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE) {
                             if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
                                 citizen.hasWood = false;
@@ -252,7 +264,7 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
     return resultPotatoField;
 }
 
-fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: *main.ChatSimState) !void {
+fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *main.ChatSimState) !void {
     var closestTree: ?*mapZig.MapTree = null;
     var fastestDistance: f32 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
@@ -283,7 +295,6 @@ fn findFastestTreeAndMoveTo(citizen: *Citizen, targetPosition: Position, state: 
     if (closestTree != null) {
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
-        citizen.moveTo = closestTree.?.position;
     } else {
         setRandomMoveTo(citizen);
     }
