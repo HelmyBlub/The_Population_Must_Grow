@@ -114,7 +114,16 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCount: usize = 0;
-    const chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
+    var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
+    const minSize = 8;
+    if (state.camera.zoom > 1 and (chunkVisible.columns < minSize or chunkVisible.rows < minSize)) {
+        // citizens can be far away from their chunks, so they need to be considered for painting too
+        const increaseBy: usize = minSize - chunkVisible.columns;
+        chunkVisible.left -= @intCast(increaseBy);
+        chunkVisible.top -= @intCast(increaseBy);
+        chunkVisible.columns += 2 * increaseBy;
+        chunkVisible.rows += 2 * increaseBy;
+    }
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
