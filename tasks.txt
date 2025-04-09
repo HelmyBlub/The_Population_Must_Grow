@@ -1,7 +1,5 @@
 tasks:
 - upgrade building:
-    - make big house use up 2x2 tiles
-        - rectangle selection has to be 2x2 sizes
     - new tool "6" to place 2x2 building with rectangle tool?
         - require 16xtrees
         - spawns 8 citizens
@@ -10,6 +8,8 @@ tasks:
     - make building placeable over existing ones
         - existing buildings count towards wood of bigger building
         - citizens will migrate to bigger building
+    - bug: not all trees removed when build
+        -rare not so important case
 
 - features:
     - upgrade building:
@@ -26,6 +26,8 @@ tasks:
             - 2x2 tiles for 8 citizen capacity
             - no using sprites with different sizes yet, so some vulkan code change required
     - walking pathes?
+    - paint order?
+    - window resizing?
     - animations?
     - decoration?
     - UX?
