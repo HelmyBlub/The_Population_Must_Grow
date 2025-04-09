@@ -51,6 +51,7 @@ pub const Citizen: type = struct {
                             citizen.foodLevel += 0.5;
                         }
                     } else {
+                        std.debug.print("move to potato", .{});
                         citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
                     }
                 } else {
@@ -219,7 +220,7 @@ pub const Citizen: type = struct {
 
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     citizen.foodLevel -= 1.0 / 60.0 / 60.0;
-    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.moveTo != null) return;
+    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null) return;
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
         potato.citizenOnTheWay += 1;
         citizen.potatoPosition = potato.position;

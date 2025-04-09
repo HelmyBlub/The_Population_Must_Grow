@@ -1,16 +1,14 @@
 tasks:
-- change rectangle select to stick to tile corners
-    - bug: check bottom right of selection rectangle
-        - for example: delete top left corner behaves different to bottom right
-    - bug: rectangle and chunk borders
-        - i placed area with "3"-Tool. One column was missing and moved left? x_xxx
 - features:
+    - change: citizen stop moving when going for food
+    - rectangle selection to tile corner
     - upgrade building:
         - house -> more citizens per house
             - 2x2 small houses to 1 bigger house for 8 citizen capacity
     - animations?
     - walking pathes?
     - decoration?
+    - UX?
 
 - performance and multicore when all features implemented
 - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%

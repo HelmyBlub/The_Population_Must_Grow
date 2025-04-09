@@ -392,7 +392,6 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
 }
 
 pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountColumns: u32, tileCountRows: u32, state: *main.ChatSimState) !void {
-    std.debug.print("copyPaste: from: {}, to: {}, columns: {d}, rows: {d}\n", .{ fromTopLeftTileXY, toTopLeftTileXY, tileCountColumns, tileCountRows });
     const fromTopLeftTileMiddle = mapTileXyToTileMiddlePosition(fromTopLeftTileXY);
     const targetTopLeftTileMiddle = mapTileXyToTileMiddlePosition(toTopLeftTileXY);
     for (0..tileCountColumns) |x| {
