@@ -14,6 +14,7 @@ void main(void)
 {	
     vec4 center = gl_in[0].gl_Position;
     float size = inSize[0] / 2.0;
+    if(inSpriteIndex[0] == 8) size *= 2;
     float width = (size * scale[0].x) / center[3];
     float height = (size * scale[0].y) / center[3];
     center[0] = center[0] / center[3];
