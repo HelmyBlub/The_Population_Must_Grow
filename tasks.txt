@@ -1,6 +1,5 @@
 tasks:
 - features:
-    - change: citizen stop moving when going for food
     - rectangle selection to tile corner
     - upgrade building:
         - house -> more citizens per house

@@ -154,14 +154,39 @@ pub fn setupRectangleData(state: *ChatSimState) void {
             };
         } else {
             if (state.mapMouseDown != null and state.currentMouse != null) {
+                const mapMouseDown = state.mapMouseDown.?;
+                const mouseUp = state.currentMouse.?;
+                const mapMouseUp = windowSdlZig.mouseWindowPositionToGameMapPoisition(mouseUp.x, mouseUp.y, state.camera);
+                const mapTopLeft: Position = .{
+                    .x = @min(mapMouseUp.x, mapMouseDown.x),
+                    .y = @min(mapMouseUp.y, mapMouseDown.y),
+                };
+                const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
+                const mapTopLeftTile: Position = .{
+                    .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
+                    .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
+                };
+                const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
+
+                const bottomRight: Position = .{
+                    .x = @max(mapMouseUp.x, mapMouseDown.x),
+                    .y = @max(mapMouseUp.y, mapMouseDown.y),
+                };
+                const mapBottomRightTileMiddle = mapZig.mapPositionToTileMiddlePosition(bottomRight);
+                const mapBottomRightTileBottomRight: Position = .{
+                    .x = mapBottomRightTileMiddle.x + mapZig.GameMap.TILE_SIZE / 2,
+                    .y = mapBottomRightTileMiddle.y + mapZig.GameMap.TILE_SIZE / 2,
+                };
+                const vulkanBottomRight = mapZig.mapPositionToVulkanSurfacePoisition(mapBottomRightTileBottomRight.x, mapBottomRightTileBottomRight.y, state.camera);
+
                 if (state.rectangles[0] == null) {
                     state.rectangles[0] = .{
                         .color = .{ 1, 0, 0 },
                         .pos = .{ .{ .x = 0, .y = 0 }, .{ .x = 0, .y = 0 } },
                     };
                 }
-                state.rectangles[0].?.pos[0] = mapZig.mapPositionToVulkanSurfacePoisition(state.mapMouseDown.?.x, state.mapMouseDown.?.y, state.camera);
-                state.rectangles[0].?.pos[1] = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.?.x, state.currentMouse.?.y);
+                state.rectangles[0].?.pos[0] = vulkanTopleft;
+                state.rectangles[0].?.pos[1] = vulkanBottomRight;
             }
         }
     }
