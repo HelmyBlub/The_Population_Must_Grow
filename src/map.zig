@@ -93,11 +93,13 @@ const VisibleChunksData = struct {
 pub const BUILD_MODE_SINGLE = 0;
 pub const BUILD_MODE_DRAG_RECTANGLE = 1;
 pub const BUILDING_TYPE_HOUSE = 0;
+pub const BUILDING_TYPE_BIG_HOUSE = 1;
 pub const BUILD_TYPE_HOUSE = 0;
 pub const BUILD_TYPE_TREE_FARM = 1;
 pub const BUILD_TYPE_POTATO_FARM = 2;
 pub const BUILD_TYPE_DEMOLISH = 3;
 pub const BUILD_TYPE_COPY_PASTE = 4;
+pub const BUILD_TYPE_BIG_HOUSE = 5;
 
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     var map: GameMap = .{

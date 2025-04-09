@@ -1,10 +1,31 @@
 tasks:
+- upgrade building:
+    - make building image for 2x2
+    - new tool "6" to place 2x2 building with rectangle tool?
+        - require 16xtrees
+        - spawns 8 citizens
+        - citizens can only carry wood from one tree
+        - multiple citizens should be able to help
+    - make building placeable over existing ones
+        - existing buildings count towards wood of bigger building
+        - citizens will migrate to bigger building
+
 - features:
     - upgrade building:
-        - house -> more citizens per house
-            - 2x2 small houses to 1 bigger house for 8 citizen capacity
-    - animations?
+        - add times to actions
+            - cutting down tree
+            - building
+            - planting
+            - eating
+        - directly build bigger building
+        - bigger house takes more wood per citizens and in more time per citizens to build
+        - build over buildings, be able to change to bigger ones
+            - building over existing houses does not just delete old houses, but counts them for material an progress
+        - big house -> more citizens per house
+            - 2x2 tiles for 8 citizen capacity
+            - no using sprites with different sizes yet, so some vulkan code change required
     - walking pathes?
+    - animations?
     - decoration?
     - UX?
 
@@ -16,6 +37,7 @@ tasks:
   
 Some data:
 - 100_000 citizens in 251 seconds (09.04.2025)
+- zig build test: FPS: 516 (09.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

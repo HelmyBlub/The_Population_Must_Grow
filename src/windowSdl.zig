@@ -94,6 +94,9 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_5) {
                 state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_6) {
+                state.currentBuildType = mapZig.BUILD_TYPE_BIG_HOUSE;
+                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_9) {
                 state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
@@ -186,7 +189,13 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
             if (state.currentBuildType == mapZig.BUILD_TYPE_HOUSE) {
                 const newBuilding: mapZig.Building = .{
                     .position = position,
-                    .type = state.currentBuildType,
+                    .type = mapZig.BUILDING_TYPE_HOUSE,
+                };
+                _ = try mapZig.placeBuilding(newBuilding, state);
+            } else if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
+                const newBuilding: mapZig.Building = .{
+                    .position = position,
+                    .type = mapZig.BUILDING_TYPE_BIG_HOUSE,
                 };
                 _ = try mapZig.placeBuilding(newBuilding, state);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {

@@ -175,9 +175,13 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 index += 1;
             }
             for (chunk.buildings.items) |*building| {
-                var imageIndex: u8 = 0;
-                if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                    imageIndex = if (building.inConstruction) imageZig.IMAGE_WHITE_RECTANGLE else imageZig.IMAGE_HOUSE;
+                var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
+                if (!building.inConstruction) {
+                    if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                        imageIndex = imageZig.IMAGE_HOUSE;
+                    } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
+                        imageIndex = imageZig.IMAGE_BIG_HOUSE;
+                    }
                 }
                 vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
                 index += 1;

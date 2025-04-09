@@ -129,6 +129,12 @@ pub const Citizen: type = struct {
                                     newCitizen.homePosition = newCitizen.position;
                                     try mapZig.placeCitizen(newCitizen, state);
                                     return;
+                                } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
+                                    var newCitizen = main.Citizen.createCitizen();
+                                    newCitizen.position = buildingPosition;
+                                    newCitizen.homePosition = newCitizen.position;
+                                    try mapZig.placeCitizen(newCitizen, state);
+                                    return;
                                 }
                             }
                         } else {
