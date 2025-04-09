@@ -1,6 +1,5 @@
 tasks:
 - features:
-    - rectangle selection to tile corner
     - upgrade building:
         - house -> more citizens per house
             - 2x2 small houses to 1 bigger house for 8 citizen capacity
@@ -15,6 +14,9 @@ tasks:
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
+Some data:
+- 100_000 citizens in 251 seconds (09.04.2025)
+
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter
