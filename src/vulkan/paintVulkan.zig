@@ -133,6 +133,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             );
             entityPaintCount += chunk.citizens.items.len;
             entityPaintCount += chunk.buildings.items.len;
+            entityPaintCount += chunk.bigBuildings.items.len;
             entityPaintCount += chunk.trees.items.len;
             entityPaintCount += chunk.potatoFields.items.len * 2;
         }
@@ -177,11 +178,15 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
                 if (!building.inConstruction) {
-                    if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-                        imageIndex = imageZig.IMAGE_HOUSE;
-                    } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
-                        imageIndex = imageZig.IMAGE_BIG_HOUSE;
-                    }
+                    imageIndex = imageZig.IMAGE_HOUSE;
+                }
+                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                index += 1;
+            }
+            for (chunk.bigBuildings.items) |*building| {
+                var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
+                if (!building.inConstruction) {
+                    imageIndex = imageZig.IMAGE_BIG_HOUSE;
                 }
                 vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
                 index += 1;

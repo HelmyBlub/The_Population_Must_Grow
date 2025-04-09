@@ -194,7 +194,7 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
                 _ = try mapZig.placeBuilding(newBuilding, state);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
                 const newBuilding: mapZig.Building = .{
-                    .position = position,
+                    .position = .{ .x = position.x + mapZig.GameMap.TILE_SIZE / 2, .y = position.y + mapZig.GameMap.TILE_SIZE / 2 },
                     .type = mapZig.BUILDING_TYPE_BIG_HOUSE,
                 };
                 _ = try mapZig.placeBuilding(newBuilding, state);

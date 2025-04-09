@@ -5,10 +5,10 @@ const windowSdlZig = @import("windowSdl.zig");
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
     activeChunkKeys: std.ArrayList(u64),
-    pub const CHUNK_LENGTH: u8 = 16;
-    pub const TILE_SIZE: u16 = 20;
-    pub const CHUNK_SIZE: u16 = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
-    pub const MAX_CHUNKS_ROWS_COLUMNS: u32 = 10_000;
+    pub const CHUNK_LENGTH: comptime_int = 16;
+    pub const TILE_SIZE: comptime_int = 20;
+    pub const CHUNK_SIZE: comptime_int = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
+    pub const MAX_CHUNKS_ROWS_COLUMNS: comptime_int = 10_000;
 };
 
 const U64HashMapContext = struct {
@@ -27,6 +27,8 @@ pub const MapChunk = struct {
     chunkY: i32,
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
+    /// buildings bigger than one tile
+    bigBuildings: std.ArrayList(Building),
     potatoFields: std.ArrayList(PotatoField),
     citizens: std.ArrayList(main.Citizen),
     buildOrders: std.ArrayList(main.Position),
@@ -34,6 +36,7 @@ pub const MapChunk = struct {
 
 pub const MapObject = union(enum) {
     building: *Building,
+    bigBuilding: *Building,
     potatoField: *PotatoField,
     tree: *MapTree,
 };
@@ -100,6 +103,8 @@ pub const BUILD_TYPE_POTATO_FARM = 2;
 pub const BUILD_TYPE_DEMOLISH = 3;
 pub const BUILD_TYPE_COPY_PASTE = 4;
 pub const BUILD_TYPE_BIG_HOUSE = 5;
+pub const TILE_SIZE_BIG_HOUSE = 2;
+pub const MAX_BUILDING_TILE_SIZE = 2;
 
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     var map: GameMap = .{
@@ -166,6 +171,29 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             return;
         }
     }
+    for (chunk.bigBuildings.items, 0..) |building, i| {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+            if (state.citizenCounter <= 1 and !building.inConstruction) {
+                return;
+            }
+            var found = false;
+            if (!building.inConstruction) {
+                for (chunk.citizens.items, 0..) |citizen, j| {
+                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                        _ = chunk.citizens.swapRemove(j);
+                        state.citizenCounter -= 1;
+                        found = true;
+                        break;
+                    }
+                }
+            } else {
+                found = true; //does not have a citizen to remove
+            }
+
+            if (found) _ = chunk.bigBuildings.swapRemove(i);
+            return;
+        }
+    }
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             _ = chunk.trees.swapRemove(i);
@@ -185,6 +213,11 @@ pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !
     for (chunk.buildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             return .{ .building = building };
+        }
+    }
+    for (chunk.bigBuildings.items) |*building| {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+            return .{ .bigBuilding = building };
         }
     }
     for (chunk.trees.items) |*tree| {
@@ -207,6 +240,11 @@ pub fn mapIsTilePositionFree(position: main.Position, state: *main.ChatSimState)
             return false;
         }
     }
+    for (chunk.bigBuildings.items) |building| {
+        if (main.calculateDistance(position, building.position) < 1.5 * @as(f32, @floatFromInt(GameMap.TILE_SIZE))) {
+            return false;
+        }
+    }
     for (chunk.trees.items) |tree| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             return false;
@@ -217,6 +255,7 @@ pub fn mapIsTilePositionFree(position: main.Position, state: *main.ChatSimState)
             return false;
         }
     }
+
     return true;
 }
 
@@ -232,20 +271,27 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSi
     return true;
 }
 
-pub fn getTilePositionBuildable(position: main.Position, state: *main.ChatSimState, setExistingTreeRegrow: bool) !bool {
+pub fn getTilePositionBuildable(position: main.Position, buildingRadius: u16, state: *main.ChatSimState, setExistingTreeRegrow: bool) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    const defaultDistance: f32 = @floatFromInt(GameMap.TILE_SIZE / 2 + buildingRadius);
+    const twoTileDistance: f32 = @floatFromInt(GameMap.TILE_SIZE + buildingRadius);
     for (chunk.buildings.items) |building| {
-        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, building.position) < defaultDistance) {
+            return false;
+        }
+    }
+    for (chunk.bigBuildings.items) |building| {
+        if (main.calculateDistance(position, building.position) < twoTileDistance) {
             return false;
         }
     }
     for (chunk.potatoFields.items) |field| {
-        if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, field.position) < defaultDistance) {
             return false;
         }
     }
     for (chunk.trees.items) |*tree| {
-        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+        if (main.calculateDistance(position, tree.position) < defaultDistance) {
             if (!tree.regrow) {
                 if (setExistingTreeRegrow) {
                     tree.regrow = true;
@@ -256,6 +302,39 @@ pub fn getTilePositionBuildable(position: main.Position, state: *main.ChatSimSta
             return false;
         }
     }
+    const moduloPosition: main.Position = .{ .x = @mod(position.x, GameMap.CHUNK_SIZE), .y = @mod(position.y, GameMap.CHUNK_SIZE) };
+    const maxBuildingReachOverToOtherChunk: f32 = @floatFromInt(GameMap.TILE_SIZE * (MAX_BUILDING_TILE_SIZE / 2) + buildingRadius);
+    if (moduloPosition.x < maxBuildingReachOverToOtherChunk) {
+        const leftChunk = try getChunkAndCreateIfNotExistsForPosition(.{ .x = position.x - GameMap.CHUNK_SIZE, .y = position.y }, state);
+        for (leftChunk.bigBuildings.items) |building| {
+            if (main.calculateDistance(position, building.position) < twoTileDistance) {
+                return false;
+            }
+        }
+    } else if (moduloPosition.x > maxBuildingReachOverToOtherChunk) {
+        const rightChunk = try getChunkAndCreateIfNotExistsForPosition(.{ .x = position.x + GameMap.CHUNK_SIZE, .y = position.y }, state);
+        for (rightChunk.bigBuildings.items) |building| {
+            if (main.calculateDistance(position, building.position) < twoTileDistance) {
+                return false;
+            }
+        }
+    }
+    if (moduloPosition.y < maxBuildingReachOverToOtherChunk) {
+        const topChunk = try getChunkAndCreateIfNotExistsForPosition(.{ .x = position.x, .y = position.y - GameMap.CHUNK_SIZE }, state);
+        for (topChunk.bigBuildings.items) |building| {
+            if (main.calculateDistance(position, building.position) < twoTileDistance) {
+                return false;
+            }
+        }
+    } else if (moduloPosition.y > maxBuildingReachOverToOtherChunk) {
+        const bottomChunk = try getChunkAndCreateIfNotExistsForPosition(.{ .x = position.x, .y = position.y + GameMap.CHUNK_SIZE }, state);
+        for (bottomChunk.bigBuildings.items) |building| {
+            if (main.calculateDistance(position, building.position) < twoTileDistance) {
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -320,7 +399,7 @@ pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) 
 }
 
 pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
-    if (!try getTilePositionBuildable(tree.position, state, true)) return false;
+    if (!try getTilePositionBuildable(tree.position, GameMap.TILE_SIZE / 2, state, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
     try chunk.buildOrders.append(tree.position);
@@ -338,7 +417,7 @@ pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
 }
 
 pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
-    if (!try getTilePositionBuildable(potatoField.position, state, false)) return false;
+    if (!try getTilePositionBuildable(potatoField.position, GameMap.TILE_SIZE / 2, state, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(potatoField.position);
@@ -347,9 +426,14 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
 }
 
 pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
-    if (!try getTilePositionBuildable(building.position, state, false)) return false;
+    const buildingRadius: u16 = if (building.type == BUILDING_TYPE_BIG_HOUSE) GameMap.TILE_SIZE else GameMap.TILE_SIZE / 2;
+    if (!try getTilePositionBuildable(building.position, buildingRadius, state, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
-    try chunk.buildings.append(building);
+    if (building.type == BUILDING_TYPE_BIG_HOUSE) {
+        try chunk.bigBuildings.append(building);
+    } else {
+        try chunk.buildings.append(building);
+    }
     try chunk.buildOrders.append(building.position);
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
@@ -386,6 +470,11 @@ pub fn getTreeOnPosition(position: main.Position, state: *main.ChatSimState) !?*
 pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState) !?*Building {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.buildings.items) |*building| {
+        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+            return building;
+        }
+    }
+    for (chunk.bigBuildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             return building;
         }
@@ -475,6 +564,7 @@ fn createChunk(chunkX: i32, chunkY: i32, allocator: std.mem.Allocator) !MapChunk
         .chunkX = chunkX,
         .chunkY = chunkY,
         .buildings = std.ArrayList(Building).init(allocator),
+        .bigBuildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
@@ -508,6 +598,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .chunkX = 0,
         .chunkY = 0,
         .buildings = std.ArrayList(Building).init(allocator),
+        .bigBuildings = std.ArrayList(Building).init(allocator),
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
@@ -518,7 +609,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .grow = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .grow = 1 });
     var citizen = main.Citizen.createCitizen();
-    citizen.homePosition = .{ .x = 0, .y = 0 };
+    citizen.homePosition = .{ .x = halveTileSize, .y = halveTileSize };
     try spawnChunk.citizens.append(citizen);
     return spawnChunk;
 }

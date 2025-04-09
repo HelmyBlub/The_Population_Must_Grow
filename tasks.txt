@@ -1,6 +1,10 @@
 tasks:
 - upgrade building:
-    - make building image for 2x2
+    - make big house use up 2x2 tiles
+        - bigger building can be in multiple chunks at the same time
+            - create arrayList for bigBuildings to be able to check a bit more efficiently?
+            - have some maximum building size value, so only close to chunk border needs to be checked?
+        - rectangle selection has to be 2x2 sizes
     - new tool "6" to place 2x2 building with rectangle tool?
         - require 16xtrees
         - spawns 8 citizens

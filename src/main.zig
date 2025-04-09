@@ -284,6 +284,12 @@ fn tick(state: *ChatSimState) !void {
                             freeCitizen.moveTo = null;
                             _ = chunk.buildOrders.pop();
                         },
+                        mapZig.MapObject.bigBuilding => |building| {
+                            freeCitizen.buildingPosition = building.position;
+                            freeCitizen.idle = false;
+                            freeCitizen.moveTo = null;
+                            _ = chunk.buildOrders.pop();
+                        },
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;
                             freeCitizen.idle = false;
@@ -310,6 +316,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
         chunk.buildings.deinit();
+        chunk.bigBuildings.deinit();
         chunk.trees.deinit();
         chunk.potatoFields.deinit();
         chunk.citizens.deinit();
