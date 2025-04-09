@@ -153,6 +153,9 @@ pub fn setupRectangleData(state: *ChatSimState) void {
                 .pos = .{ vulkanTopleft, vulkanBottomRight },
             };
         } else {
+            const rectangleTileColumns: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
+            const rectangleTileRows: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
+
             if (state.mapMouseDown != null and state.currentMouse != null) {
                 const mapMouseDown = state.mapMouseDown.?;
                 const mouseUp = state.currentMouse.?;
@@ -162,22 +165,37 @@ pub fn setupRectangleData(state: *ChatSimState) void {
                     .y = @min(mapMouseUp.y, mapMouseDown.y),
                 };
                 const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
-                const mapTopLeftTile: Position = .{
+                var mapTopLeftTile: Position = .{
                     .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
                     .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
                 };
-                const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
 
                 const bottomRight: Position = .{
                     .x = @max(mapMouseUp.x, mapMouseDown.x),
                     .y = @max(mapMouseUp.y, mapMouseDown.y),
                 };
                 const mapBottomRightTileMiddle = mapZig.mapPositionToTileMiddlePosition(bottomRight);
-                const mapBottomRightTileBottomRight: Position = .{
+                var mapBottomRightTileBottomRight: Position = .{
                     .x = mapBottomRightTileMiddle.x + mapZig.GameMap.TILE_SIZE / 2,
                     .y = mapBottomRightTileMiddle.y + mapZig.GameMap.TILE_SIZE / 2,
                 };
+                const columns: u8 = @intFromFloat((mapBottomRightTileBottomRight.x - mapTopLeftTile.x) / mapZig.GameMap.TILE_SIZE);
+                const rows: u8 = @intFromFloat((mapBottomRightTileBottomRight.y - mapTopLeftTile.y) / mapZig.GameMap.TILE_SIZE);
+                const adjustColumns = @mod(columns, rectangleTileColumns);
+                const adjustRows = @mod(rows, rectangleTileRows);
+                if (mapMouseUp.x < mapMouseDown.x) {
+                    mapTopLeftTile.x = mapTopLeftTile.x - @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                } else {
+                    mapBottomRightTileBottomRight.x = mapBottomRightTileBottomRight.x + @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                }
+                if (mapMouseUp.y < mapMouseDown.y) {
+                    mapTopLeftTile.y = mapTopLeftTile.y - @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                } else {
+                    mapBottomRightTileBottomRight.y = mapBottomRightTileBottomRight.y + @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                }
+
                 const vulkanBottomRight = mapZig.mapPositionToVulkanSurfacePoisition(mapBottomRightTileBottomRight.x, mapBottomRightTileBottomRight.y, state.camera);
+                const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
 
                 if (state.rectangles[0] == null) {
                     state.rectangles[0] = .{
