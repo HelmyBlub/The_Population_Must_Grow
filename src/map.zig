@@ -507,6 +507,20 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                     continue :nextTile;
                 }
             }
+            for (chunk.bigBuildings.items) |building| {
+                if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
+                    const newBuilding: Building = .{
+                        .position = .{
+                            .x = building.position.x + targetTopLeftTileMiddle.x - fromTopLeftTileMiddle.x,
+                            .y = building.position.y + targetTopLeftTileMiddle.y - fromTopLeftTileMiddle.y,
+                        },
+                        .inConstruction = true,
+                        .type = building.type,
+                    };
+                    _ = try placeBuilding(newBuilding, state);
+                    continue :nextTile;
+                }
+            }
             for (chunk.trees.items) |tree| {
                 if (main.calculateDistance(sourcePosition, tree.position) < GameMap.TILE_SIZE and tree.regrow) {
                     const newTree: MapTree = .{
