@@ -188,7 +188,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_BIG_HOUSE;
                 }
-                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2 };
                 index += 1;
             }
             for (chunk.potatoFields.items) |*field| {

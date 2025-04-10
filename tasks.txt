@@ -1,27 +1,19 @@
 tasks:
 - big house/upgrade building:
-    - make building placeable over existing ones
-        - existing buildings count towards wood of bigger building
-        - citizens will migrate to bigger building
+    - placed indenticator size
+    - on some tiles, placing over does not work correctly
+        - some case of placing to close to potatoFarm tile
+        - chunk edges are the problem
     - bug: not all trees removed when build
         -rare not so important case
-    - placed indenticator size
     
 
 - features:
-    - upgrade building:
-        - add times to actions
-            - cutting down tree
-            - building
-            - planting
-            - eating
-        - directly build bigger building
-        - bigger house takes more wood per citizens and in more time per citizens to build
-        - build over buildings, be able to change to bigger ones
-            - building over existing houses does not just delete old houses, but counts them for material an progress
-        - big house -> more citizens per house
-            - 2x2 tiles for 8 citizen capacity
-            - no using sprites with different sizes yet, so some vulkan code change required
+    - add times to actions
+        - cutting down tree
+        - building
+        - planting
+        - eating
     - walking pathes?
     - paint order?
     - window resizing?
