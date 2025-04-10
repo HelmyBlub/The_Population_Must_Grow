@@ -122,19 +122,25 @@ pub const Citizen: type = struct {
                                 citizen.buildingPosition = null;
                                 citizen.moveTo = null;
                                 citizen.idle = true;
-                                building.inConstruction = false;
+                                building.woodRequired -= 1;
                                 if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
+                                    building.inConstruction = false;
                                     var newCitizen = main.Citizen.createCitizen();
                                     newCitizen.position = buildingPosition;
                                     newCitizen.homePosition = newCitizen.position;
                                     try mapZig.placeCitizen(newCitizen, state);
                                     return;
                                 } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
-                                    var newCitizen = main.Citizen.createCitizen();
-                                    newCitizen.position = buildingPosition;
-                                    newCitizen.homePosition = newCitizen.position;
-                                    try mapZig.placeCitizen(newCitizen, state);
-                                    return;
+                                    if (building.woodRequired == 0) {
+                                        building.inConstruction = false;
+                                        for (0..8) |_| {
+                                            var newCitizen = main.Citizen.createCitizen();
+                                            newCitizen.position = buildingPosition;
+                                            newCitizen.homePosition = newCitizen.position;
+                                            try mapZig.placeCitizen(newCitizen, state);
+                                        }
+                                        return;
+                                    }
                                 }
                             }
                         } else {

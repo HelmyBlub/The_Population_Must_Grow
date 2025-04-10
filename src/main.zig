@@ -293,10 +293,10 @@ fn tick(state: *ChatSimState) !void {
         var iterator = chunk.buildOrders.items.len;
         while (iterator > 0) {
             iterator -= 1;
-            const buildOrder = chunk.buildOrders.items[iterator];
-            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder, state);
+            const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
+            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
             if (optMapObject) |mapObject| {
-                if (try Citizen.findClosestFreeCitizen(buildOrder, state)) |freeCitizen| {
+                if (try Citizen.findClosestFreeCitizen(buildOrder.position, state)) |freeCitizen| {
                     switch (mapObject) {
                         mapZig.MapObject.building => |building| {
                             freeCitizen.buildingPosition = building.position;
@@ -308,7 +308,12 @@ fn tick(state: *ChatSimState) !void {
                             freeCitizen.buildingPosition = building.position;
                             freeCitizen.idle = false;
                             freeCitizen.moveTo = null;
-                            _ = chunk.buildOrders.pop();
+                            if (buildOrder.materialCount > 0) {
+                                buildOrder.materialCount -= 1;
+                                iterator += 1;
+                            } else {
+                                _ = chunk.buildOrders.pop();
+                            }
                         },
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;

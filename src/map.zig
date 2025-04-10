@@ -31,7 +31,12 @@ pub const MapChunk = struct {
     bigBuildings: std.ArrayList(Building),
     potatoFields: std.ArrayList(PotatoField),
     citizens: std.ArrayList(main.Citizen),
-    buildOrders: std.ArrayList(main.Position),
+    buildOrders: std.ArrayList(BuildOrder),
+};
+
+pub const BuildOrder = struct {
+    position: main.Position,
+    materialCount: u8,
 };
 
 pub const MapObject = union(enum) {
@@ -54,6 +59,7 @@ pub const Building = struct {
     type: u8,
     position: main.Position,
     inConstruction: bool = true,
+    woodRequired: u8 = 1,
 };
 
 pub const PotatoField = struct {
@@ -173,17 +179,19 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
     }
     for (chunk.bigBuildings.items, 0..) |building, i| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
-            if (state.citizenCounter <= 1 and !building.inConstruction) {
+            if (state.citizenCounter <= 8 and !building.inConstruction) {
                 return;
             }
             var found = false;
             if (!building.inConstruction) {
-                for (chunk.citizens.items, 0..) |citizen, j| {
+                var index = chunk.citizens.items.len;
+                while (index > 0) {
+                    index -= 1;
+                    const citizen = chunk.citizens.items[index];
                     if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
-                        _ = chunk.citizens.swapRemove(j);
+                        _ = chunk.citizens.swapRemove(index);
                         state.citizenCounter -= 1;
                         found = true;
-                        break;
                     }
                 }
             } else {
@@ -402,7 +410,7 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
     if (!try getTilePositionBuildable(tree.position, GameMap.TILE_SIZE / 2, state, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
-    try chunk.buildOrders.append(tree.position);
+    try chunk.buildOrders.append(.{ .position = tree.position, .materialCount = 1 });
     if (tree.regrow) {
         try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     }
@@ -420,7 +428,7 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
     if (!try getTilePositionBuildable(potatoField.position, GameMap.TILE_SIZE / 2, state, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
-    try chunk.buildOrders.append(potatoField.position);
+    try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
 }
@@ -431,10 +439,11 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
         try chunk.bigBuildings.append(building);
+        try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 16 });
     } else {
         try chunk.buildings.append(building);
+        try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
-    try chunk.buildOrders.append(building.position);
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
 }
@@ -582,7 +591,7 @@ fn createChunk(chunkX: i32, chunkY: i32, allocator: std.mem.Allocator) !MapChunk
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
-        .buildOrders = std.ArrayList(main.Position).init(allocator),
+        .buildOrders = std.ArrayList(BuildOrder).init(allocator),
     };
 
     for (0..GameMap.CHUNK_LENGTH) |x| {
@@ -616,7 +625,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .trees = std.ArrayList(MapTree).init(allocator),
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
-        .buildOrders = std.ArrayList(main.Position).init(allocator),
+        .buildOrders = std.ArrayList(BuildOrder).init(allocator),
     };
     const halveTileSize = GameMap.TILE_SIZE / 2;
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
