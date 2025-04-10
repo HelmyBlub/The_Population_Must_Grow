@@ -136,7 +136,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
             const tileXy = mapZig.mapPositionToTileXy(topLeft);
             const tileXyBottomRight = mapZig.mapPositionToTileXyBottomRight(bottomRight);
             const tileRectangle: mapZig.MapTileRectangle = .{
-                .tileXY = tileXy,
+                .topLeftTileXY = tileXy,
                 .columnCount = @intCast(tileXyBottomRight.tileX - tileXy.tileX),
                 .rowCount = @intCast(tileXyBottomRight.tileY - tileXy.tileY),
             };
@@ -155,7 +155,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
             if (event.button.button != 1) return;
             const mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
             try mapZig.copyFromTo(
-                state.copyAreaRectangle.?.tileXY,
+                state.copyAreaRectangle.?.topLeftTileXY,
                 mapZig.mapPositionToTileXy(mapTargetTopLeft),
                 state.copyAreaRectangle.?.columnCount,
                 state.copyAreaRectangle.?.rowCount,
@@ -173,8 +173,8 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
     for (0..mapTileRectangle.columnCount) |x| {
         for (0..mapTileRectangle.rowCount) |y| {
             const position: main.Position = mapZig.mapTileXyToTileMiddlePosition(.{
-                .tileX = mapTileRectangle.tileXY.tileX + @as(i32, @intCast(x)),
-                .tileY = mapTileRectangle.tileXY.tileY + @as(i32, @intCast(y)),
+                .tileX = mapTileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
+                .tileY = mapTileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
             });
             const loopChunk = mapZig.getChunkXyForPosition(position);
             if (currentChunkXY == null or loopChunk.chunkX != currentChunkXY.?.chunkX or loopChunk.chunkY != currentChunkXY.?.chunkY) {

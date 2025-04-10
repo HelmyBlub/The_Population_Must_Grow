@@ -1,12 +1,8 @@
 tasks:
 - big house/upgrade building:
-    - placed indenticator size
     - on some tiles, placing over does not work correctly
         - some case of placing to close to potatoFarm tile
-        - chunk edges are the problem
-    - bug: not all trees removed when build
-        -rare not so important case
-    
+        - chunk edges are the problem    
 
 - features:
     - add times to actions
@@ -15,11 +11,20 @@ tasks:
         - planting
         - eating
     - walking pathes?
+        - buildings only possible connected to pathes
+        - citizens should prefer walking on path
+        - citizen can enter their home => not visible
+        - citizens can walk over potato fields for food
+        - to many citizens walking over a potato field changes it to path tile
+    - change penalty for not enough food?
+        - low on food => slower, less productive citizen, might not work most tasks, only does potato planting
+    - day/night cycle? citizen go home to sleep at night?
     - paint order?
     - window resizing?
     - animations?
     - decoration?
     - UX?
+    - sound?
 
 - performance and multicore when all features implemented
 - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
@@ -28,8 +33,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- 100_000 citizens in 233 seconds (10.04.2025)
-- zig build test: FPS: 516 (10.04.2025)
+- 100_000 citizens in 213 seconds (10.04.2025)
+- zig build test: FPS: 511 (10.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

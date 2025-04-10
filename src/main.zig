@@ -120,11 +120,11 @@ pub fn setupRectangleData(state: *ChatSimState) void {
         state.rectangles[1] = .{
             .color = .{ 1, 0, 0 },
             .pos = .{
-                mapZig.mapTileXyToVulkanSurfacePosition(copyAreaRectangle.tileXY, state.camera),
+                mapZig.mapTileXyToVulkanSurfacePosition(copyAreaRectangle.topLeftTileXY, state.camera),
                 mapZig.mapTileXyToVulkanSurfacePosition(
                     .{
-                        .tileX = copyAreaRectangle.tileXY.tileX + @as(i32, @intCast(copyAreaRectangle.columnCount)),
-                        .tileY = copyAreaRectangle.tileXY.tileY + @as(i32, @intCast(copyAreaRectangle.rowCount)),
+                        .tileX = copyAreaRectangle.topLeftTileXY.tileX + @as(i32, @intCast(copyAreaRectangle.columnCount)),
+                        .tileY = copyAreaRectangle.topLeftTileXY.tileY + @as(i32, @intCast(copyAreaRectangle.rowCount)),
                     },
                     state.camera,
                 ),
