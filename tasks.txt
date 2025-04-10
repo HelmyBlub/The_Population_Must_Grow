@@ -1,16 +1,26 @@
 tasks:
+- walking pathes
+    - create sprite for "path"
+    - new tool "7": set pathes
+    - check draw order so citizens are not insivible behind pathes
+        - put potatofields also in these
+    - buildings can only be placed connected to a path
+
+    - citizens are not allowed to walk over buildings, which are not their own
+        - pathfinding?
+            - start with simple but inperformant version? like A*
+            - dumb citizens, try to walk direct path and can only do simple adjustments
+
 - features:
-    - add times to actions
-        - cutting down tree
-        - building
-        - planting
-        - eating
     - walking pathes?
-        - buildings only possible connected to pathes
+        - put potato fields and pathes in own drawCmd as they should be painted first
+        - buildings/homes only possible connected to pathes
         - citizens should prefer walking on path
-        - citizen can enter their home => not visible
-        - citizens can walk over potato fields for food
         - to many citizens walking over a potato field changes it to path tile
+        - what about trees?
+            - citizens can walk towards trees not connected to pathes
+        - what about potato fields?
+            - citizens can walk over potato fields for food
     - change penalty for not enough food?
         - low on food => slower, less productive citizen, might not work most tasks, only does potato planting
     - day/night cycle? citizen go home to sleep at night?
