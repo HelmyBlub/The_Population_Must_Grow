@@ -129,15 +129,17 @@ pub const Citizen: type = struct {
                                     newCitizen.position = buildingPosition;
                                     newCitizen.homePosition = newCitizen.position;
                                     try mapZig.placeCitizen(newCitizen, state);
+                                    building.citizensSpawned += 1;
                                     return;
                                 } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
                                     if (building.woodRequired == 0) {
                                         building.inConstruction = false;
-                                        for (0..8) |_| {
+                                        while (building.citizensSpawned < 8) {
                                             var newCitizen = main.Citizen.createCitizen();
                                             newCitizen.position = buildingPosition;
                                             newCitizen.homePosition = newCitizen.position;
                                             try mapZig.placeCitizen(newCitizen, state);
+                                            building.citizensSpawned += 1;
                                         }
                                         return;
                                     }

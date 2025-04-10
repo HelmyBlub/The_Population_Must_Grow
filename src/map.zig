@@ -60,6 +60,7 @@ pub const Building = struct {
     position: main.Position,
     inConstruction: bool = true,
     woodRequired: u8 = 1,
+    citizensSpawned: u8 = 0,
 };
 
 pub const PotatoField = struct {
@@ -154,51 +155,40 @@ pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *
 
 pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
-    for (chunk.buildings.items, 0..) |building, i| {
+    for (chunk.buildings.items, 0..) |*building, i| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
-            if (state.citizenCounter <= 1 and !building.inConstruction) {
-                return;
-            }
-            var found = false;
-            if (!building.inConstruction) {
+            if (state.citizenCounter > 1 and building.citizensSpawned > 0) {
                 for (chunk.citizens.items, 0..) |citizen, j| {
                     if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
                         _ = chunk.citizens.swapRemove(j);
+                        building.citizensSpawned -= 1;
                         state.citizenCounter -= 1;
-                        found = true;
                         break;
                     }
                 }
-            } else {
-                found = true; //does not have a citizen to remove
             }
 
-            if (found) _ = chunk.buildings.swapRemove(i);
+            if (building.citizensSpawned == 0) _ = chunk.buildings.swapRemove(i);
             return;
         }
     }
-    for (chunk.bigBuildings.items, 0..) |building, i| {
+    for (chunk.bigBuildings.items, 0..) |*building, i| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
-            if (state.citizenCounter <= 8 and !building.inConstruction) {
-                return;
-            }
-            var found = false;
-            if (!building.inConstruction) {
-                var index = chunk.citizens.items.len;
-                while (index > 0) {
-                    index -= 1;
-                    const citizen = chunk.citizens.items[index];
-                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
-                        _ = chunk.citizens.swapRemove(index);
-                        state.citizenCounter -= 1;
-                        found = true;
-                    }
+            var index = chunk.citizens.items.len;
+            while (index > 0 and state.citizenCounter > building.citizensSpawned) {
+                if (building.citizensSpawned == 0) {
+                    break;
                 }
-            } else {
-                found = true; //does not have a citizen to remove
+                index -= 1;
+                const citizen = chunk.citizens.items[index];
+                if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                    _ = chunk.citizens.swapRemove(index);
+                    state.citizenCounter -= 1;
+                    building.citizensSpawned -= 1;
+                }
             }
 
-            if (found) _ = chunk.bigBuildings.swapRemove(i);
+            if (building.citizensSpawned == 0) _ = chunk.bigBuildings.swapRemove(i);
             return;
         }
     }
@@ -279,13 +269,15 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSi
     return true;
 }
 
-pub fn getTilePositionBuildable(position: main.Position, buildingRadius: u16, state: *main.ChatSimState, setExistingTreeRegrow: bool) !bool {
+pub fn getTilePositionBuildable(position: main.Position, buildingRadius: u16, state: *main.ChatSimState, setExistingTreeRegrow: bool, ignore1TileBuildings: bool) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     const defaultDistance: f32 = @floatFromInt(GameMap.TILE_SIZE / 2 + buildingRadius);
     const twoTileDistance: f32 = @floatFromInt(GameMap.TILE_SIZE + buildingRadius);
-    for (chunk.buildings.items) |building| {
-        if (main.calculateDistance(position, building.position) < defaultDistance) {
-            return false;
+    if (!ignore1TileBuildings) {
+        for (chunk.buildings.items) |building| {
+            if (main.calculateDistance(position, building.position) < defaultDistance) {
+                return false;
+            }
         }
     }
     for (chunk.bigBuildings.items) |building| {
@@ -407,7 +399,7 @@ pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) 
 }
 
 pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
-    if (!try getTilePositionBuildable(tree.position, GameMap.TILE_SIZE / 2, state, true)) return false;
+    if (!try getTilePositionBuildable(tree.position, GameMap.TILE_SIZE / 2, state, true, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
     try chunk.buildOrders.append(.{ .position = tree.position, .materialCount = 1 });
@@ -425,7 +417,7 @@ pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
 }
 
 pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
-    if (!try getTilePositionBuildable(potatoField.position, GameMap.TILE_SIZE / 2, state, false)) return false;
+    if (!try getTilePositionBuildable(potatoField.position, GameMap.TILE_SIZE / 2, state, false, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
@@ -435,17 +427,51 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
 
 pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
     const buildingRadius: u16 = if (building.type == BUILDING_TYPE_BIG_HOUSE) GameMap.TILE_SIZE else GameMap.TILE_SIZE / 2;
-    if (!try getTilePositionBuildable(building.position, buildingRadius, state, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
-        try chunk.bigBuildings.append(building);
-        try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 16 });
+        if (!try getTilePositionBuildable(building.position, buildingRadius, state, false, true)) return false;
+        var tempBuilding = building;
+        try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
+        try chunk.bigBuildings.append(tempBuilding);
+        try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
+        if (!try getTilePositionBuildable(building.position, buildingRadius, state, false, false)) return false;
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
+}
+
+fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSimState) !void {
+    const corners = [_]main.Position{
+        .{ .x = building.position.x - GameMap.TILE_SIZE / 2, .y = building.position.y - GameMap.TILE_SIZE / 2 },
+        .{ .x = building.position.x - GameMap.TILE_SIZE / 2, .y = building.position.y + GameMap.TILE_SIZE / 2 },
+        .{ .x = building.position.x + GameMap.TILE_SIZE / 2, .y = building.position.y - GameMap.TILE_SIZE / 2 },
+        .{ .x = building.position.x + GameMap.TILE_SIZE / 2, .y = building.position.y + GameMap.TILE_SIZE / 2 },
+    };
+
+    for (corners) |corner| {
+        const optBuilding = try getBuildingOnPosition(.{ .x = corner.x, .y = corner.y }, state);
+        if (optBuilding) |cornerBuilding| {
+            building.woodRequired -= 1;
+            const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, state);
+            for (chunk.citizens.items, 0..) |*citizen, i| {
+                if (citizen.homePosition != null and citizen.homePosition.?.x == cornerBuilding.position.x and citizen.homePosition.?.y == cornerBuilding.position.y) {
+                    citizen.homePosition = building.position;
+                    building.citizensSpawned += 1;
+                    cornerBuilding.citizensSpawned -= 1;
+                    const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
+                    if (newBuildingChunk != chunk) {
+                        const moveCitizen = chunk.citizens.swapRemove(i);
+                        try newBuildingChunk.citizens.append(moveCitizen);
+                    }
+                    break;
+                }
+            }
+            try demolishAnythingOnPosition(cornerBuilding.position, state);
+        }
+    }
 }
 
 pub fn addTickPosition(chunkX: i32, chunkY: i32, state: *main.ChatSimState) !void {
@@ -628,7 +654,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
     };
     const halveTileSize = GameMap.TILE_SIZE / 2;
-    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE });
+    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .grow = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .grow = 1 });
     var citizen = main.Citizen.createCitizen();

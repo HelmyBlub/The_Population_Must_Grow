@@ -1,10 +1,5 @@
 tasks:
 - big house/upgrade building:
-    - new building big house
-        - require 16xtrees
-        - spawns 8 citizens
-        - citizens can only carry wood from one tree
-        - multiple citizens should be able to help
     - make building placeable over existing ones
         - existing buildings count towards wood of bigger building
         - citizens will migrate to bigger building
