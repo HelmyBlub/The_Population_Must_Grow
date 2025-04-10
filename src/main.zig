@@ -179,19 +179,21 @@ pub fn setupRectangleData(state: *ChatSimState) void {
                     .x = mapBottomRightTileMiddle.x + mapZig.GameMap.TILE_SIZE / 2,
                     .y = mapBottomRightTileMiddle.y + mapZig.GameMap.TILE_SIZE / 2,
                 };
-                const columns: u8 = @intFromFloat((mapBottomRightTileBottomRight.x - mapTopLeftTile.x) / mapZig.GameMap.TILE_SIZE);
-                const rows: u8 = @intFromFloat((mapBottomRightTileBottomRight.y - mapTopLeftTile.y) / mapZig.GameMap.TILE_SIZE);
-                const adjustColumns = @mod(columns, rectangleTileColumns);
-                const adjustRows = @mod(rows, rectangleTileRows);
-                if (mapMouseUp.x < mapMouseDown.x) {
-                    mapTopLeftTile.x = mapTopLeftTile.x - @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
-                } else {
-                    mapBottomRightTileBottomRight.x = mapBottomRightTileBottomRight.x + @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
-                }
-                if (mapMouseUp.y < mapMouseDown.y) {
-                    mapTopLeftTile.y = mapTopLeftTile.y - @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
-                } else {
-                    mapBottomRightTileBottomRight.y = mapBottomRightTileBottomRight.y + @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                if (rectangleTileColumns != 1 or rectangleTileRows != 1) {
+                    const columns: u16 = @intFromFloat((mapBottomRightTileBottomRight.x - mapTopLeftTile.x) / mapZig.GameMap.TILE_SIZE);
+                    const rows: u16 = @intFromFloat((mapBottomRightTileBottomRight.y - mapTopLeftTile.y) / mapZig.GameMap.TILE_SIZE);
+                    const adjustColumns = @mod(columns, rectangleTileColumns);
+                    const adjustRows = @mod(rows, rectangleTileRows);
+                    if (mapMouseUp.x < mapMouseDown.x) {
+                        mapTopLeftTile.x = mapTopLeftTile.x - @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                    } else {
+                        mapBottomRightTileBottomRight.x = mapBottomRightTileBottomRight.x + @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                    }
+                    if (mapMouseUp.y < mapMouseDown.y) {
+                        mapTopLeftTile.y = mapTopLeftTile.y - @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                    } else {
+                        mapBottomRightTileBottomRight.y = mapBottomRightTileBottomRight.y + @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                    }
                 }
 
                 const vulkanBottomRight = mapZig.mapPositionToVulkanSurfacePoisition(mapBottomRightTileBottomRight.x, mapBottomRightTileBottomRight.y, state.camera);
