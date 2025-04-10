@@ -1,9 +1,4 @@
 tasks:
-- big house/upgrade building:
-    - on some tiles, placing over does not work correctly
-        - some case of placing to close to potatoFarm tile
-        - chunk edges are the problem    
-
 - features:
     - add times to actions
         - cutting down tree
@@ -33,7 +28,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- 100_000 citizens in 213 seconds (10.04.2025)
+- 100_000 citizens in 253 seconds (10.04.2025)
 - zig build test: FPS: 511 (10.04.2025)
 
 Goal:
