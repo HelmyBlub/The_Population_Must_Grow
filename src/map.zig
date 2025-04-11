@@ -310,6 +310,11 @@ pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatS
                 return false;
             }
         }
+        for (chunk.pathes.items) |pathPos| {
+            if (is1x1ObjectOverlapping(pathPos, buildRectangle)) {
+                return false;
+            }
+        }
         for (chunk.trees.items) |*tree| {
             if (is1x1ObjectOverlapping(tree.position, buildRectangle)) {
                 if (!tree.regrow) {
@@ -324,11 +329,6 @@ pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatS
         }
         for (chunk.potatoFields.items) |field| {
             if (is1x1ObjectOverlapping(field.position, buildRectangle)) {
-                return false;
-            }
-        }
-        for (chunk.pathes.items) |pathPos| {
-            if (is1x1ObjectOverlapping(pathPos, buildRectangle)) {
                 return false;
             }
         }
