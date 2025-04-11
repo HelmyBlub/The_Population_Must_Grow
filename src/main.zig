@@ -327,6 +327,9 @@ fn tick(state: *ChatSimState) !void {
                             freeCitizen.moveTo = null;
                             _ = chunk.buildOrders.pop();
                         },
+                        mapZig.MapObject.path => {
+                            unreachable;
+                        },
                     }
                 } else {
                     break;
@@ -346,6 +349,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.potatoFields.deinit();
         chunk.citizens.deinit();
         chunk.buildOrders.deinit();
+        chunk.pathes.deinit();
     }
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();

@@ -33,6 +33,7 @@ pub const MapChunk = struct {
     potatoFields: std.ArrayList(PotatoField),
     citizens: std.ArrayList(main.Citizen),
     buildOrders: std.ArrayList(BuildOrder),
+    pathes: std.ArrayList(main.Position),
 };
 
 pub const BuildOrder = struct {
@@ -45,6 +46,7 @@ pub const MapObject = union(enum) {
     bigBuilding: *Building,
     potatoField: *PotatoField,
     tree: *MapTree,
+    path: *main.Position,
 };
 
 pub const MapTree = struct {
@@ -103,6 +105,7 @@ const VisibleChunksData = struct {
 
 pub const BUILD_MODE_SINGLE = 0;
 pub const BUILD_MODE_DRAG_RECTANGLE = 1;
+pub const BUILD_MODE_DRAW = 2;
 pub const BUILDING_TYPE_HOUSE = 0;
 pub const BUILDING_TYPE_BIG_HOUSE = 1;
 pub const BUILD_TYPE_HOUSE = 0;
@@ -111,6 +114,7 @@ pub const BUILD_TYPE_POTATO_FARM = 2;
 pub const BUILD_TYPE_DEMOLISH = 3;
 pub const BUILD_TYPE_COPY_PASTE = 4;
 pub const BUILD_TYPE_BIG_HOUSE = 5;
+pub const BUILD_TYPE_PATHES = 6;
 pub const TILE_SIZE_BIG_HOUSE = 2;
 
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
@@ -204,6 +208,12 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             return;
         }
     }
+    for (chunk.pathes.items, 0..) |path, i| {
+        if (main.calculateDistance(position, path) < GameMap.TILE_SIZE) {
+            _ = chunk.pathes.swapRemove(i);
+            return;
+        }
+    }
 }
 
 pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !?MapObject {
@@ -226,6 +236,11 @@ pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !
     for (chunk.potatoFields.items) |*field| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
             return .{ .potatoField = field };
+        }
+    }
+    for (chunk.pathes.items) |*pathPos| {
+        if (main.calculateDistance(position, pathPos.*) < GameMap.TILE_SIZE) {
+            return .{ .path = pathPos };
         }
     }
     return null;
@@ -309,6 +324,11 @@ pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatS
         }
         for (chunk.potatoFields.items) |field| {
             if (is1x1ObjectOverlapping(field.position, buildRectangle)) {
+                return false;
+            }
+        }
+        for (chunk.pathes.items) |pathPos| {
+            if (is1x1ObjectOverlapping(pathPos, buildRectangle)) {
                 return false;
             }
         }
@@ -438,6 +458,13 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
+    return true;
+}
+
+pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
+    if (!try isRectangleBuildable(get1x1RectangleFromPosition(pathPos), state, false, false)) return false;
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(pathPos, state);
+    try chunk.pathes.append(pathPos);
     return true;
 }
 
@@ -592,6 +619,12 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                     continue :nextTile;
                 }
             }
+            for (chunk.pathes.items) |pathPos| {
+                if (main.calculateDistance(sourcePosition, pathPos) < GameMap.TILE_SIZE) {
+                    _ = try placePath(targetPosition, state);
+                    continue :nextTile;
+                }
+            }
         }
     }
 }
@@ -633,6 +666,7 @@ fn createChunk(chunkX: i32, chunkY: i32, allocator: std.mem.Allocator) !MapChunk
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
+        .pathes = std.ArrayList(main.Position).init(allocator),
     };
 
     for (0..GameMap.CHUNK_LENGTH) |x| {
@@ -667,6 +701,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
         .potatoFields = std.ArrayList(PotatoField).init(allocator),
         .citizens = std.ArrayList(main.Citizen).init(allocator),
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
+        .pathes = std.ArrayList(main.Position).init(allocator),
     };
     const halveTileSize = GameMap.TILE_SIZE / 2;
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1 });

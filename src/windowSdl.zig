@@ -45,6 +45,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
         if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) try handleBuildModeRectangle(&event, state);
+        if (state.buildMode == mapZig.BUILD_MODE_DRAW) try handleBuildModeDraw(&event, state);
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.currentMouse = .{ .x = event.motion.x, .y = event.motion.y };
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
@@ -71,6 +72,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 _ = try mapZig.placeBuilding(newBuilding, state);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
+            var buildModeChanged = false;
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
                 state.camera.position.x -= 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
@@ -82,26 +84,37 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
                 state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_5) {
                 state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_6) {
                 state.currentBuildType = mapZig.BUILD_TYPE_BIG_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_7) {
+                state.currentBuildType = mapZig.BUILD_TYPE_PATHES;
+                state.buildMode = mapZig.BUILD_MODE_DRAW;
+                buildModeChanged = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_9) {
                 state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+                buildModeChanged = true;
             }
-            if (state.copyAreaRectangle != null and state.currentBuildType != mapZig.BUILD_TYPE_COPY_PASTE) {
+            if (buildModeChanged) {
                 state.copyAreaRectangle = null;
                 state.mapMouseDown = null;
                 state.rectangles[0] = null;
@@ -110,6 +123,14 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
         }
+    }
+}
+
+fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
+    if (state.buildMode != mapZig.BUILD_MODE_DRAW) return;
+    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mapMouseDown != null) {
+        state.mapMouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+        _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(state.mapMouseDown.?), state);
     }
 }
 

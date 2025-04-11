@@ -136,6 +136,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             entityPaintCount += chunk.bigBuildings.items.len;
             entityPaintCount += chunk.trees.items.len;
             entityPaintCount += chunk.potatoFields.items.len * 2;
+            entityPaintCount += chunk.pathes.items.len;
         }
     }
     state.vkState.entityPaintCount = @intCast(entityPaintCount);
@@ -196,6 +197,10 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 index += 1;
                 const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
                 vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
+                index += 1;
+            }
+            for (chunk.pathes.items) |*pathPos| {
+                vkState.vertices[index] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE };
                 index += 1;
             }
         }
