@@ -65,7 +65,7 @@ test "test measure performance" {
     defer destroyGameState(&state);
     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
     for (0..10_000) |_| {
-        try mapZig.placeCitizen(Citizen.createCitizen(), &state);
+        try mapZig.placeCitizen(Citizen.createCitizen(allocator), &state);
     }
     Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(0, 0, &state));
     state.fpsLimiter = false;
@@ -301,13 +301,13 @@ fn tick(state: *ChatSimState) !void {
                         mapZig.MapObject.building => |building| {
                             freeCitizen.buildingPosition = building.position;
                             freeCitizen.idle = false;
-                            freeCitizen.moveTo = null;
+                            freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                         },
                         mapZig.MapObject.bigBuilding => |building| {
                             freeCitizen.buildingPosition = building.position;
                             freeCitizen.idle = false;
-                            freeCitizen.moveTo = null;
+                            freeCitizen.moveTo.clearAndFree();
                             if (buildOrder.materialCount > 0) {
                                 buildOrder.materialCount -= 1;
                                 iterator += 1;
@@ -318,17 +318,17 @@ fn tick(state: *ChatSimState) !void {
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;
                             freeCitizen.idle = false;
-                            freeCitizen.moveTo = null;
+                            freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                         },
                         mapZig.MapObject.tree => |tree| {
                             freeCitizen.treePosition = tree.position;
                             freeCitizen.idle = false;
-                            freeCitizen.moveTo = null;
+                            freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                         },
                         mapZig.MapObject.path => {
-                            unreachable;
+                            _ = chunk.buildOrders.pop();
                         },
                     }
                 } else {
@@ -347,6 +347,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.bigBuildings.deinit();
         chunk.trees.deinit();
         chunk.potatoFields.deinit();
+        Citizen.destroyCitizens(chunk);
         chunk.citizens.deinit();
         chunk.buildOrders.deinit();
         chunk.pathes.deinit();

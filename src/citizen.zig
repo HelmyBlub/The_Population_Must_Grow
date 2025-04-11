@@ -5,7 +5,7 @@ const mapZig = @import("map.zig");
 
 pub const Citizen: type = struct {
     position: Position,
-    moveTo: ?Position = null,
+    moveTo: std.ArrayList(main.Position),
     executingUntil: ?u32 = null,
     moveSpeed: f16,
     idle: bool = true,
@@ -18,11 +18,18 @@ pub const Citizen: type = struct {
     foodLevel: f32 = 1,
     deadUntil: ?u32 = null,
 
-    pub fn createCitizen() Citizen {
+    pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{
             .position = .{ .x = 0, .y = 0 },
             .moveSpeed = 2.0,
+            .moveTo = std.ArrayList(main.Position).init(allocator),
         };
+    }
+
+    pub fn destroyCitizens(chunk: *mapZig.MapChunk) void {
+        for (chunk.citizens.items) |*citizen| {
+            citizen.moveTo.deinit();
+        }
     }
 
     pub fn citizensTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
@@ -42,7 +49,7 @@ pub const Citizen: type = struct {
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
         if (citizen.potatoPosition) |potatoPosition| {
-            if (citizen.moveTo == null and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
+            if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getPotatoFieldOnPosition(potatoPosition, state)) |farmTile| {
                     if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
                         if (citizen.executingUntil == null) {
@@ -57,14 +64,14 @@ pub const Citizen: type = struct {
                             citizen.executingUntil = null;
                         }
                     } else {
-                        citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                        try citizen.moveTo.append(.{ .x = farmTile.position.x, .y = farmTile.position.y });
                     }
                 } else {
                     citizen.potatoPosition = null;
                 }
             }
         } else if (citizen.farmPosition) |farmPosition| {
-            if (citizen.moveTo == null and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
+            if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getPotatoFieldOnPosition(farmPosition, state)) |farmTile| {
                     if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
                         if (citizen.executingUntil == null) {
@@ -78,7 +85,7 @@ pub const Citizen: type = struct {
                             citizen.idle = true;
                         }
                     } else {
-                        citizen.moveTo = .{ .x = farmTile.position.x, .y = farmTile.position.y };
+                        try citizen.moveTo.append(.{ .x = farmTile.position.x, .y = farmTile.position.y });
                     }
                 } else {
                     citizen.farmPosition = null;
@@ -86,14 +93,14 @@ pub const Citizen: type = struct {
                 }
             }
         } else if (citizen.buildingPosition) |buildingPosition| {
-            if (citizen.moveTo == null and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
+            if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (citizen.treePosition == null and citizen.hasWood == false) {
                     try findAndSetFastestTree(citizen, buildingPosition, state);
                     if (citizen.treePosition == null and try mapZig.getBuildingOnPosition(buildingPosition, state) == null) {
                         citizen.hasWood = false;
                         citizen.treePosition = null;
                         citizen.buildingPosition = null;
-                        citizen.moveTo = null;
+                        citizen.moveTo.clearAndFree();
                         citizen.idle = true;
                     }
                 } else if (citizen.treePosition != null and citizen.hasWood == false) {
@@ -110,7 +117,7 @@ pub const Citizen: type = struct {
                                     tree.grow = 0;
                                     tree.citizenOnTheWay = false;
                                     citizen.treePosition = null;
-                                    citizen.moveTo = buildingPosition;
+                                    try citizen.moveTo.append(buildingPosition);
                                     if (!tree.regrow) {
                                         _ = chunk.trees.swapRemove(i);
                                     }
@@ -120,7 +127,7 @@ pub const Citizen: type = struct {
                         }
                         citizen.treePosition = null;
                     } else {
-                        citizen.moveTo = citizen.treePosition;
+                        try citizen.moveTo.append(citizen.treePosition.?);
                     }
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
@@ -128,7 +135,7 @@ pub const Citizen: type = struct {
                             citizen.hasWood = false;
                             citizen.treePosition = null;
                             citizen.buildingPosition = null;
-                            citizen.moveTo = null;
+                            citizen.moveTo.clearAndFree();
                             citizen.idle = true;
                             return;
                         }
@@ -141,12 +148,12 @@ pub const Citizen: type = struct {
                                     citizen.hasWood = false;
                                     citizen.treePosition = null;
                                     citizen.buildingPosition = null;
-                                    citizen.moveTo = null;
+                                    citizen.moveTo.clearAndFree();
                                     citizen.idle = true;
                                     building.woodRequired -= 1;
                                     if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                                         building.inConstruction = false;
-                                        var newCitizen = main.Citizen.createCitizen();
+                                        var newCitizen = main.Citizen.createCitizen(state.allocator);
                                         newCitizen.position = buildingPosition;
                                         newCitizen.homePosition = newCitizen.position;
                                         try mapZig.placeCitizen(newCitizen, state);
@@ -156,7 +163,7 @@ pub const Citizen: type = struct {
                                         if (building.woodRequired == 0) {
                                             building.inConstruction = false;
                                             while (building.citizensSpawned < 8) {
-                                                var newCitizen = main.Citizen.createCitizen();
+                                                var newCitizen = main.Citizen.createCitizen(state.allocator);
                                                 newCitizen.position = buildingPosition;
                                                 newCitizen.homePosition = newCitizen.position;
                                                 try mapZig.placeCitizen(newCitizen, state);
@@ -168,19 +175,19 @@ pub const Citizen: type = struct {
                                 }
                             }
                         } else {
-                            citizen.moveTo = buildingPosition;
+                            try citizen.moveTo.append(buildingPosition);
                         }
                     } else {
                         citizen.hasWood = false;
                         citizen.treePosition = null;
                         citizen.buildingPosition = null;
-                        citizen.moveTo = null;
+                        citizen.moveTo.clearAndFree();
                         citizen.idle = true;
                     }
                 }
             }
         } else if (citizen.treePosition != null) {
-            if (citizen.moveTo == null and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
+            if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |tree| {
                     if (main.calculateDistance(citizen.position, tree.position) < mapZig.GameMap.TILE_SIZE) {
                         if (citizen.executingUntil == null) {
@@ -192,27 +199,28 @@ pub const Citizen: type = struct {
                             citizen.idle = true;
                         }
                     } else {
-                        citizen.moveTo = tree.position;
+                        try citizen.moveTo.append(tree.position);
                     }
                 } else {
                     citizen.treePosition = null;
                     citizen.idle = true;
                 }
             }
-        } else if (citizen.moveTo == null) {
-            setRandomMoveTo(citizen);
+        } else if (citizen.moveTo.items.len == 0) {
+            try setRandomMoveTo(citizen);
         } else {
-            if (@abs(citizen.position.x - citizen.moveTo.?.x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.?.y) < citizen.moveSpeed) {
-                citizen.moveTo = null;
+            if (@abs(citizen.position.x - citizen.moveTo.getLast().x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.getLast().y) < citizen.moveSpeed) {
+                _ = citizen.moveTo.pop();
                 return;
             }
         }
-        if (citizen.moveTo) |moveTo| {
+        if (citizen.moveTo.items.len > 0) {
+            const moveTo = citizen.moveTo.getLast();
             const direction: f32 = main.calculateDirection(citizen.position, moveTo);
             citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
             citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
             if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
-                citizen.moveTo = null;
+                _ = citizen.moveTo.pop();
             }
         }
     }
@@ -261,11 +269,11 @@ pub const Citizen: type = struct {
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const hungryBefore = !(citizen.foodLevel > 0.5);
     citizen.foodLevel -= 1.0 / 60.0 / 60.0;
-    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.executingUntil != null or (hungryBefore and citizen.moveTo != null)) return;
+    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.executingUntil != null or (hungryBefore and citizen.moveTo.items.len > 0)) return;
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
         potato.citizenOnTheWay += 1;
         citizen.potatoPosition = potato.position;
-        citizen.moveTo = null;
+        citizen.moveTo.clearAndFree();
     } else if (citizen.foodLevel <= 0) {
         citizen.deadUntil = state.gameTimeMs + 60_000;
         if (citizen.homePosition) |pos| citizen.position = pos;
@@ -338,18 +346,18 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
     } else {
-        setRandomMoveTo(citizen);
+        try setRandomMoveTo(citizen);
     }
 }
 
-fn setRandomMoveTo(citizen: *Citizen) void {
+fn setRandomMoveTo(citizen: *Citizen) !void {
     const rand = std.crypto.random;
-    citizen.moveTo = .{
+    try citizen.moveTo.append(.{
         .x = rand.float(f32) * 400.0 - 200.0,
         .y = rand.float(f32) * 400.0 - 200.0,
-    };
+    });
     if (citizen.homePosition) |pos| {
-        citizen.moveTo.?.x += pos.x;
-        citizen.moveTo.?.y += pos.y;
+        citizen.moveTo.items[citizen.moveTo.items.len - 1].x += pos.x;
+        citizen.moveTo.items[citizen.moveTo.items.len - 1].y += pos.y;
     }
 }

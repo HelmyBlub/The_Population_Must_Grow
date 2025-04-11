@@ -23,6 +23,12 @@ const U64HashMapContext = struct {
     }
 };
 
+pub const PathingType = enum {
+    fast,
+    slow,
+    blocking,
+};
+
 pub const MapChunk = struct {
     chunkX: i32,
     chunkY: i32,
@@ -34,6 +40,7 @@ pub const MapChunk = struct {
     citizens: std.ArrayList(main.Citizen),
     buildOrders: std.ArrayList(BuildOrder),
     pathes: std.ArrayList(main.Position),
+    pathingData: [GameMap.CHUNK_LENGTH * GameMap.CHUNK_LENGTH]PathingType = [_]PathingType{PathingType.slow} ** (GameMap.CHUNK_LENGTH * GameMap.CHUNK_LENGTH),
 };
 
 pub const BuildOrder = struct {
@@ -172,7 +179,11 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
                 }
             }
 
-            if (building.citizensSpawned == 0) _ = chunk.buildings.swapRemove(i);
+            if (building.citizensSpawned == 0) {
+                const buildRectangle = get1x1RectangleFromPosition(building.position);
+                try changePathingDataRectangle(buildRectangle, PathingType.slow, state);
+                _ = chunk.buildings.swapRemove(i);
+            }
             return;
         }
     }
@@ -192,7 +203,11 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
                 }
             }
 
-            if (building.citizensSpawned == 0) _ = chunk.bigBuildings.swapRemove(i);
+            if (building.citizensSpawned == 0) {
+                const buildRectangle = getBigBuildingRectangle(building.position);
+                try changePathingDataRectangle(buildRectangle, PathingType.slow, state);
+                _ = chunk.bigBuildings.swapRemove(i);
+            }
             return;
         }
     }
@@ -476,17 +491,44 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
+        try changePathingDataRectangle(buildRectangle, PathingType.blocking, state);
         try chunk.bigBuildings.append(tempBuilding);
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
         const buildRectangle = get1x1RectangleFromPosition(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
+        try changePathingDataRectangle(buildRectangle, PathingType.blocking, state);
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
+}
+
+fn changePathingDataRectangle(rectangle: MapTileRectangle, pathingType: PathingType, state: *main.ChatSimState) !void {
+    for (0..rectangle.columnCount) |column| {
+        for (0..rectangle.rowCount) |row| {
+            try changePathingData(.{
+                .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(column)),
+                .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(row)),
+            }, pathingType, state);
+        }
+    }
+}
+
+fn changePathingData(tileXY: TileXY, pathingType: PathingType, state: *main.ChatSimState) !void {
+    const chunkXY = getChunkXyForTileXy(tileXY);
+    const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
+    const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, GameMap.CHUNK_LENGTH) * GameMap.CHUNK_LENGTH));
+    chunk.pathingData[pathingDataIndex] = pathingType;
+}
+
+pub fn isTilePathBlocking(tileXY: TileXY, state: *main.ChatSimState) !bool {
+    const chunkXY = getChunkXyForTileXy(tileXY);
+    const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
+    const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, GameMap.CHUNK_LENGTH) * GameMap.CHUNK_LENGTH));
+    return chunk.pathingData[pathingDataIndex] == PathingType.blocking;
 }
 
 fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.ChatSimState) !bool {
@@ -789,7 +831,7 @@ fn createSpawnChunk(allocator: std.mem.Allocator) !MapChunk {
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .grow = 1 });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .grow = 1 });
-    var citizen = main.Citizen.createCitizen();
+    var citizen = main.Citizen.createCitizen(allocator);
     citizen.homePosition = .{ .x = halveTileSize, .y = halveTileSize };
     try spawnChunk.citizens.append(citizen);
     return spawnChunk;

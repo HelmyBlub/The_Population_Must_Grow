@@ -1,15 +1,24 @@
 tasks:
-- walking pathes
-    - citizens are not allowed to walk over buildings, which are not their own
-        - pathfinding?
-            - start with simple but inperformant version? like A*
-            - dumb citizens, try to walk direct path and can only do simple adjustments
+- pathfinding
+    - map chunks needs array for fast position path data access
+    - need algorithm, probably A* as start to find path
+        - change citizen to be able to store multiple "moveTo" positions to follow route
+        - first try just consider buildings as blocking
+            - maybe try "citizen home" as only position not blocking for specific citizen
+    - check performance and decide if i should already improve it
 
 - features:
     - walking pathes?
-        - put potato fields and pathes in own drawCmd as they should be painted first
-        - buildings/homes only possible connected to pathes
+        - citizens are not allowed to walk over buildings, which are not their own
+        - if start and target are on connected, only use path?
+        - if target not connected, get to closest path before running of path?
+        - random move around only on pathes
+        - can not move over buildings            
+
+        - start with simple but inperformant version? like A*
+        - dumb citizens, try to walk direct path and can only do simple adjustments
         - citizens should prefer walking on path
+            - right side
         - to many citizens walking over a potato field changes it to path tile
         - what about trees?
             - citizens can walk towards trees not connected to pathes
@@ -33,7 +42,7 @@ tasks:
   
 Some data:
 - 100_000 citizens in 313 seconds (11.04.2025)
-- zig build test: FPS: 511 (10.04.2025)
+- zig build test: FPS: 467 (11.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
