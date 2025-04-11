@@ -468,21 +468,102 @@ pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
     return true;
 }
 
-pub fn placeBuilding(building: Building, state: *main.ChatSimState) !bool {
+pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
-        if (!try isRectangleBuildable(getBigBuildingRectangle(building.position), state, false, true)) return false;
+        const buildRectangle = getBigBuildingRectangle(building.position);
+        if (!try isRectangleBuildable(buildRectangle, state, false, true)) return false;
+        if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
         try chunk.bigBuildings.append(tempBuilding);
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
-        if (!try isRectangleBuildable(get1x1RectangleFromPosition(building.position), state, false, false)) return false;
+        const buildRectangle = get1x1RectangleFromPosition(building.position);
+        if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
+        if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
     try addTickPosition(chunk.chunkX, chunk.chunkY, state);
     return true;
+}
+
+fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.ChatSimState) !bool {
+    var checkCorners = [_]TileXY{
+        .{
+            .tileX = buildRectangle.topLeftTileXY.tileX - 1,
+            .tileY = buildRectangle.topLeftTileXY.tileY - 1,
+        },
+        .{
+            .tileX = buildRectangle.topLeftTileXY.tileX + @as(i32, @intCast(buildRectangle.columnCount)),
+            .tileY = buildRectangle.topLeftTileXY.tileY - 1,
+        },
+        .{
+            .tileX = buildRectangle.topLeftTileXY.tileX - 1,
+            .tileY = buildRectangle.topLeftTileXY.tileY + @as(i32, @intCast(buildRectangle.rowCount)),
+        },
+        .{
+            .tileX = buildRectangle.topLeftTileXY.tileX + @as(i32, @intCast(buildRectangle.columnCount)),
+            .tileY = buildRectangle.topLeftTileXY.tileY + @as(i32, @intCast(buildRectangle.rowCount)),
+        },
+    };
+    var chunksMaxIndex: usize = 0;
+    var chunkXysToCheck: [4]?ChunkXY = .{ null, null, null, null };
+    {
+        const xMod = @mod(buildRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH);
+        const yMod = @mod(buildRectangle.topLeftTileXY.tileY, GameMap.CHUNK_LENGTH);
+        if (xMod == 0) {
+            if (yMod == 0) {
+                checkCorners[0].tileX += 1;
+            } else if (yMod == GameMap.CHUNK_LENGTH - 1) {
+                checkCorners[2].tileX += 1;
+            }
+        } else if (xMod == GameMap.CHUNK_LENGTH - 1) {
+            if (yMod == 0) {
+                checkCorners[1].tileX -= 1;
+            } else if (yMod == GameMap.CHUNK_LENGTH - 1) {
+                checkCorners[3].tileX -= 1;
+            }
+        }
+    }
+    for (checkCorners) |corner| {
+        const chunkXy = getChunkXyForTileXy(corner);
+        var exists = false;
+        if (chunksMaxIndex > 0) {
+            for (0..chunksMaxIndex) |existsIndex| {
+                const checkChunkXy = chunkXysToCheck[existsIndex].?;
+                if (checkChunkXy.chunkX == chunkXy.chunkX and checkChunkXy.chunkY == chunkXy.chunkY) {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+        if (!exists) {
+            chunkXysToCheck[chunksMaxIndex] = chunkXy;
+            chunksMaxIndex += 1;
+        }
+    }
+    const rectMapTopLeft = mapTileXyToTilePosition(buildRectangle.topLeftTileXY);
+    const rectMapBottomRight: main.Position = .{
+        .x = rectMapTopLeft.x + @as(f32, @floatFromInt(buildRectangle.columnCount * GameMap.TILE_SIZE)),
+        .y = rectMapTopLeft.y + @as(f32, @floatFromInt(buildRectangle.rowCount * GameMap.TILE_SIZE)),
+    };
+    for (0..chunksMaxIndex) |chunkIndex| {
+        const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?.chunkX, chunkXysToCheck[chunkIndex].?.chunkY, state);
+        for (chunk.pathes.items) |pathPos| {
+            if (rectMapTopLeft.x - GameMap.TILE_SIZE < pathPos.x and pathPos.x < rectMapBottomRight.x + GameMap.TILE_SIZE and
+                rectMapTopLeft.y - GameMap.TILE_SIZE < pathPos.y and pathPos.y < rectMapBottomRight.y + GameMap.TILE_SIZE)
+            {
+                if (rectMapTopLeft.x < pathPos.x and pathPos.x < rectMapBottomRight.x or
+                    rectMapTopLeft.y < pathPos.y and pathPos.y < rectMapBottomRight.y)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSimState) !void {
@@ -580,7 +661,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         .inConstruction = true,
                         .type = building.type,
                     };
-                    _ = try placeBuilding(newBuilding, state);
+                    _ = try placeBuilding(newBuilding, state, false);
                     continue :nextTile;
                 }
             }
@@ -593,8 +674,9 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         },
                         .inConstruction = true,
                         .type = building.type,
+                        .woodRequired = 16,
                     };
-                    _ = try placeBuilding(newBuilding, state);
+                    _ = try placeBuilding(newBuilding, state, false);
                     continue :nextTile;
                 }
             }

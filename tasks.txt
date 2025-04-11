@@ -1,8 +1,11 @@
 tasks:
+- bug: integer overflow
+    - D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:146:59: 0x7ff73d0936e5 in citizenMove (zig.exe.obj)
+                                    building.woodRequired -= 1;
 - walking pathes
-    - check draw order so citizens are not insivible behind pathes
-        - put potatofields also in these
     - buildings can only be placed connected to a path
+        - what happens if path besides building is removed?
+            - keep building for now
 
     - citizens are not allowed to walk over buildings, which are not their own
         - pathfinding?
@@ -36,7 +39,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- 100_000 citizens in 253 seconds (10.04.2025)
+- 100_000 citizens in 566 seconds (11.04.2025)
 - zig build test: FPS: 511 (10.04.2025)
 
 Goal:
