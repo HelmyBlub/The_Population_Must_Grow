@@ -57,7 +57,8 @@ pub const Vk_State = struct {
     colorImage: vk.VkImage = undefined,
     colorImageMemory: vk.VkDeviceMemory = undefined,
     colorImageView: vk.VkImageView = undefined,
-    entityPaintCount: u32 = 0,
+    entityPaintCountLayer1: u32 = 0,
+    entityPaintCountLayer2: u32 = 0,
     vertices: []Vertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
     font: fontVulkanZig.VkFont = .{},
@@ -113,7 +114,8 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
-    var entityPaintCount: usize = 0;
+    var entityPaintCountLayer1: usize = 0;
+    var entityPaintCountLayer2: usize = 0;
     var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
     const minSize = 8;
     if (state.camera.zoom > 1 and (chunkVisible.columns < minSize or chunkVisible.rows < minSize)) {
@@ -131,15 +133,18 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 chunkVisible.top + @as(i32, @intCast(y)),
                 state,
             );
-            entityPaintCount += chunk.citizens.items.len;
-            entityPaintCount += chunk.buildings.items.len;
-            entityPaintCount += chunk.bigBuildings.items.len;
-            entityPaintCount += chunk.trees.items.len;
-            entityPaintCount += chunk.potatoFields.items.len * 2;
-            entityPaintCount += chunk.pathes.items.len;
+            entityPaintCountLayer1 += chunk.citizens.items.len;
+            entityPaintCountLayer1 += chunk.buildings.items.len;
+            entityPaintCountLayer1 += chunk.bigBuildings.items.len;
+            entityPaintCountLayer1 += chunk.trees.items.len;
+            entityPaintCountLayer1 += chunk.potatoFields.items.len;
+            entityPaintCountLayer2 += chunk.potatoFields.items.len;
+            entityPaintCountLayer2 += chunk.pathes.items.len;
         }
     }
-    state.vkState.entityPaintCount = @intCast(entityPaintCount);
+    state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
+    state.vkState.entityPaintCountLayer2 = @intCast(entityPaintCountLayer2);
+    const totalEntityCount = state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer2;
     // recreate buffer with new size
     if (vkState.vertexBufferSize == 0) return;
     if (vkState.vertexBufferCleanUp[vkState.currentFrame] != null) {
@@ -148,13 +153,14 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         vkState.vertexBufferCleanUp[vkState.currentFrame] = null;
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = null;
     }
-    if ((vkState.vertexBufferSize < entityPaintCount or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > entityPaintCount)) {
+    if ((vkState.vertexBufferSize < totalEntityCount or vkState.vertexBufferSize -| Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > totalEntityCount)) {
         vkState.vertexBufferCleanUp[vkState.currentFrame] = vkState.vertexBuffer;
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.vertexBufferMemory;
-        try createVertexBuffer(vkState, entityPaintCount, state.allocator);
+        try createVertexBuffer(vkState, totalEntityCount, state.allocator);
     }
 
-    var index: u32 = 0;
+    var indexLayer1: u32 = 0;
+    var indexLayer2: u32 = state.vkState.entityPaintCountLayer1;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -163,8 +169,8 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 state,
             );
             for (chunk.citizens.items) |*citizen| {
-                vkState.vertices[index] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
-                index += 1;
+                vkState.vertices[indexLayer1] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
+                indexLayer1 += 1;
             }
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
@@ -173,35 +179,35 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                     size = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
                     imageIndex = imageZig.IMAGE_TREE;
                 }
-                vkState.vertices[index] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size };
-                index += 1;
+                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size };
+                indexLayer1 += 1;
             }
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_HOUSE;
                 }
-                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
-                index += 1;
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                indexLayer1 += 1;
             }
             for (chunk.bigBuildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_BIG_HOUSE;
                 }
-                vkState.vertices[index] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2 };
-                index += 1;
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2 };
+                indexLayer1 += 1;
             }
             for (chunk.potatoFields.items) |*field| {
-                vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
-                index += 1;
+                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
+                indexLayer2 += 1;
                 const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
-                vkState.vertices[index] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
-                index += 1;
+                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
+                indexLayer1 += 1;
             }
             for (chunk.pathes.items) |*pathPos| {
-                vkState.vertices[index] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE };
-                index += 1;
+                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE };
+                indexLayer2 += 1;
             }
         }
     }
@@ -873,7 +879,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
         null,
     );
 
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCount), 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1), 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, 0, 0);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);

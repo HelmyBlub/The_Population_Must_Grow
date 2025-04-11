@@ -1,7 +1,5 @@
 tasks:
 - walking pathes
-    - create sprite for "path"
-    - new tool "7": set pathes
     - check draw order so citizens are not insivible behind pathes
         - put potatofields also in these
     - buildings can only be placed connected to a path
