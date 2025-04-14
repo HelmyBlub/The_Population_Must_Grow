@@ -200,7 +200,7 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
             const loopChunk = mapZig.getChunkXyForPosition(position);
             if (currentChunkXY == null or loopChunk.chunkX != currentChunkXY.?.chunkX or loopChunk.chunkY != currentChunkXY.?.chunkY) {
                 currentChunkXY = loopChunk;
-                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?.chunkX, currentChunkXY.?.chunkY, state);
+                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, state);
             }
             if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
                 try mapZig.demolishAnythingOnPosition(position, state);

@@ -2,7 +2,6 @@ const std = @import("std");
 const main = @import("main.zig");
 const Position = main.Position;
 const mapZig = @import("map.zig");
-const pathfindingZig = @import("pathfinding.zig");
 
 pub const Citizen: type = struct {
     position: Position,
@@ -53,7 +52,7 @@ pub const Citizen: type = struct {
         // try self.moveTo.append(target);
         const start = mapZig.mapPositionToTileXy(self.position);
         const goal = mapZig.mapPositionToTileXy(target);
-        try pathfindingZig.pathfindAStar(start, goal, self, state);
+        try main.pathfindingZig.pathfindAStar(start, goal, self, state);
     }
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -163,7 +162,7 @@ pub const Citizen: type = struct {
                                     if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                                         building.inConstruction = false;
                                         const buildRectangle = mapZig.get1x1RectangleFromPosition(building.position);
-                                        try mapZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
+                                        try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
                                         var newCitizen = main.Citizen.createCitizen(state.allocator);
                                         newCitizen.position = buildingPosition;
                                         newCitizen.homePosition = newCitizen.position;
@@ -174,7 +173,7 @@ pub const Citizen: type = struct {
                                         if (building.woodRequired == 0) {
                                             building.inConstruction = false;
                                             const buildRectangle = mapZig.getBigBuildingRectangle(building.position);
-                                            try mapZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
+                                            try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
                                             while (building.citizensSpawned < 8) {
                                                 var newCitizen = main.Citizen.createCitizen(state.allocator);
                                                 newCitizen.position = buildingPosition;
@@ -258,9 +257,11 @@ pub const Citizen: type = struct {
             for (0..loops) |x| {
                 for (0..loops) |y| {
                     if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
-                    const chunkX: i32 = topLeftChunk.chunkX + @as(i32, @intCast(x));
-                    const chunkY: i32 = topLeftChunk.chunkY + @as(i32, @intCast(y));
-                    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
+                    const chunkXY: mapZig.ChunkXY = .{
+                        .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
+                        .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
+                    };
+                    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                     for (chunk.citizens.items) |*citizen| {
                         if (!citizen.idle) continue;
                         const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
@@ -305,9 +306,11 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
         for (0..loops) |x| {
             for (0..loops) |y| {
                 if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
-                const chunkX: i32 = topLeftChunk.chunkX + @as(i32, @intCast(x));
-                const chunkY: i32 = topLeftChunk.chunkY + @as(i32, @intCast(y));
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
+                const chunkXY: mapZig.ChunkXY = .{
+                    .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
+                    .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
+                };
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.potatoFields.items) |*potatoField| {
                     if (!potatoField.planted or potatoField.citizenOnTheWay >= 2) continue;
                     if (potatoField.citizenOnTheWay > 0 and potatoField.grow < 1) continue;
@@ -338,9 +341,11 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
         for (0..loops) |x| {
             for (0..loops) |y| {
                 if (x != 0 and x != loops - 1 and y != 0 and y != loops - 1) continue;
-                const chunkX: i32 = topLeftChunk.chunkX + @as(i32, @intCast(x));
-                const chunkY: i32 = topLeftChunk.chunkY + @as(i32, @intCast(y));
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkX, chunkY, state);
+                const chunkXY: mapZig.ChunkXY = .{
+                    .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
+                    .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
+                };
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.trees.items) |*tree| {
                     if (tree.grow < 1 or tree.citizenOnTheWay) continue;
                     const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);

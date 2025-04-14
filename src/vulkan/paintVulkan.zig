@@ -129,8 +129,10 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                chunkVisible.left + @as(i32, @intCast(x)),
-                chunkVisible.top + @as(i32, @intCast(y)),
+                .{
+                    .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
+                    .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
+                },
                 state,
             );
             entityPaintCountLayer1 += chunk.citizens.items.len;
@@ -164,8 +166,10 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                chunkVisible.left + @as(i32, @intCast(x)),
-                chunkVisible.top + @as(i32, @intCast(y)),
+                .{
+                    .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
+                    .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
+                },
                 state,
             );
             for (chunk.citizens.items) |*citizen| {

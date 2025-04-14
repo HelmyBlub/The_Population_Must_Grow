@@ -4,7 +4,7 @@ pub const Citizen = @import("citizen.zig").Citizen;
 const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
-const pathfindingZig = @import("pathfinding.zig");
+pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
@@ -69,7 +69,7 @@ test "test measure performance" {
     for (0..10_000) |_| {
         try mapZig.placeCitizen(Citizen.createCitizen(allocator), &state);
     }
-    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(0, 0, &state));
+    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, &state));
     state.fpsLimiter = false;
     state.gameSpeed = 1;
 
@@ -96,7 +96,6 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
 
 pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
-
     state.* = ChatSimState{
         .map = map,
         .gameSpeed = 1,
@@ -114,7 +113,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         .allocator = allocator,
         .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
     };
-    try mapZig.addTickPosition(0, 0, state);
+    try mapZig.createSpawnChunk(allocator, state);
     try initPaintVulkanAndWindowSdl(state);
 }
 
@@ -354,6 +353,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.citizens.deinit();
         chunk.buildOrders.deinit();
         chunk.pathes.deinit();
+        pathfindingZig.destoryChunkData(&chunk.pathingData);
     }
     pathfindingZig.destoryPathfindingData(&state.pathfindingData);
     state.map.chunks.deinit();

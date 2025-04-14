@@ -6,10 +6,16 @@ pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
     cameFrom: std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80),
     gScore: std.AutoHashMap(mapZig.TileXY, i32),
+    graphRectangles: std.ArrayList(ChunkGraphRectangle),
+};
+
+pub const ChunkGraphRectangle = struct {
+    tileRectangle: mapZig.MapTileRectangle,
+    connections: std.ArrayList(*ChunkGraphRectangle),
 };
 
 pub const PathfindingChunkData = struct {
-    pathingData: [mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]mapZig.PathingType = [_]mapZig.PathingType{mapZig.PathingType.slow} ** (mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH),
+    pathingData: [mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]*ChunkGraphRectangle,
 };
 
 const TileXyContext = struct {
@@ -38,10 +44,23 @@ const Node = struct {
 };
 
 pub fn createChunkData(chunkXY: mapZig.ChunkXY, allocator: std.mem.Allocator, state: *main.ChatSimState) !PathfindingChunkData {
-    _ = chunkXY;
-    _ = state;
-    _ = allocator;
-    return PathfindingChunkData{};
+    const chunkGraphRectangle: ChunkGraphRectangle = .{
+        .connections = std.ArrayList(*ChunkGraphRectangle).init(allocator),
+        .tileRectangle = .{
+            .topLeftTileXY = .{
+                .tileX = chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
+                .tileY = chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH,
+            },
+            .columnCount = mapZig.GameMap.CHUNK_LENGTH,
+            .rowCount = mapZig.GameMap.CHUNK_LENGTH,
+        },
+    };
+    state.pathfindingData.graphRectangles.append(chunkGraphRectangle);
+    const result: PathfindingChunkData = .{};
+    for (0..result.pathingData.len) |i| {
+        result.pathingData[i] = state.pathfindingData.graphRectangles.getLast();
+    }
+    return result;
 }
 
 pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, state: *main.ChatSimState) !void {
@@ -60,6 +79,7 @@ pub fn createPathfindingData(allocator: std.mem.Allocator) !PathfindingData {
         .openSet = std.ArrayList(Node).init(allocator),
         .cameFrom = std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80).init(allocator),
         .gScore = std.AutoHashMap(mapZig.TileXY, i32).init(allocator),
+        .graphRectangles = std.ArrayList(ChunkGraphRectangle).init(allocator),
     };
 }
 
@@ -73,13 +93,10 @@ pub fn destoryPathfindingData(data: *PathfindingData) void {
     data.openSet.deinit();
 }
 
-// The Manhattan distance is a common heuristic for grids.
 pub fn heuristic(a: mapZig.TileXY, b: mapZig.TileXY) i32 {
     return @as(i32, @intCast(@abs(a.tileX - b.tileX) + @abs(a.tileY - b.tileY)));
 }
 
-// Reconstruct the path by walking back through the cameFrom map.
-// The cameFrom map maps a coordinate to the coordinate from which it was reached.
 pub fn reconstructPath(
     cameFrom: *std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80),
     start: mapZig.TileXY,
@@ -87,11 +104,9 @@ pub fn reconstructPath(
 ) !void {
     var current = start;
     try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(current));
-    // Walk back until no parent is found.
     while (true) {
         if (cameFrom.get(current)) |parent| {
             current = parent;
-            // Prepend the parent at the beginning.
             try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(current));
         } else {
             break;
@@ -99,9 +114,19 @@ pub fn reconstructPath(
     }
 }
 
-// The A* implementation.
-// Returns an optional slice of Coordinates representing the path from start to goal.
 pub fn pathfindAStar(
+    start: mapZig.TileXY,
+    goal: mapZig.TileXY,
+    citizen: *main.Citizen,
+    state: *main.ChatSimState,
+) !void {
+    _ = state;
+    _ = start;
+    try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(goal));
+    return;
+}
+
+pub fn oldPathfindAStar(
     start: mapZig.TileXY,
     goal: mapZig.TileXY,
     citizen: *main.Citizen,
@@ -110,17 +135,13 @@ pub fn pathfindAStar(
     if (try isTilePathBlocking(.{ .tileX = goal.tileX, .tileY = goal.tileY }, state)) {
         return;
     }
-    // openSet holds nodes we still need to examine.
     var openSet = &state.pathfindingData.openSet;
     openSet.clearRetainingCapacity();
-    // cameFrom records how we reached each coordinate.
     var cameFrom = &state.pathfindingData.cameFrom;
     cameFrom.clearRetainingCapacity();
-    // gScore map: best cost from start to a given coordinate.
     var gScore = &state.pathfindingData.gScore;
     gScore.clearRetainingCapacity();
 
-    // Set the start node score.
     try gScore.put(start, 0);
     const startNode = Node{
         .pos = start,
@@ -130,7 +151,6 @@ pub fn pathfindAStar(
     try openSet.append(startNode);
 
     while (openSet.items.len > 0) {
-        // Find the node in openSet with the lowest priority (f-score).
         var currentIndex: usize = 0;
         var current = openSet.items[0];
         for (openSet.items, 0..) |node, i| {
@@ -140,17 +160,13 @@ pub fn pathfindAStar(
             }
         }
 
-        // If we reached the goal, reconstruct and return the path.
-
         if (cameFrom.ctx.eql(current.pos, goal)) {
             try reconstructPath(cameFrom, current.pos, citizen);
             return;
         }
 
-        // Remove the current node from openSet.
         _ = openSet.swapRemove(currentIndex);
 
-        // Expand each neighbor of the current node.
         const neighbors: [4]mapZig.TileXY = .{
             .{ .tileX = current.pos.tileX, .tileY = current.pos.tileY + 1 },
             .{ .tileX = current.pos.tileX, .tileY = current.pos.tileY - 1 },
@@ -158,17 +174,13 @@ pub fn pathfindAStar(
             .{ .tileX = current.pos.tileX - 1, .tileY = current.pos.tileY },
         };
         for (neighbors) |neighbor| {
-            // Skip neighbors if the tile is blocked.
             if (try isTilePathBlocking(.{ .tileX = neighbor.tileX, .tileY = neighbor.tileY }, state)) continue;
-            // Assume a cost of 1 per move.
             const tentativeGScore = current.cost + 1;
             if (gScore.get(neighbor) == null or tentativeGScore < gScore.get(neighbor).?) {
-                // Record the best path to this neighbor.
                 try cameFrom.put(neighbor, current.pos);
                 try gScore.put(neighbor, tentativeGScore);
                 const fScore = tentativeGScore + heuristic(neighbor, goal);
                 var found = false;
-                // If the neighbor is already in openSet, update its cost if the new fScore is lower.
                 for (openSet.items) |*node| {
                     if (cameFrom.ctx.eql(node.pos, neighbor)) {
                         if (fScore < node.priority) {
@@ -179,7 +191,6 @@ pub fn pathfindAStar(
                         break;
                     }
                 }
-                // If not in openSet, add it.
                 if (!found) {
                     try openSet.append(Node{
                         .pos = neighbor,
@@ -194,14 +205,14 @@ pub fn pathfindAStar(
 
 fn isTilePathBlocking(tileXY: mapZig.TileXY, state: *main.ChatSimState) !bool {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
     const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.CHUNK_LENGTH));
     return chunk.pathingData.pathingData[pathingDataIndex] == mapZig.PathingType.blocking;
 }
 
 fn changePathingData(tileXY: mapZig.TileXY, pathingType: mapZig.PathingType, state: *main.ChatSimState) !void {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
     const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.CHUNK_LENGTH));
     chunk.pathingData.pathingData[pathingDataIndex] = pathingType;
 }
