@@ -6,6 +6,13 @@ tasks:
         - first try just consider buildings as blocking
             - maybe try "citizen home" as only position not blocking for specific citizen
     - check performance and decide if i should already improve it
+        - different pathfinding per type of chunk
+            - caching of pathes from chunk a to chunk b
+            - chunk know number of blocking tiles
+                - no blocking tiles -> no pathfinding required
+                - few blocking tiles -> check if direct path is blocked by one of the tiles
+                - some graph (put multiple tiles into a "graph point") so instead of checking every tile on a path, i can use "graph points" to check less
+                - alot of blocking tyles -> A*
 
 - features:
     - walking pathes?
@@ -41,7 +48,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- 100_000 citizens in 313 seconds (11.04.2025)
+- 100_000 citizens in 32 seconds (14.04.2025)
 - zig build test: FPS: 467 (11.04.2025)
 
 Goal:

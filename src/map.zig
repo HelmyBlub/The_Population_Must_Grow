@@ -351,7 +351,7 @@ pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatS
     return true;
 }
 
-fn getBigBuildingRectangle(bigBuildingPosition: main.Position) MapTileRectangle {
+pub fn getBigBuildingRectangle(bigBuildingPosition: main.Position) MapTileRectangle {
     return .{
         .topLeftTileXY = mapPositionToTileXy(.{
             .x = bigBuildingPosition.x - GameMap.TILE_SIZE / 2,
@@ -362,7 +362,7 @@ fn getBigBuildingRectangle(bigBuildingPosition: main.Position) MapTileRectangle 
     };
 }
 
-fn get1x1RectangleFromPosition(position: main.Position) MapTileRectangle {
+pub fn get1x1RectangleFromPosition(position: main.Position) MapTileRectangle {
     return .{
         .topLeftTileXY = mapPositionToTileXy(position),
         .columnCount = 1,
@@ -491,14 +491,12 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
-        try changePathingDataRectangle(buildRectangle, PathingType.blocking, state);
         try chunk.bigBuildings.append(tempBuilding);
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
         const buildRectangle = get1x1RectangleFromPosition(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
-        try changePathingDataRectangle(buildRectangle, PathingType.blocking, state);
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
@@ -506,7 +504,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     return true;
 }
 
-fn changePathingDataRectangle(rectangle: MapTileRectangle, pathingType: PathingType, state: *main.ChatSimState) !void {
+pub fn changePathingDataRectangle(rectangle: MapTileRectangle, pathingType: PathingType, state: *main.ChatSimState) !void {
     for (0..rectangle.columnCount) |column| {
         for (0..rectangle.rowCount) |row| {
             try changePathingData(.{

@@ -4,6 +4,7 @@ pub const Citizen = @import("citizen.zig").Citizen;
 const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
+const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
@@ -30,6 +31,7 @@ pub const ChatSimState: type = struct {
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
+    pathfindingData: pathfindingZig.PathfindingData,
 };
 
 pub const VulkanRectangle = struct {
@@ -95,7 +97,7 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
 pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
 
-    state.* = .{
+    state.* = ChatSimState{
         .map = map,
         .gameSpeed = 1,
         .paintIntervalMs = 16,
@@ -110,6 +112,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
             .zoom = 1,
         },
         .allocator = allocator,
+        .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
     };
     try mapZig.addTickPosition(0, 0, state);
     try initPaintVulkanAndWindowSdl(state);
@@ -352,6 +355,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.buildOrders.deinit();
         chunk.pathes.deinit();
     }
+    pathfindingZig.destoryPathfindingData(&state.pathfindingData);
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();
 }

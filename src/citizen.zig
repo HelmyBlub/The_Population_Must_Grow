@@ -2,6 +2,7 @@ const std = @import("std");
 const main = @import("main.zig");
 const Position = main.Position;
 const mapZig = @import("map.zig");
+const pathfindingZig = @import("pathfinding.zig");
 
 pub const Citizen: type = struct {
     position: Position,
@@ -47,6 +48,14 @@ pub const Citizen: type = struct {
         }
     }
 
+    pub fn moveToPosition(self: *Citizen, target: main.Position, state: *main.ChatSimState) !void {
+        // _ = state;
+        // try self.moveTo.append(target);
+        const start = mapZig.mapPositionToTileXy(self.position);
+        const goal = mapZig.mapPositionToTileXy(target);
+        try pathfindingZig.pathfindAStar(start, goal, self, state);
+    }
+
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
         if (citizen.potatoPosition) |potatoPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
@@ -64,7 +73,7 @@ pub const Citizen: type = struct {
                             citizen.executingUntil = null;
                         }
                     } else {
-                        try citizen.moveTo.append(.{ .x = farmTile.position.x, .y = farmTile.position.y });
+                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y }, state);
                     }
                 } else {
                     citizen.potatoPosition = null;
@@ -85,7 +94,7 @@ pub const Citizen: type = struct {
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveTo.append(.{ .x = farmTile.position.x, .y = farmTile.position.y });
+                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y }, state);
                     }
                 } else {
                     citizen.farmPosition = null;
@@ -117,7 +126,7 @@ pub const Citizen: type = struct {
                                     tree.grow = 0;
                                     tree.citizenOnTheWay = false;
                                     citizen.treePosition = null;
-                                    try citizen.moveTo.append(buildingPosition);
+                                    try citizen.moveToPosition(buildingPosition, state);
                                     if (!tree.regrow) {
                                         _ = chunk.trees.swapRemove(i);
                                     }
@@ -127,7 +136,7 @@ pub const Citizen: type = struct {
                         }
                         citizen.treePosition = null;
                     } else {
-                        try citizen.moveTo.append(citizen.treePosition.?);
+                        try citizen.moveToPosition(citizen.treePosition.?, state);
                     }
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
@@ -153,6 +162,8 @@ pub const Citizen: type = struct {
                                     building.woodRequired -= 1;
                                     if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                                         building.inConstruction = false;
+                                        const buildRectangle = mapZig.get1x1RectangleFromPosition(building.position);
+                                        try mapZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
                                         var newCitizen = main.Citizen.createCitizen(state.allocator);
                                         newCitizen.position = buildingPosition;
                                         newCitizen.homePosition = newCitizen.position;
@@ -162,6 +173,8 @@ pub const Citizen: type = struct {
                                     } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
                                         if (building.woodRequired == 0) {
                                             building.inConstruction = false;
+                                            const buildRectangle = mapZig.getBigBuildingRectangle(building.position);
+                                            try mapZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
                                             while (building.citizensSpawned < 8) {
                                                 var newCitizen = main.Citizen.createCitizen(state.allocator);
                                                 newCitizen.position = buildingPosition;
@@ -175,7 +188,7 @@ pub const Citizen: type = struct {
                                 }
                             }
                         } else {
-                            try citizen.moveTo.append(buildingPosition);
+                            try citizen.moveToPosition(buildingPosition, state);
                         }
                     } else {
                         citizen.hasWood = false;
@@ -199,7 +212,7 @@ pub const Citizen: type = struct {
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveTo.append(tree.position);
+                        try citizen.moveToPosition(tree.position, state);
                     }
                 } else {
                     citizen.treePosition = null;
@@ -207,7 +220,7 @@ pub const Citizen: type = struct {
                 }
             }
         } else if (citizen.moveTo.items.len == 0) {
-            try setRandomMoveTo(citizen);
+            try setRandomMoveTo(citizen, state);
         } else {
             if (@abs(citizen.position.x - citizen.moveTo.getLast().x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.getLast().y) < citizen.moveSpeed) {
                 _ = citizen.moveTo.pop();
@@ -346,18 +359,19 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
     } else {
-        try setRandomMoveTo(citizen);
+        try setRandomMoveTo(citizen, state);
     }
 }
 
-fn setRandomMoveTo(citizen: *Citizen) !void {
+fn setRandomMoveTo(citizen: *Citizen, state: *main.ChatSimState) !void {
     const rand = std.crypto.random;
-    try citizen.moveTo.append(.{
+    var randomPos: main.Position = .{
         .x = rand.float(f32) * 400.0 - 200.0,
         .y = rand.float(f32) * 400.0 - 200.0,
-    });
+    };
     if (citizen.homePosition) |pos| {
-        citizen.moveTo.items[citizen.moveTo.items.len - 1].x += pos.x;
-        citizen.moveTo.items[citizen.moveTo.items.len - 1].y += pos.y;
+        randomPos.x += pos.x;
+        randomPos.y += pos.y;
     }
+    try citizen.moveToPosition(randomPos, state);
 }

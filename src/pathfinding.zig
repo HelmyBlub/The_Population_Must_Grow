@@ -2,18 +2,26 @@ const std = @import("std");
 const mapZig = @import("map.zig");
 const main = @import("main.zig");
 
+pub const PathfindingData = struct {
+    openSet: std.ArrayList(Node),
+    cameFrom: std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80),
+    gScore: std.AutoHashMap(mapZig.TileXY, i32),
+};
+
 const TileXyContext = struct {
-    pub fn eql(a: mapZig.TileXY, b: mapZig.TileXY) bool {
+    pub fn eql(self: @This(), a: mapZig.TileXY, b: mapZig.TileXY) bool {
+        _ = self;
         return a.tileX == b.tileX and a.tileY == b.tileY;
     }
 
     // A simple hash function based on FNV-1a.
-    pub fn hash(self: mapZig.TileXY) u64 {
+    pub fn hash(self: @This(), key: mapZig.TileXY) u64 {
+        _ = self;
         var h: u64 = 1469598103934665603;
-        h ^= @intCast(self.tileX);
-        h *= 1099511628211;
-        h ^= @intCast(self.tileY);
-        h *= 1099511628211;
+        h ^= @bitCast(@as(i64, @intCast(key.tileX)));
+        h *%= 1099511628211;
+        h ^= @bitCast(@as(i64, @intCast(key.tileY)));
+        h *%= 1099511628211;
         return h;
     }
 };
@@ -25,62 +33,66 @@ const Node = struct {
     priority: i32, // f(x) = g(x) + h(x) (with h() as the heuristic).
 };
 
-// The Manhattan distance is a common heuristic for grids.
-pub fn heuristic(a: mapZig.TileXY, b: mapZig.TileXY) i32 {
-    return std.math.abs(a.tileX - b.tileX) + std.math.abs(a.tileY - b.tileY);
+pub fn createPathfindingData(allocator: std.mem.Allocator) !PathfindingData {
+    return PathfindingData{
+        .openSet = std.ArrayList(Node).init(allocator),
+        .cameFrom = std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80).init(allocator),
+        .gScore = std.AutoHashMap(mapZig.TileXY, i32).init(allocator),
+    };
 }
 
-// Get the four cardinal neighbors.
-pub fn getNeighbors(pos: mapZig.TileXY) []mapZig.TileXY {
-    var neighbors: [4]mapZig.TileXY = .{
-        .{ .x = pos.tileX, .y = pos.tileY + 1 },
-        .{ .x = pos.tileX, .y = pos.tileY - 1 },
-        .{ .x = pos.tileX + 1, .y = pos.tileY },
-        .{ .x = pos.tileX - 1, .y = pos.tileY },
-    };
-    return neighbors[0..];
+pub fn destoryPathfindingData(data: *PathfindingData) void {
+    data.cameFrom.deinit();
+    data.gScore.deinit();
+    data.openSet.deinit();
+}
+
+// The Manhattan distance is a common heuristic for grids.
+pub fn heuristic(a: mapZig.TileXY, b: mapZig.TileXY) i32 {
+    return @as(i32, @intCast(@abs(a.tileX - b.tileX) + @abs(a.tileY - b.tileY)));
 }
 
 // Reconstruct the path by walking back through the cameFrom map.
 // The cameFrom map maps a coordinate to the coordinate from which it was reached.
 pub fn reconstructPath(
-    cameFrom: *std.AutoHashMap(mapZig.TileXY, mapZig.TileXY),
-    current: mapZig.TileXY,
-    allocator: *std.mem.Allocator,
-) ![]mapZig.TileXY {
-    var path = std.ArrayList(mapZig.TileXY).init(allocator);
-    try path.append(current);
+    cameFrom: *std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80),
+    start: mapZig.TileXY,
+    citizen: *main.Citizen,
+) !void {
+    var current = start;
+    try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(current));
     // Walk back until no parent is found.
     while (true) {
         if (cameFrom.get(current)) |parent| {
-            current = parent.*;
+            current = parent;
             // Prepend the parent at the beginning.
-            try path.prepend(current);
+            try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(current));
         } else {
             break;
         }
     }
-    return path.toOwnedSlice();
 }
 
 // The A* implementation.
 // Returns an optional slice of Coordinates representing the path from start to goal.
 pub fn pathfindAStar(
-    allocator: std.mem.Allocator,
     start: mapZig.TileXY,
     goal: mapZig.TileXY,
+    citizen: *main.Citizen,
     state: *main.ChatSimState,
-) !?[]mapZig.TileXY {
+) !void {
+    if (try mapZig.isTilePathBlocking(.{ .tileX = goal.tileX, .tileY = goal.tileY }, state)) {
+        return;
+    }
     // openSet holds nodes we still need to examine.
-    var openSet = std.ArrayList(Node).init(allocator);
+    var openSet = &state.pathfindingData.openSet;
+    openSet.clearRetainingCapacity();
     // cameFrom records how we reached each coordinate.
-    var cameFrom = std.HashMap(u64, mapZig.TileXY, TileXyContext, 80);
+    var cameFrom = &state.pathfindingData.cameFrom;
+    cameFrom.clearRetainingCapacity();
     // gScore map: best cost from start to a given coordinate.
-    var gScore = std.AutoHashMap(mapZig.TileXY, i32).init(allocator);
-
-    defer openSet.deinit();
-    defer cameFrom.deinit();
-    defer gScore.deinit();
+    var gScore = &state.pathfindingData.gScore;
+    gScore.clearRetainingCapacity();
 
     // Set the start node score.
     try gScore.put(start, 0);
@@ -103,18 +115,25 @@ pub fn pathfindAStar(
         }
 
         // If we reached the goal, reconstruct and return the path.
-        if (mapZig.TileXY.eq(current.pos, goal)) {
-            return reconstructPath(&cameFrom, current.pos, allocator);
+
+        if (cameFrom.ctx.eql(current.pos, goal)) {
+            try reconstructPath(cameFrom, current.pos, citizen);
+            return;
         }
 
         // Remove the current node from openSet.
-        openSet.items.swapRemove(currentIndex);
+        _ = openSet.swapRemove(currentIndex);
 
         // Expand each neighbor of the current node.
-        const neighbors = getNeighbors(current.pos);
+        const neighbors: [4]mapZig.TileXY = .{
+            .{ .tileX = current.pos.tileX, .tileY = current.pos.tileY + 1 },
+            .{ .tileX = current.pos.tileX, .tileY = current.pos.tileY - 1 },
+            .{ .tileX = current.pos.tileX + 1, .tileY = current.pos.tileY },
+            .{ .tileX = current.pos.tileX - 1, .tileY = current.pos.tileY },
+        };
         for (neighbors) |neighbor| {
             // Skip neighbors if the tile is blocked.
-            if (mapZig.isTilePathBlocking(.{ .tileX = neighbor.x, .tileY = neighbor.y }, state)) continue;
+            if (try mapZig.isTilePathBlocking(.{ .tileX = neighbor.tileX, .tileY = neighbor.tileY }, state)) continue;
             // Assume a cost of 1 per move.
             const tentativeGScore = current.cost + 1;
             if (gScore.get(neighbor) == null or tentativeGScore < gScore.get(neighbor).?) {
@@ -125,7 +144,7 @@ pub fn pathfindAStar(
                 var found = false;
                 // If the neighbor is already in openSet, update its cost if the new fScore is lower.
                 for (openSet.items) |*node| {
-                    if (TileXyContext.eql(node.pos, neighbor)) {
+                    if (cameFrom.ctx.eql(node.pos, neighbor)) {
                         if (fScore < node.priority) {
                             node.cost = tentativeGScore;
                             node.priority = fScore;
@@ -145,6 +164,4 @@ pub fn pathfindAStar(
             }
         }
     }
-    // If we've exhausted the search space, return null (no path found).
-    return null;
 }
