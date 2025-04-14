@@ -1,4 +1,5 @@
 tasks:
+- continue pathfinding: trying out different ideas: currenlty some "integer overflow" on arraylist append i don't understand
 - pathfinding
     - map chunks needs array for fast position path data access
     - need algorithm, probably A* as start to find path

@@ -4,7 +4,7 @@ pub const Citizen = @import("citizen.zig").Citizen;
 const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
-pub const pathfindingZig = @import("pathfinding.zig");
+pub const pathfindingZig = @import("pathfinding2.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");

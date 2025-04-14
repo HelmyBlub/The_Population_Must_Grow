@@ -10,8 +10,9 @@ pub const PathfindingData = struct {
 };
 
 pub const ChunkGraphRectangle = struct {
+    index: usize,
     tileRectangle: mapZig.MapTileRectangle,
-    connections: std.ArrayList(*ChunkGraphRectangle),
+    connectionIndexes: std.ArrayList(usize),
 };
 
 pub const PathfindingChunkData = struct {
@@ -45,7 +46,8 @@ const Node = struct {
 
 pub fn createChunkData(chunkXY: mapZig.ChunkXY, allocator: std.mem.Allocator, state: *main.ChatSimState) !PathfindingChunkData {
     const chunkGraphRectangle: ChunkGraphRectangle = .{
-        .connections = std.ArrayList(*ChunkGraphRectangle).init(allocator),
+        .index = state.pathfindingData.graphRectangles.items.len,
+        .connectionIndexes = std.ArrayList(usize).init(allocator),
         .tileRectangle = .{
             .topLeftTileXY = .{
                 .tileX = chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
@@ -55,11 +57,28 @@ pub fn createChunkData(chunkXY: mapZig.ChunkXY, allocator: std.mem.Allocator, st
             .rowCount = mapZig.GameMap.CHUNK_LENGTH,
         },
     };
-    state.pathfindingData.graphRectangles.append(chunkGraphRectangle);
-    const result: PathfindingChunkData = .{};
+    const neighbors = [_]mapZig.ChunkXY{
+        .{ .chunkX = chunkXY.chunkX - 1, .chunkY = chunkXY.chunkY },
+        .{ .chunkX = chunkXY.chunkX + 1, .chunkY = chunkXY.chunkY },
+        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY - 1 },
+        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY + 1 },
+    };
+    try state.pathfindingData.graphRectangles.append(chunkGraphRectangle);
+    const ptrChunkGraphRectangle = &state.pathfindingData.graphRectangles.items[chunkGraphRectangle.index];
+    var result: PathfindingChunkData = .{ .pathingData = undefined };
     for (0..result.pathingData.len) |i| {
-        result.pathingData[i] = state.pathfindingData.graphRectangles.getLast();
+        result.pathingData[i] = ptrChunkGraphRectangle;
     }
+    for (neighbors) |neighbor| {
+        const key = mapZig.getKeyForChunkXY(neighbor);
+        if (state.map.chunks.getPtr(key)) |neighborChunk| {
+            std.debug.print("chunk: {}, neighbor: {}\n", .{ chunkXY, neighbor });
+            const neighborGraphRectangle = neighborChunk.pathingData.pathingData[0];
+            try ptrChunkGraphRectangle.connectionIndexes.append(neighborGraphRectangle.index);
+            try neighborGraphRectangle.connectionIndexes.append(ptrChunkGraphRectangle.index);
+        }
+    }
+
     return result;
 }
 
@@ -91,6 +110,10 @@ pub fn destoryPathfindingData(data: *PathfindingData) void {
     data.cameFrom.deinit();
     data.gScore.deinit();
     data.openSet.deinit();
+    for (data.graphRectangles.items) |graphRectangle| {
+        graphRectangle.connectionIndexes.deinit();
+    }
+    data.graphRectangles.deinit();
 }
 
 pub fn heuristic(a: mapZig.TileXY, b: mapZig.TileXY) i32 {
@@ -205,14 +228,21 @@ pub fn oldPathfindAStar(
 
 fn isTilePathBlocking(tileXY: mapZig.TileXY, state: *main.ChatSimState) !bool {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
     const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.CHUNK_LENGTH));
-    return chunk.pathingData.pathingData[pathingDataIndex] == mapZig.PathingType.blocking;
+    // return chunk.pathingData.pathingData[pathingDataIndex] == mapZig.PathingType.blocking;
+    //TODO
+    _ = chunk;
+    _ = pathingDataIndex;
+    return false;
 }
 
 fn changePathingData(tileXY: mapZig.TileXY, pathingType: mapZig.PathingType, state: *main.ChatSimState) !void {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY.chunkX, chunkXY.chunkY, state);
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
     const pathingDataIndex = @as(usize, @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.CHUNK_LENGTH));
-    chunk.pathingData.pathingData[pathingDataIndex] = pathingType;
+    //TODO
+    _ = pathingType;
+    _ = chunk;
+    _ = pathingDataIndex;
 }
