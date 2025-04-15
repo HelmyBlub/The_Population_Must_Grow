@@ -1,19 +1,11 @@
 tasks:
-- continue pathfinding: trying out different ideas: currenlty some "integer overflow" on arraylist append i don't understand
-- pathfinding
-    - map chunks needs array for fast position path data access
-    - need algorithm, probably A* as start to find path
-        - change citizen to be able to store multiple "moveTo" positions to follow route
-        - first try just consider buildings as blocking
-            - maybe try "citizen home" as only position not blocking for specific citizen
-    - check performance and decide if i should already improve it
-        - different pathfinding per type of chunk
-            - caching of pathes from chunk a to chunk b
-            - chunk know number of blocking tiles
-                - no blocking tiles -> no pathfinding required
-                - few blocking tiles -> check if direct path is blocked by one of the tiles
-                - some graph (put multiple tiles into a "graph point") so instead of checking every tile on a path, i can use "graph points" to check less
-                - alot of blocking tyles -> A*
+- pathfinding version 2, use "graph"
+    - correct pathRectangle to tile location
+        - citizens currently always run to topLeft corner of chunk
+    - setup graph after blocking tile placed
+    - setup graph after blocking tile delete
+    - setup graph after copy paste
+    - visulaize graph so it might be easier to debug when i get problems?
 
 - features:
     - walking pathes?

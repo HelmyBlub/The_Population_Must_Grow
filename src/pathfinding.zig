@@ -82,10 +82,10 @@ pub fn heuristic(a: mapZig.TileXY, b: mapZig.TileXY) i32 {
 // The cameFrom map maps a coordinate to the coordinate from which it was reached.
 pub fn reconstructPath(
     cameFrom: *std.HashMap(mapZig.TileXY, mapZig.TileXY, TileXyContext, 80),
-    start: mapZig.TileXY,
+    goal: mapZig.TileXY,
     citizen: *main.Citizen,
 ) !void {
-    var current = start;
+    var current = goal;
     try citizen.moveTo.append(mapZig.mapTileXyToTileMiddlePosition(current));
     // Walk back until no parent is found.
     while (true) {
@@ -107,7 +107,7 @@ pub fn pathfindAStar(
     citizen: *main.Citizen,
     state: *main.ChatSimState,
 ) !void {
-    if (try isTilePathBlocking(.{ .tileX = goal.tileX, .tileY = goal.tileY }, state)) {
+    if (try isTilePathBlocking(goal.tileX, state)) {
         return;
     }
     // openSet holds nodes we still need to examine.
