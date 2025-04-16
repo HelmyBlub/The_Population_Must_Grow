@@ -5,6 +5,7 @@ const vk = @cImport({
 });
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const mapZig = @import("../map.zig");
 
 pub const VkRectangle = struct {
     pipelineLayout: vk.VkPipelineLayout = undefined,
@@ -12,6 +13,8 @@ pub const VkRectangle = struct {
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []RectangleVertex = undefined,
+    verticeCount: usize = 0,
+    const MAX_VERTICES = 8 * 600;
 };
 
 const RectangleVertex = struct {
@@ -56,16 +59,83 @@ pub fn destroyRectangle(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Al
 }
 
 pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimState) !void {
-    for (rectangles, 0..) |optRectangle, i| {
+    state.vkState.rectangle.verticeCount = 0;
+    const recVertCount = 8;
+    for (rectangles) |optRectangle| {
         if (optRectangle) |rectangle| {
-            state.vkState.rectangle.vertices[i * 5] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
-            state.vkState.rectangle.vertices[i * 5 + 1] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[0].y }, .color = rectangle.color };
-            state.vkState.rectangle.vertices[i * 5 + 2] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[1].y }, .color = rectangle.color };
-            state.vkState.rectangle.vertices[i * 5 + 3] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[1].y }, .color = rectangle.color };
-            state.vkState.rectangle.vertices[i * 5 + 4] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ rectangle.pos[1].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 6] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[1].y }, .color = rectangle.color };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 7] = .{ .pos = .{ rectangle.pos[0].x, rectangle.pos[0].y }, .color = rectangle.color };
+            state.vkState.rectangle.verticeCount += recVertCount;
         } else {
             break;
         }
+    }
+    const graphRectangleColor = [_]f32{ 1, 0, 0 };
+    const connectionRectangleColor = [_]f32{ 0, 0, 1 };
+    for (state.pathfindingData.graphRectangles.items) |rectangle| {
+        const topLeftVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectangle.tileRectangle.topLeftTileXY, state.camera);
+        const bottomRightVulkan = mapZig.mapTileXyToVulkanSurfacePosition(.{
+            .tileX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)),
+            .tileY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)),
+        }, state.camera);
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ topLeftVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ bottomRightVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ bottomRightVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ bottomRightVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ bottomRightVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ topLeftVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 6] = .{ .pos = .{ topLeftVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 7] = .{ .pos = .{ topLeftVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
+        state.vkState.rectangle.verticeCount += recVertCount;
+        for (rectangle.connectionIndexes.items) |conIndex| {
+            if (state.vkState.rectangle.verticeCount + 6 >= VkRectangle.MAX_VERTICES) break;
+            const conRect = state.pathfindingData.graphRectangles.items[conIndex];
+            var conTileXy: mapZig.TileXY = .{
+                .tileX = conRect.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.tileRectangle.columnCount + 1, 2))),
+                .tileY = conRect.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(conRect.tileRectangle.rowCount + 1, 2))),
+            };
+            var rectTileXy: mapZig.TileXY = .{
+                .tileX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.columnCount + 1, 2))),
+                .tileY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.rowCount + 1, 2))),
+            };
+            const recOffsetX = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.columnCount)), 3);
+            const conOffsetX = @divFloor(@as(i32, @intCast(conRect.tileRectangle.columnCount)), 3);
+            if (conRect.tileRectangle.topLeftTileXY.tileX > rectangle.tileRectangle.topLeftTileXY.tileX) {
+                conTileXy.tileX -= conOffsetX;
+                rectTileXy.tileX += recOffsetX;
+            } else {
+                conTileXy.tileX += conOffsetX;
+                rectTileXy.tileX -= recOffsetX;
+            }
+            const recOffsetY = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.rowCount)), 3);
+            const conOffsetY = @divFloor(@as(i32, @intCast(conRect.tileRectangle.rowCount)), 3);
+            if (conRect.tileRectangle.topLeftTileXY.tileY > rectangle.tileRectangle.topLeftTileXY.tileY) {
+                conTileXy.tileY -= conOffsetY;
+                rectTileXy.tileY += recOffsetY;
+            } else {
+                conTileXy.tileY += conOffsetY;
+                rectTileXy.tileY -= recOffsetY;
+            }
+            const topLeftConRectVulkan = mapZig.mapTileXyToVulkanSurfacePosition(conTileXy, state.camera);
+            const topLeftSpacingVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectTileXy, state.camera);
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = connectionRectangleColor };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ topLeftSpacingVulkan.x, topLeftSpacingVulkan.y }, .color = connectionRectangleColor };
+
+            const direction = main.calculateDirection(topLeftSpacingVulkan, topLeftConRectVulkan) + std.math.pi;
+
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ topLeftConRectVulkan.x + @cos(direction + 0.3) * 0.05, topLeftConRectVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ topLeftConRectVulkan.x + @cos(direction - 0.3) * 0.05, topLeftConRectVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.verticeCount += 6;
+        }
+        if (state.vkState.rectangle.verticeCount + recVertCount >= VkRectangle.MAX_VERTICES) break;
     }
     try setupVertexDataForGPU(&state.vkState);
 }
@@ -79,20 +149,19 @@ pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
 }
 
 pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
-    if (state.rectangles[0] == null) return;
-    const vertexCount: u16 = if (state.rectangles[1] == null) 5 else 10;
+    if (state.vkState.rectangle.verticeCount <= 0) return;
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.rectangle.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.rectangle.verticeCount), 1, 0, 0);
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    vkState.rectangle.vertices = try allocator.alloc(RectangleVertex, 10);
+    vkState.rectangle.vertices = try allocator.alloc(RectangleVertex, VkRectangle.MAX_VERTICES);
     try paintVulkanZig.createBuffer(
-        @sizeOf(RectangleVertex) * 10,
+        @sizeOf(RectangleVertex) * VkRectangle.MAX_VERTICES,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.rectangle.vertexBuffer,
@@ -139,8 +208,8 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
 
     var inputAssembly = vk.VkPipelineInputAssemblyStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = vk.VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
-        .primitiveRestartEnable = vk.VK_TRUE,
+        .topology = vk.VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+        .primitiveRestartEnable = vk.VK_FALSE,
     };
 
     var viewportState = vk.VkPipelineViewportStateCreateInfo{
