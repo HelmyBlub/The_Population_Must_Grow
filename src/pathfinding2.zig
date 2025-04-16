@@ -120,6 +120,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                 newTileRetangles[i] = null;
                                 graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = rightRectangle.index;
                                 graphRectangleForUpdateIndex += 1;
+                                setPaththingDataRectangle(tileRectangle, chunk, rightRectangle.index);
                                 continue;
                             }
                         }
@@ -137,6 +138,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                 newTileRetangles[i] = null;
                                 graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = downRectangle.index;
                                 graphRectangleForUpdateIndex += 1;
+                                setPaththingDataRectangle(tileRectangle, chunk, downRectangle.index);
                                 continue;
                             }
                         }
@@ -153,6 +155,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                 newTileRetangles[i] = null;
                                 graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = leftRectangle.index;
                                 graphRectangleForUpdateIndex += 1;
+                                setPaththingDataRectangle(tileRectangle, chunk, leftRectangle.index);
                                 continue;
                             }
                         }
@@ -169,6 +172,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                 newTileRetangles[i] = null;
                                 graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = upRectangle.index;
                                 graphRectangleForUpdateIndex += 1;
+                                setPaththingDataRectangle(tileRectangle, chunk, upRectangle.index);
                                 continue;
                             }
                         }
@@ -191,6 +195,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                         newGraphRectangle.index = graphRectangle.index;
                         state.pathfindingData.graphRectangles.items[graphRectangle.index] = newGraphRectangle;
                     }
+                    setPaththingDataRectangle(tileRectangle, chunk, newGraphRectangle.index);
                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = newGraphRectangle.index;
                     graphRectangleForUpdateIndex += 1;
                 }
@@ -224,11 +229,20 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                     }
                 }
             }
-
-            // TODO correct chunk.pathfinding
+            if (originalReplaced) {
+                graphRectangle.connectionIndexes.deinit();
+            }
         }
     } else {
         //TODO
+    }
+}
+
+fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, newIndex: usize) void {
+    for (0..rectangle.columnCount) |x| {
+        for (0..rectangle.rowCount) |y| {
+            chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)), .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)) })] = newIndex;
+        }
     }
 }
 
