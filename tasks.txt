@@ -1,8 +1,7 @@
 tasks:
 - pathfinding version 2, use "graph"
-    - correct pathRectangle to tile location
-        - citizens currently always run to topLeft corner of chunk
     - setup graph after blocking tile placed
+        - continue: made image for some thinking about how to step through
     - setup graph after blocking tile delete
     - setup graph after copy paste
     - visulaize graph so it might be easier to debug when i get problems?
