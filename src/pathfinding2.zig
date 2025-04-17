@@ -231,9 +231,6 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                     }
                 }
             }
-            if (!originalReplaced) {
-                return error.toImplemt;
-            }
             // correct connetions
             for (toSplitGraphRectangle.connectionIndexes.items) |conIndex| {
                 const connectionGraphRectanglePtr = &state.pathfindingData.graphRectangles.items[conIndex];
@@ -273,16 +270,50 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                     }
                 }
             }
-            if (originalReplaced) {
-                toSplitGraphRectangle.connectionIndexes.deinit();
+            if (!originalReplaced) {
+                swapRemoveGraphIndex(toSplitGraphRectangle.index, chunk, state);
             }
+            toSplitGraphRectangle.connectionIndexes.deinit();
         }
     } else {
         //TODO
     }
 }
 
-fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, newIndex: usize) void {
+fn swapRemoveGraphIndex(graphIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) void {
+    const removedGraph = state.pathfindingData.graphRectangles.swapRemove(graphIndex);
+    std.debug.print("swap remove {},  {},\n", .{ graphIndex, removedGraph.tileRectangle });
+    const oldIndex = state.pathfindingData.graphRectangles.items.len;
+    // remove existing connections to removedGraph
+    for (removedGraph.connectionIndexes.items) |conIndex| {
+        const connectedGraph = &state.pathfindingData.graphRectangles.items[conIndex];
+        for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
+            if (checkIndex == oldIndex) {
+                _ = connectedGraph.connectionIndexes.swapRemove(i);
+                std.debug.print("removed connection {},\n", .{connectedGraph.tileRectangle});
+                break;
+            }
+        }
+    }
+    setPaththingDataRectangle(removedGraph.tileRectangle, chunk, null);
+
+    // change indexes of newAtIndex
+    if (graphIndex >= oldIndex) return;
+    const newAtIndex = &state.pathfindingData.graphRectangles.items[graphIndex];
+    for (newAtIndex.connectionIndexes.items) |conIndex| {
+        const connectedGraph = &state.pathfindingData.graphRectangles.items[conIndex];
+        for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
+            if (checkIndex == oldIndex) {
+                connectedGraph.connectionIndexes.items[i] = graphIndex;
+                std.debug.print("updated index  {},\n", .{connectedGraph.tileRectangle});
+                break;
+            }
+        }
+    }
+    setPaththingDataRectangle(newAtIndex.tileRectangle, chunk, graphIndex);
+}
+
+fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, newIndex: ?usize) void {
     for (0..rectangle.columnCount) |x| {
         for (0..rectangle.rowCount) |y| {
             chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)), .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)) })] = newIndex;
