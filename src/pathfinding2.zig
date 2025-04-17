@@ -126,7 +126,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     newTileRetangles[i] = null;
                                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = rightRectangle.index;
                                     graphRectangleForUpdateIndex += 1;
-                                    setPaththingDataRectangle(tileRectangle, chunk, rightRectangle.index);
+                                    try setPaththingDataRectangle(tileRectangle, rightRectangle.index, state);
                                     std.debug.print("merge right {}, {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index });
                                     continue;
                                 }
@@ -146,8 +146,8 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     newTileRetangles[i] = null;
                                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = downRectangle.index;
                                     graphRectangleForUpdateIndex += 1;
-                                    setPaththingDataRectangle(tileRectangle, chunk, downRectangle.index);
-                                    std.debug.print("merge down \n", .{});
+                                    try setPaththingDataRectangle(tileRectangle, downRectangle.index, state);
+                                    std.debug.print("merge down {}, {}\n", .{ downRectangle.tileRectangle, downRectangle.index });
                                     continue;
                                 }
                             }
@@ -165,8 +165,8 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     newTileRetangles[i] = null;
                                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = leftRectangle.index;
                                     graphRectangleForUpdateIndex += 1;
-                                    setPaththingDataRectangle(tileRectangle, chunk, leftRectangle.index);
-                                    std.debug.print("merge left \n", .{});
+                                    try setPaththingDataRectangle(tileRectangle, leftRectangle.index, state);
+                                    std.debug.print("merge left {}, {}\n", .{ leftRectangle.tileRectangle, leftRectangle.index });
                                     continue;
                                 }
                             }
@@ -184,8 +184,8 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     newTileRetangles[i] = null;
                                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = upRectangle.index;
                                     graphRectangleForUpdateIndex += 1;
-                                    setPaththingDataRectangle(tileRectangle, chunk, upRectangle.index);
-                                    std.debug.print("merge up \n", .{});
+                                    try setPaththingDataRectangle(tileRectangle, upRectangle.index, state);
+                                    std.debug.print("merge up {}, {}\n", .{ upRectangle.tileRectangle, upRectangle.index });
                                     continue;
                                 }
                             }
@@ -219,7 +219,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                         state.pathfindingData.graphRectangles.items[toSplitGraphRectangle.index] = newGraphRectangle;
                     }
                     std.debug.print("new graph rectangle: {}, id: {}\n", .{ newGraphRectangle.tileRectangle, newGraphRectangle.index });
-                    setPaththingDataRectangle(tileRectangle, chunk, newGraphRectangle.index);
+                    try setPaththingDataRectangle(tileRectangle, newGraphRectangle.index, state);
                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = newGraphRectangle.index;
                     tileRectangleIndexToGraphRectangleIndex[i] = newGraphRectangle.index;
                     graphRectangleForUpdateIndex += 1;
@@ -273,7 +273,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 }
             }
             if (!originalReplaced) {
-                swapRemoveGraphIndex(toSplitGraphRectangle.index, chunk, state);
+                try swapRemoveGraphIndex(toSplitGraphRectangle.index, state);
             }
             toSplitGraphRectangle.connectionIndexes.deinit();
         }
@@ -282,7 +282,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
     }
 }
 
-fn swapRemoveGraphIndex(graphIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) void {
+fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
     const removedGraph = state.pathfindingData.graphRectangles.swapRemove(graphIndex);
     std.debug.print("swap remove {},  {},\n", .{ graphIndex, removedGraph.tileRectangle });
     const oldIndex = state.pathfindingData.graphRectangles.items.len;
@@ -313,10 +313,13 @@ fn swapRemoveGraphIndex(graphIndex: usize, chunk: *mapZig.MapChunk, state: *main
             }
         }
     }
-    setPaththingDataRectangle(newAtIndex.tileRectangle, chunk, graphIndex);
+    try setPaththingDataRectangle(newAtIndex.tileRectangle, graphIndex, state);
 }
 
-fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, newIndex: ?usize) void {
+/// assumes to be only in one chunk
+fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, newIndex: ?usize, state: *main.ChatSimState) !void {
+    const chunkXY = mapZig.getChunkXyForTileXy(rectangle.topLeftTileXY);
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
     for (0..rectangle.columnCount) |x| {
         for (0..rectangle.rowCount) |y| {
             chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)), .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)) })] = newIndex;

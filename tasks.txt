@@ -1,7 +1,7 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile placed
-        - bug: integer overflow, unknown reason
+        - bug: integer out of bound, unknown reason
             - has to do with chunk.pathfinding data not being setup correctly
         - chunk.pathfinding not set to null for blocking tile
         - big buildings
