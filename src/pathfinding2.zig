@@ -83,10 +83,12 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
     if (pathingType == mapZig.PathingType.blocking) {
         const chunkXY = mapZig.getChunkXyForTileXy(rectangle.topLeftTileXY);
         const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
-        const optGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(rectangle.topLeftTileXY)];
+        const topLeftPathingIndex = getPathingIndexForTileXY(rectangle.topLeftTileXY);
+        const optGraphRectangleIndex = chunk.pathingData.pathingData[topLeftPathingIndex];
         if (optGraphRectangleIndex) |graphRectangleIndex| {
             std.debug.print("start change graph\n", .{});
             std.debug.print("new rectangle: {}\n", .{rectangle});
+            chunk.pathingData.pathingData[topLeftPathingIndex] = null;
             var graphRectangleForUpdateIndex: usize = 0;
             var graphRectangleForUpdateIndexes = [_]?usize{ null, null, null, null };
             const toSplitGraphRectangle = state.pathfindingData.graphRectangles.items[graphRectangleIndex];
@@ -125,7 +127,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = rightRectangle.index;
                                     graphRectangleForUpdateIndex += 1;
                                     setPaththingDataRectangle(tileRectangle, chunk, rightRectangle.index);
-                                    std.debug.print("merge right \n", .{});
+                                    std.debug.print("merge right {}, {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index });
                                     continue;
                                 }
                             }
@@ -286,26 +288,27 @@ fn swapRemoveGraphIndex(graphIndex: usize, chunk: *mapZig.MapChunk, state: *main
     const oldIndex = state.pathfindingData.graphRectangles.items.len;
     // remove existing connections to removedGraph
     for (removedGraph.connectionIndexes.items) |conIndex| {
-        const connectedGraph = &state.pathfindingData.graphRectangles.items[conIndex];
+        const connectedGraph = if (conIndex != oldIndex) &state.pathfindingData.graphRectangles.items[conIndex] else &state.pathfindingData.graphRectangles.items[graphIndex];
         for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
-            if (checkIndex == oldIndex) {
+            if (checkIndex == graphIndex) {
                 _ = connectedGraph.connectionIndexes.swapRemove(i);
                 std.debug.print("removed connection {},\n", .{connectedGraph.tileRectangle});
                 break;
             }
         }
     }
-    setPaththingDataRectangle(removedGraph.tileRectangle, chunk, null);
+    // setPaththingDataRectangle(removedGraph.tileRectangle, chunk, null);
 
     // change indexes of newAtIndex
     if (graphIndex >= oldIndex) return;
     const newAtIndex = &state.pathfindingData.graphRectangles.items[graphIndex];
+    newAtIndex.index = graphIndex;
     for (newAtIndex.connectionIndexes.items) |conIndex| {
         const connectedGraph = &state.pathfindingData.graphRectangles.items[conIndex];
         for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
             if (checkIndex == oldIndex) {
                 connectedGraph.connectionIndexes.items[i] = graphIndex;
-                std.debug.print("updated index  {},\n", .{connectedGraph.tileRectangle});
+                std.debug.print("updated index {},\n", .{connectedGraph.tileRectangle});
                 break;
             }
         }
@@ -474,7 +477,7 @@ pub fn pathfindAStar(
     state: *main.ChatSimState,
 ) !void {
     if (try isTilePathBlocking(goalTile, state)) {
-        std.debug.print("goal on blocking tile", .{});
+        std.debug.print("goal on blocking tile {}\n", .{goalTile});
         return;
     }
     var openSet = &state.pathfindingData.openSet;
@@ -484,10 +487,20 @@ pub fn pathfindAStar(
     var gScore = &state.pathfindingData.gScore;
     gScore.clearRetainingCapacity();
     var neighbors = &state.pathfindingData.neighbors;
-    const startRecIndex = try getChunkGraphRectangleIndexForTileXY(startTile, state);
+    var startRecIndex = try getChunkGraphRectangleIndexForTileXY(startTile, state);
     if (startRecIndex == null) {
-        std.debug.print("start on blocking tile", .{});
-        return;
+        if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY - 1 }, state)) |topOfStart| {
+            startRecIndex = topOfStart;
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY + 1 }, state)) |bottomOfStart| {
+            startRecIndex = bottomOfStart;
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, state)) |leftOfStart| {
+            startRecIndex = leftOfStart;
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, state)) |rightOfStart| {
+            startRecIndex = rightOfStart;
+        } else {
+            std.debug.print("stuck on blocking tile", .{});
+            return;
+        }
     }
     const start = &state.pathfindingData.graphRectangles.items[startRecIndex.?];
     const goalRecIndex = (try getChunkGraphRectangleIndexForTileXY(goalTile, state)).?;

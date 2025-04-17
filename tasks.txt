@@ -1,6 +1,10 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile placed
+        - bug: integer overflow, unknown reason
+            - has to do with chunk.pathfinding data not being setup correctly
+        - chunk.pathfinding not set to null for blocking tile
+        - big buildings
     - setup graph after blocking tile delete
     - setup graph after copy paste
     - visulaize graph so it might be easier to debug when i get problems?

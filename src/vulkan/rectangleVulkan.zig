@@ -14,7 +14,7 @@ pub const VkRectangle = struct {
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []RectangleVertex = undefined,
     verticeCount: usize = 0,
-    const MAX_VERTICES = 8 * 800;
+    const MAX_VERTICES = 8 * 1200;
 };
 
 const RectangleVertex = struct {
