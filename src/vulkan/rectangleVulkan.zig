@@ -14,7 +14,7 @@ pub const VkRectangle = struct {
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []RectangleVertex = undefined,
     verticeCount: usize = 0,
-    const MAX_VERTICES = 8 * 600;
+    const MAX_VERTICES = 8 * 800;
 };
 
 const RectangleVertex = struct {
@@ -109,7 +109,7 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
             if (conRect.tileRectangle.topLeftTileXY.tileX > rectangle.tileRectangle.topLeftTileXY.tileX) {
                 conTileXy.tileX -= conOffsetX;
                 rectTileXy.tileX += recOffsetX;
-            } else {
+            } else if (conRect.tileRectangle.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX) {
                 conTileXy.tileX += conOffsetX;
                 rectTileXy.tileX -= recOffsetX;
             }
@@ -118,21 +118,21 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
             if (conRect.tileRectangle.topLeftTileXY.tileY > rectangle.tileRectangle.topLeftTileXY.tileY) {
                 conTileXy.tileY -= conOffsetY;
                 rectTileXy.tileY += recOffsetY;
-            } else {
+            } else if (conRect.tileRectangle.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY) {
                 conTileXy.tileY += conOffsetY;
                 rectTileXy.tileY -= recOffsetY;
             }
-            const topLeftConRectVulkan = mapZig.mapTileXyToVulkanSurfacePosition(conTileXy, state.camera);
-            const topLeftSpacingVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectTileXy, state.camera);
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = connectionRectangleColor };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ topLeftSpacingVulkan.x, topLeftSpacingVulkan.y }, .color = connectionRectangleColor };
+            const conArrowEndVulkan = mapZig.mapTileXyToVulkanSurfacePosition(conTileXy, state.camera);
+            const arrowStartVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectTileXy, state.camera);
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = connectionRectangleColor };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ arrowStartVulkan.x, arrowStartVulkan.y }, .color = connectionRectangleColor };
 
-            const direction = main.calculateDirection(topLeftSpacingVulkan, topLeftConRectVulkan) + std.math.pi;
+            const direction = main.calculateDirection(arrowStartVulkan, conArrowEndVulkan) + std.math.pi;
 
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ topLeftConRectVulkan.x + @cos(direction + 0.3) * 0.05, topLeftConRectVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ topLeftConRectVulkan.x, topLeftConRectVulkan.y }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ topLeftConRectVulkan.x + @cos(direction - 0.3) * 0.05, topLeftConRectVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction + 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
+            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction - 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
             state.vkState.rectangle.verticeCount += 6;
         }
         if (state.vkState.rectangle.verticeCount + recVertCount >= VkRectangle.MAX_VERTICES) break;
