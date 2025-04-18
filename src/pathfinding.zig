@@ -192,6 +192,10 @@ pub fn pathfindAStar(
     }
 }
 
+pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) void {
+    _ = state;
+}
+
 fn isTilePathBlocking(tileXY: mapZig.TileXY, state: *main.ChatSimState) !bool {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);

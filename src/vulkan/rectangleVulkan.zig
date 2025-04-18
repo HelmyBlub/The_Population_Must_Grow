@@ -14,7 +14,7 @@ pub const VkRectangle = struct {
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []RectangleVertex = undefined,
     verticeCount: usize = 0,
-    const MAX_VERTICES = 8 * 1200;
+    pub const MAX_VERTICES = 8 * 1200;
 };
 
 const RectangleVertex = struct {
@@ -76,70 +76,7 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
             break;
         }
     }
-    const graphRectangleColor = [_]f32{ 1, 0, 0 };
-    const connectionRectangleColor = [_]f32{ 0, 0, 1 };
-    for (state.pathfindingData.graphRectangles.items) |rectangle| {
-        const topLeftVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectangle.tileRectangle.topLeftTileXY, state.camera);
-        const bottomRightVulkan = mapZig.mapTileXyToVulkanSurfacePosition(.{
-            .tileX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)),
-            .tileY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)),
-        }, state.camera);
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ topLeftVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ bottomRightVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ bottomRightVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ bottomRightVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ bottomRightVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ topLeftVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 6] = .{ .pos = .{ topLeftVulkan.x, bottomRightVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 7] = .{ .pos = .{ topLeftVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
-        state.vkState.rectangle.verticeCount += recVertCount;
-        for (rectangle.connectionIndexes.items) |conIndex| {
-            if (state.vkState.rectangle.verticeCount + 6 >= VkRectangle.MAX_VERTICES) break;
-            if (state.pathfindingData.graphRectangles.items.len <= conIndex) {
-                std.debug.print("beforeCrash: {}, {}\n", .{ rectangle.tileRectangle, rectangle.index });
-            }
-            const conRect = state.pathfindingData.graphRectangles.items[conIndex];
-            var conTileXy: mapZig.TileXY = .{
-                .tileX = conRect.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.tileRectangle.columnCount + 1, 2))),
-                .tileY = conRect.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(conRect.tileRectangle.rowCount + 1, 2))),
-            };
-            var rectTileXy: mapZig.TileXY = .{
-                .tileX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.columnCount + 1, 2))),
-                .tileY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.rowCount + 1, 2))),
-            };
-            const recOffsetX = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.columnCount)), 3);
-            const conOffsetX = @divFloor(@as(i32, @intCast(conRect.tileRectangle.columnCount)), 3);
-            if (conRect.tileRectangle.topLeftTileXY.tileX > rectangle.tileRectangle.topLeftTileXY.tileX) {
-                conTileXy.tileX -= conOffsetX;
-                rectTileXy.tileX += recOffsetX;
-            } else if (conRect.tileRectangle.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX) {
-                conTileXy.tileX += conOffsetX;
-                rectTileXy.tileX -= recOffsetX;
-            }
-            const recOffsetY = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.rowCount)), 3);
-            const conOffsetY = @divFloor(@as(i32, @intCast(conRect.tileRectangle.rowCount)), 3);
-            if (conRect.tileRectangle.topLeftTileXY.tileY > rectangle.tileRectangle.topLeftTileXY.tileY) {
-                conTileXy.tileY -= conOffsetY;
-                rectTileXy.tileY += recOffsetY;
-            } else if (conRect.tileRectangle.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY) {
-                conTileXy.tileY += conOffsetY;
-                rectTileXy.tileY -= recOffsetY;
-            }
-            const conArrowEndVulkan = mapZig.mapTileXyToVulkanSurfacePosition(conTileXy, state.camera);
-            const arrowStartVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectTileXy, state.camera);
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = connectionRectangleColor };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ arrowStartVulkan.x, arrowStartVulkan.y }, .color = connectionRectangleColor };
-
-            const direction = main.calculateDirection(arrowStartVulkan, conArrowEndVulkan) + std.math.pi;
-
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction + 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction - 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
-            state.vkState.rectangle.verticeCount += 6;
-        }
-        if (state.vkState.rectangle.verticeCount + recVertCount >= VkRectangle.MAX_VERTICES) break;
-    }
+    main.pathfindingZig.paintDebugPathfindingVisualization(state);
     try setupVertexDataForGPU(&state.vkState);
 }
 
