@@ -2,8 +2,11 @@ tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile placed
         - bug: integer out of bound, unknown reason
-            - has to do with chunk.pathfinding data not being setup correctly
-        - chunk.pathfinding not set to null for blocking tile
+            - continue: added some more console debug info. still unclear when it happens
+            - reproduce
+                - (5,2)(5,3)(5,5)(4,8)(5,6)
+                - (4,6)(5,8)(2,6)(2,8)  !(3,6)!
+                - (1,8)(1,6)(3,8)(0,6)(0,8)
         - big buildings
     - setup graph after blocking tile delete
     - setup graph after copy paste

@@ -95,6 +95,9 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
         state.vkState.rectangle.verticeCount += recVertCount;
         for (rectangle.connectionIndexes.items) |conIndex| {
             if (state.vkState.rectangle.verticeCount + 6 >= VkRectangle.MAX_VERTICES) break;
+            if (state.pathfindingData.graphRectangles.items.len <= conIndex) {
+                std.debug.print("beforeCrash: {}, {}\n", .{ rectangle.tileRectangle, rectangle.index });
+            }
             const conRect = state.pathfindingData.graphRectangles.items[conIndex];
             var conTileXy: mapZig.TileXY = .{
                 .tileX = conRect.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.tileRectangle.columnCount + 1, 2))),
