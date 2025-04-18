@@ -167,6 +167,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             if (state.citizenCounter > 1 and building.citizensSpawned > 0) {
                 for (chunk.citizens.items, 0..) |citizen, j| {
                     if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                        citizen.moveTo.deinit();
                         _ = chunk.citizens.swapRemove(j);
                         building.citizensSpawned -= 1;
                         state.citizenCounter -= 1;

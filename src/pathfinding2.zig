@@ -114,85 +114,14 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 }
             }
             // check merges
+            var lastMergedTileRectanlge: ?mapZig.MapTileRectangle = null;
             for (newTileRetangles, 0..) |optTileRectangle, i| {
                 if (optTileRectangle) |tileRectangle| {
-                    if (i != 0) {
-                        //do right merge check
-                        if (@mod(tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
-                            const optRightGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), .tileY = tileRectangle.topLeftTileXY.tileY })];
-                            if (optRightGraphRectangleIndex) |rightRectangleIndex| {
-                                const rightRectangle = &state.pathfindingData.graphRectangles.items[rightRectangleIndex];
-                                if (rightRectangle.tileRectangle.topLeftTileXY.tileY == tileRectangle.topLeftTileXY.tileY and rightRectangle.tileRectangle.rowCount == tileRectangle.rowCount) {
-                                    // can be merged
-                                    rightRectangle.tileRectangle.columnCount += @as(u32, @intCast(rightRectangle.tileRectangle.topLeftTileXY.tileX - tileRectangle.topLeftTileXY.tileX));
-                                    rightRectangle.tileRectangle.topLeftTileXY.tileX = tileRectangle.topLeftTileXY.tileX;
-                                    newTileRetangles[i] = null;
-                                    graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = rightRectangle.index;
-                                    graphRectangleForUpdateIndex += 1;
-                                    try setPaththingDataRectangle(tileRectangle, rightRectangle.index, state);
-                                    if (PATHFINDING_DEBUG) std.debug.print("merge right {}, {}, mergedWith: {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index, tileRectangle });
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    if (i != 1) {
-                        //do down merge check
-                        if (@mod(tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(tileRectangle.rowCount)), mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
-                            const optDownGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX, .tileY = tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(tileRectangle.rowCount)) })];
-                            if (optDownGraphRectangleIndex) |downRectangleIndex| {
-                                const downRectangle = &state.pathfindingData.graphRectangles.items[downRectangleIndex];
-                                if (downRectangle.tileRectangle.topLeftTileXY.tileX == tileRectangle.topLeftTileXY.tileX and downRectangle.tileRectangle.columnCount == tileRectangle.columnCount) {
-                                    // can be merged
-                                    downRectangle.tileRectangle.rowCount += @as(u32, @intCast(downRectangle.tileRectangle.topLeftTileXY.tileY - tileRectangle.topLeftTileXY.tileY));
-                                    downRectangle.tileRectangle.topLeftTileXY.tileY = tileRectangle.topLeftTileXY.tileY;
-                                    newTileRetangles[i] = null;
-                                    graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = downRectangle.index;
-                                    graphRectangleForUpdateIndex += 1;
-                                    try setPaththingDataRectangle(tileRectangle, downRectangle.index, state);
-                                    if (PATHFINDING_DEBUG) std.debug.print("merge down {}, {}\n", .{ downRectangle.tileRectangle, downRectangle.index });
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    if (i != 2) {
-                        //do left merge check
-                        if (@mod(tileRectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
-                            const optLeftGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX - 1, .tileY = tileRectangle.topLeftTileXY.tileY })];
-                            if (optLeftGraphRectangleIndex) |leftRectangleIndex| {
-                                const leftRectangle = &state.pathfindingData.graphRectangles.items[leftRectangleIndex];
-                                if (leftRectangle.tileRectangle.topLeftTileXY.tileY == tileRectangle.topLeftTileXY.tileY and leftRectangle.tileRectangle.rowCount == tileRectangle.rowCount) {
-                                    // can be merged
-                                    leftRectangle.tileRectangle.columnCount += tileRectangle.columnCount;
-                                    newTileRetangles[i] = null;
-                                    graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = leftRectangle.index;
-                                    graphRectangleForUpdateIndex += 1;
-                                    try setPaththingDataRectangle(tileRectangle, leftRectangle.index, state);
-                                    if (PATHFINDING_DEBUG) std.debug.print("merge left {}, {}\n", .{ leftRectangle.tileRectangle, leftRectangle.index });
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    if (i != 3) {
-                        //do up merge check
-                        if (@mod(tileRectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
-                            const optUpGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX, .tileY = tileRectangle.topLeftTileXY.tileY - 1 })];
-                            if (optUpGraphRectangleIndex) |upRectangleIndex| {
-                                const upRectangle = &state.pathfindingData.graphRectangles.items[upRectangleIndex];
-                                if (upRectangle.tileRectangle.topLeftTileXY.tileX == tileRectangle.topLeftTileXY.tileX and upRectangle.tileRectangle.columnCount == tileRectangle.columnCount) {
-                                    // can be merged
-                                    upRectangle.tileRectangle.rowCount += tileRectangle.rowCount;
-                                    newTileRetangles[i] = null;
-                                    graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = upRectangle.index;
-                                    graphRectangleForUpdateIndex += 1;
-                                    try setPaththingDataRectangle(tileRectangle, upRectangle.index, state);
-                                    if (PATHFINDING_DEBUG) std.debug.print("merge up {}, {}\n", .{ upRectangle.tileRectangle, upRectangle.index });
-                                    continue;
-                                }
-                            }
-                        }
+                    if (try checkMergeGraphRectangles(tileRectangle, i, chunk, state)) |mergeIndex| {
+                        lastMergedTileRectanlge = tileRectangle;
+                        newTileRetangles[i] = null;
+                        graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = mergeIndex;
+                        graphRectangleForUpdateIndex += 1;
                     }
                 }
             }
@@ -289,12 +218,124 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
             }
             if (!originalReplaced) {
                 try swapRemoveGraphIndex(toSplitGraphRectangle.index, state);
+
+                if (lastMergedTileRectanlge) |tileRec| {
+                    if (chunk.pathingData.pathingData[getPathingIndexForTileXY(tileRec.topLeftTileXY)]) |anotherMergeCheckGraphIndex| {
+                        const anotherMergeCheckGraphRectangle = state.pathfindingData.graphRectangles.items[anotherMergeCheckGraphIndex];
+                        if (try checkMergeGraphRectangles(anotherMergeCheckGraphRectangle.tileRectangle, 5, chunk, state)) |mergeIndex| {
+                            const mergedToGraphRectangle = &state.pathfindingData.graphRectangles.items[mergeIndex];
+                            // another merge, clean up
+                            for (anotherMergeCheckGraphRectangle.connectionIndexes.items) |conIndex| {
+                                if (mergeIndex == conIndex) continue;
+                                const connectionGraphRectangle = &state.pathfindingData.graphRectangles.items[conIndex];
+                                for (connectionGraphRectangle.connectionIndexes.items, 0..) |mergedToConIndex, mergeToIndexIndex| {
+                                    if (mergedToConIndex == anotherMergeCheckGraphIndex) {
+                                        if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, mergeIndex)) {
+                                            connectionGraphRectangle.connectionIndexes.items[mergeToIndexIndex] = mergeIndex;
+                                            if (PATHFINDING_DEBUG) std.debug.print("update connection second merge rec {}, updated {} -> {},\n", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
+                                        } else {
+                                            _ = connectionGraphRectangle.connectionIndexes.swapRemove(mergeToIndexIndex);
+                                            if (PATHFINDING_DEBUG) std.debug.print("remove connection second merge rec {}, removed {},\n", .{ connectionGraphRectangle.index, mergedToConIndex });
+                                        }
+                                        if (!connectionsIndexesContains(mergedToGraphRectangle.connectionIndexes.items, conIndex)) {
+                                            try mergedToGraphRectangle.connectionIndexes.append(conIndex);
+                                            if (PATHFINDING_DEBUG) std.debug.print("add connection second merge rec {}, added> {},\n", .{ mergedToGraphRectangle.index, conIndex });
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            try swapRemoveGraphIndex(anotherMergeCheckGraphRectangle.index, state);
+                            anotherMergeCheckGraphRectangle.connectionIndexes.deinit();
+                        }
+                    }
+                }
             }
             toSplitGraphRectangle.connectionIndexes.deinit();
         }
     } else {
         //TODO
     }
+}
+
+fn connectionsIndexesContains(indexes: []usize, checkIndex: usize) bool {
+    for (indexes) |index| {
+        if (index == checkIndex) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// returns merge graph rectangle index
+fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirectionIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) !?usize {
+    if (skipDirectionIndex != 0) {
+        //do right merge check
+        if (@mod(tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
+            const optRightGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), .tileY = tileRectangle.topLeftTileXY.tileY })];
+            if (optRightGraphRectangleIndex) |rightRectangleIndex| {
+                const rightRectangle = &state.pathfindingData.graphRectangles.items[rightRectangleIndex];
+                if (rightRectangle.tileRectangle.topLeftTileXY.tileY == tileRectangle.topLeftTileXY.tileY and rightRectangle.tileRectangle.rowCount == tileRectangle.rowCount) {
+                    // can be merged
+                    rightRectangle.tileRectangle.columnCount += @as(u32, @intCast(rightRectangle.tileRectangle.topLeftTileXY.tileX - tileRectangle.topLeftTileXY.tileX));
+                    rightRectangle.tileRectangle.topLeftTileXY.tileX = tileRectangle.topLeftTileXY.tileX;
+                    try setPaththingDataRectangle(tileRectangle, rightRectangle.index, state);
+                    if (PATHFINDING_DEBUG) std.debug.print("merge right {}, {}, mergedWith: {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index, tileRectangle });
+                    return rightRectangle.index;
+                }
+            }
+        }
+    }
+    if (skipDirectionIndex != 1) {
+        //do down merge check
+        if (@mod(tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(tileRectangle.rowCount)), mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
+            const optDownGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX, .tileY = tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(tileRectangle.rowCount)) })];
+            if (optDownGraphRectangleIndex) |downRectangleIndex| {
+                const downRectangle = &state.pathfindingData.graphRectangles.items[downRectangleIndex];
+                if (downRectangle.tileRectangle.topLeftTileXY.tileX == tileRectangle.topLeftTileXY.tileX and downRectangle.tileRectangle.columnCount == tileRectangle.columnCount) {
+                    // can be merged
+                    downRectangle.tileRectangle.rowCount += @as(u32, @intCast(downRectangle.tileRectangle.topLeftTileXY.tileY - tileRectangle.topLeftTileXY.tileY));
+                    downRectangle.tileRectangle.topLeftTileXY.tileY = tileRectangle.topLeftTileXY.tileY;
+                    try setPaththingDataRectangle(tileRectangle, downRectangle.index, state);
+                    if (PATHFINDING_DEBUG) std.debug.print("merge down {}, {}\n", .{ downRectangle.tileRectangle, downRectangle.index });
+                    return downRectangle.index;
+                }
+            }
+        }
+    }
+    if (skipDirectionIndex != 2) {
+        //do left merge check
+        if (@mod(tileRectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
+            const optLeftGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX - 1, .tileY = tileRectangle.topLeftTileXY.tileY })];
+            if (optLeftGraphRectangleIndex) |leftRectangleIndex| {
+                const leftRectangle = &state.pathfindingData.graphRectangles.items[leftRectangleIndex];
+                if (leftRectangle.tileRectangle.topLeftTileXY.tileY == tileRectangle.topLeftTileXY.tileY and leftRectangle.tileRectangle.rowCount == tileRectangle.rowCount) {
+                    // can be merged
+                    leftRectangle.tileRectangle.columnCount += tileRectangle.columnCount;
+                    try setPaththingDataRectangle(tileRectangle, leftRectangle.index, state);
+                    if (PATHFINDING_DEBUG) std.debug.print("merge left {}, {}\n", .{ leftRectangle.tileRectangle, leftRectangle.index });
+                    return leftRectangle.index;
+                }
+            }
+        }
+    }
+    if (skipDirectionIndex != 3) {
+        //do up merge check
+        if (@mod(tileRectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
+            const optUpGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX, .tileY = tileRectangle.topLeftTileXY.tileY - 1 })];
+            if (optUpGraphRectangleIndex) |upRectangleIndex| {
+                const upRectangle = &state.pathfindingData.graphRectangles.items[upRectangleIndex];
+                if (upRectangle.tileRectangle.topLeftTileXY.tileX == tileRectangle.topLeftTileXY.tileX and upRectangle.tileRectangle.columnCount == tileRectangle.columnCount) {
+                    // can be merged
+                    upRectangle.tileRectangle.rowCount += tileRectangle.rowCount;
+                    try setPaththingDataRectangle(tileRectangle, upRectangle.index, state);
+                    if (PATHFINDING_DEBUG) std.debug.print("merge up {}, {}\n", .{ upRectangle.tileRectangle, upRectangle.index });
+                    return upRectangleIndex;
+                }
+            }
+        }
+    }
+    return null;
 }
 
 fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
@@ -312,7 +353,6 @@ fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
             }
         }
     }
-    // setPaththingDataRectangle(removedGraph.tileRectangle, chunk, null);
 
     // change indexes of newAtIndex
     if (graphIndex >= oldIndex) return;
@@ -513,7 +553,7 @@ pub fn pathfindAStar(
             startRecIndex = bottomOfStart;
         } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, state)) |leftOfStart| {
             startRecIndex = leftOfStart;
-        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, state)) |rightOfStart| {
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX + 1, .tileY = startTile.tileY }, state)) |rightOfStart| {
             startRecIndex = rightOfStart;
         } else {
             if (PATHFINDING_DEBUG) std.debug.print("stuck on blocking tile", .{});
