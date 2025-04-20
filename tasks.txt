@@ -1,7 +1,7 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile placed
-        - case which could be improved: double merge?
+        - continue: case which could be improved: double merge?
             - bug: connection duplication
             - bug: does not work all the time
         - big buildings

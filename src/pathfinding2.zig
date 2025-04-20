@@ -3,7 +3,7 @@ const mapZig = @import("map.zig");
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 
-const PATHFINDING_DEBUG = true;
+const PATHFINDING_DEBUG = false;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -90,18 +90,24 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
         const optGraphRectangleIndex = chunk.pathingData.pathingData[topLeftPathingIndex];
         if (optGraphRectangleIndex) |graphRectangleIndex| {
             if (PATHFINDING_DEBUG) std.debug.print("start change graph\n", .{});
-            if (PATHFINDING_DEBUG) std.debug.print("new rectangle: {}\n", .{rectangle});
+            if (PATHFINDING_DEBUG) std.debug.print("    placed blocking rectangle: {}\n", .{rectangle});
             chunk.pathingData.pathingData[topLeftPathingIndex] = null;
             var graphRectangleForUpdateIndex: usize = 0;
             var graphRectangleForUpdateIndexes = [_]?usize{ null, null, null, null };
             const toSplitGraphRectangle = state.pathfindingData.graphRectangles.items[graphRectangleIndex];
-            if (PATHFINDING_DEBUG) std.debug.print("graph rect: {}\n", .{toSplitGraphRectangle.tileRectangle});
+            if (PATHFINDING_DEBUG) {
+                std.debug.print("    graph rect to change: ", .{});
+                printGraphData(&toSplitGraphRectangle);
+            }
             const directions = [_]mapZig.TileXY{
                 .{ .tileX = -1, .tileY = 0 },
                 .{ .tileX = 0, .tileY = -1 },
                 .{ .tileX = 1, .tileY = 0 },
                 .{ .tileX = 0, .tileY = 1 },
             };
+            if (PATHFINDING_DEBUG) {
+                std.debug.print("    Adjacent tile rectangles to check if new graph rectangles need to be created: \n", .{});
+            }
             var newTileRetangles = [_]?mapZig.MapTileRectangle{ null, null, null, null };
             for (directions, 0..) |direction, i| {
                 const adjacentTile: mapZig.TileXY = .{
@@ -110,7 +116,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 };
                 if (toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileX <= adjacentTile.tileX and adjacentTile.tileX <= toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(toSplitGraphRectangle.tileRectangle.columnCount)) - 1 and toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileY <= adjacentTile.tileY and adjacentTile.tileY <= toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(toSplitGraphRectangle.tileRectangle.rowCount)) - 1) {
                     newTileRetangles[i] = createAjdacentTileRectangle(adjacentTile, i, toSplitGraphRectangle);
-                    if (PATHFINDING_DEBUG) std.debug.print("added tile rectangle: {}\n", .{newTileRetangles[i].?});
+                    if (PATHFINDING_DEBUG) std.debug.print("        added tile rectangle: {}\n", .{newTileRetangles[i].?});
                 }
             }
             // check merges
@@ -130,6 +136,9 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
             var tileRectangleIndexToGraphRectangleIndex = [_]?usize{ null, null, null, null };
             for (newTileRetangles, 0..) |optTileRectangle, i| {
                 if (optTileRectangle) |tileRectangle| {
+                    if (PATHFINDING_DEBUG) {
+                        std.debug.print("   Create graph rec from tile rec or replace old one: {} \n", .{tileRectangle});
+                    }
                     var newGraphRectangle: ChunkGraphRectangle = .{
                         .tileRectangle = tileRectangle,
                         .index = state.pathfindingData.graphRectangles.items.len,
@@ -140,18 +149,21 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                         if (i > 1 and i - 2 == connectToIndex) continue; // do not connect diagonals
                         if (tileRectangleIndexToGraphRectangleIndex[connectToIndex]) |connectToGraphIndex| {
                             try newGraphRectangle.connectionIndexes.append(connectToGraphIndex);
-                            if (PATHFINDING_DEBUG) std.debug.print("new connection {} -> {}\n", .{ newGraphRectangle.index, connectToGraphIndex });
+                            if (PATHFINDING_DEBUG) {
+                                std.debug.print("       added connection {} to rec {}. ", .{ newGraphRectangle.index, connectToGraphIndex });
+                                printGraphData(&newGraphRectangle);
+                            }
                         }
                     }
 
                     if (originalReplaced) {
                         try state.pathfindingData.graphRectangles.append(newGraphRectangle);
-                        if (PATHFINDING_DEBUG) std.debug.print("new graph rectangle: {}, id: {}\n", .{ newGraphRectangle.tileRectangle, newGraphRectangle.index });
+                        if (PATHFINDING_DEBUG) std.debug.print("        new rec {}, {}\n", .{ newGraphRectangle.index, newGraphRectangle.tileRectangle });
                     } else {
                         originalReplaced = true;
                         newGraphRectangle.index = toSplitGraphRectangle.index;
                         state.pathfindingData.graphRectangles.items[toSplitGraphRectangle.index] = newGraphRectangle;
-                        if (PATHFINDING_DEBUG) std.debug.print("replaced graph rectangle: {}, id: {}\n", .{ newGraphRectangle.tileRectangle, newGraphRectangle.index });
+                        if (PATHFINDING_DEBUG) std.debug.print("        replaced rec {} with {}\n", .{ newGraphRectangle.index, newGraphRectangle.tileRectangle });
                     }
                     try setPaththingDataRectangle(tileRectangle, newGraphRectangle.index, state);
                     graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = newGraphRectangle.index;
@@ -163,14 +175,17 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                         if (tileRectangleIndexToGraphRectangleIndex[connectToIndex]) |connectToGraphIndex| {
                             const previousNewGraphRectangle = &state.pathfindingData.graphRectangles.items[connectToGraphIndex];
                             try previousNewGraphRectangle.connectionIndexes.append(newGraphRectangle.index);
-                            if (PATHFINDING_DEBUG) std.debug.print("new connection {} -> {}\n", .{ previousNewGraphRectangle.index, newGraphRectangle.index });
+                            if (PATHFINDING_DEBUG) {
+                                std.debug.print("       added connection {} to rec {}. ", .{ newGraphRectangle.index, previousNewGraphRectangle.index });
+                                printGraphData(&newGraphRectangle);
+                            }
                         }
                     }
                 }
             }
             // correct connetions
             for (toSplitGraphRectangle.connectionIndexes.items) |conIndex| {
-                if (PATHFINDING_DEBUG) std.debug.print("checking rec {} conIndex {}\n", .{ toSplitGraphRectangle.index, conIndex });
+                if (PATHFINDING_DEBUG) std.debug.print("    checking rec {} conIndex {}\n", .{ toSplitGraphRectangle.index, conIndex });
                 const connectionGraphRectanglePtr = &state.pathfindingData.graphRectangles.items[conIndex];
                 const rect1 = connectionGraphRectanglePtr.tileRectangle;
                 var connectionGraphReplacedOld = false;
@@ -189,28 +204,43 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                 if (!connectionGraphReplacedOld) {
                                     for (0..connectionGraphRectanglePtr.connectionIndexes.items.len) |conIndexIndex| {
                                         if (connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] == toSplitGraphRectangle.index) {
-                                            connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] = newGraphRectanglePtr.index;
-                                            replacedNew = true;
                                             connectionGraphReplacedOld = true;
-                                            if (PATHFINDING_DEBUG) std.debug.print("replaced old connection with new indexes: recId {} odl: {}, new: {}\n", .{ connectionGraphRectanglePtr.index, toSplitGraphRectangle.index, newGraphRectanglePtr.index });
+                                            if (connectionsIndexesContains(connectionGraphRectanglePtr.connectionIndexes.items, toSplitGraphRectangle.index)) {
+                                                if (toSplitGraphRectangle.index != newGraphRectanglePtr.index) {
+                                                    _ = connectionGraphRectanglePtr.connectionIndexes.swapRemove(conIndexIndex);
+                                                    if (PATHFINDING_DEBUG) {
+                                                        std.debug.print("       removed connection {} in rec {}. ", .{ toSplitGraphRectangle.index, connectionGraphRectanglePtr.index });
+                                                        printGraphData(connectionGraphRectanglePtr);
+                                                    }
+                                                }
+                                            } else {
+                                                replacedNew = true;
+                                                connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] = newGraphRectanglePtr.index;
+                                                if (PATHFINDING_DEBUG) {
+                                                    std.debug.print("       update connection in rec {} from {} to {}. ", .{ connectionGraphRectanglePtr.index, toSplitGraphRectangle.index, newGraphRectanglePtr.index });
+                                                    printGraphData(connectionGraphRectanglePtr);
+                                                }
+                                            }
                                             break;
                                         }
                                     }
                                 }
-                                try newGraphRectanglePtr.connectionIndexes.append(connectionGraphRectanglePtr.index);
-                                if (PATHFINDING_DEBUG) std.debug.print("new connection rec {}, {} -> {},\n", .{ newGraphRectanglePtr.tileRectangle, newGraphRectanglePtr.index, connectionGraphRectanglePtr.index });
+                                _ = try appendConnectionWithCheck(newGraphRectanglePtr, connectionGraphRectanglePtr.index);
                                 if (!replacedNew) {
-                                    try connectionGraphRectanglePtr.connectionIndexes.append(newGraphRectanglePtr.index);
-                                    if (PATHFINDING_DEBUG) std.debug.print("new connection rec {}, {} -> {},\n", .{ connectionGraphRectanglePtr.tileRectangle, connectionGraphRectanglePtr.index, newGraphRectanglePtr.index });
+                                    _ = try appendConnectionWithCheck(connectionGraphRectanglePtr, newGraphRectanglePtr.index);
                                 }
                             }
                         }
                     }
-                } else if (!connectionGraphReplacedOld) {
+                }
+                if (!connectionGraphReplacedOld) {
                     for (0..connectionGraphRectanglePtr.connectionIndexes.items.len) |conIndexIndex| {
                         if (connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] == toSplitGraphRectangle.index) {
                             _ = connectionGraphRectanglePtr.connectionIndexes.swapRemove(conIndexIndex);
-                            if (PATHFINDING_DEBUG) std.debug.print("remove connection rec {}, {}, removed con id {},\n", .{ connectionGraphRectanglePtr.tileRectangle, connectionGraphRectanglePtr.index, toSplitGraphRectangle.index });
+                            if (PATHFINDING_DEBUG) {
+                                std.debug.print("       removed connection {} from rec {}. ", .{ conIndexIndex, connectionGraphRectanglePtr.index });
+                                printGraphData(connectionGraphRectanglePtr);
+                            }
                             break;
                         }
                     }
@@ -225,6 +255,9 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                         if (try checkMergeGraphRectangles(anotherMergeCheckGraphRectangle.tileRectangle, 5, chunk, state)) |mergeIndex| {
                             const mergedToGraphRectangle = &state.pathfindingData.graphRectangles.items[mergeIndex];
                             // another merge, clean up
+                            if (PATHFINDING_DEBUG) {
+                                std.debug.print("   merged rec {} with {}\n", .{ mergeIndex, anotherMergeCheckGraphRectangle.index });
+                            }
                             for (anotherMergeCheckGraphRectangle.connectionIndexes.items) |conIndex| {
                                 if (mergeIndex == conIndex) continue;
                                 const connectionGraphRectangle = &state.pathfindingData.graphRectangles.items[conIndex];
@@ -232,15 +265,18 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                                     if (mergedToConIndex == anotherMergeCheckGraphIndex) {
                                         if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, mergeIndex)) {
                                             connectionGraphRectangle.connectionIndexes.items[mergeToIndexIndex] = mergeIndex;
-                                            if (PATHFINDING_DEBUG) std.debug.print("update connection second merge rec {}, updated {} -> {},\n", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
+                                            if (PATHFINDING_DEBUG) {
+                                                std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
+                                                printGraphData(connectionGraphRectangle);
+                                            }
                                         } else {
                                             _ = connectionGraphRectangle.connectionIndexes.swapRemove(mergeToIndexIndex);
-                                            if (PATHFINDING_DEBUG) std.debug.print("remove connection second merge rec {}, removed {},\n", .{ connectionGraphRectangle.index, mergedToConIndex });
+                                            if (PATHFINDING_DEBUG) {
+                                                std.debug.print("       removed connection {} from rec {}. ", .{ mergedToConIndex, connectionGraphRectangle.index });
+                                                printGraphData(connectionGraphRectangle);
+                                            }
                                         }
-                                        if (!connectionsIndexesContains(mergedToGraphRectangle.connectionIndexes.items, conIndex)) {
-                                            try mergedToGraphRectangle.connectionIndexes.append(conIndex);
-                                            if (PATHFINDING_DEBUG) std.debug.print("add connection second merge rec {}, added> {},\n", .{ mergedToGraphRectangle.index, conIndex });
-                                        }
+                                        _ = try appendConnectionWithCheck(mergedToGraphRectangle, conIndex);
                                         break;
                                     }
                                 }
@@ -256,6 +292,30 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
     } else {
         //TODO
     }
+}
+
+/// returns true if appended
+fn appendConnectionWithCheck(addConnectionbToGraph: *ChunkGraphRectangle, newConIndex: usize) !bool {
+    if (!connectionsIndexesContains(addConnectionbToGraph.connectionIndexes.items, newConIndex)) {
+        try addConnectionbToGraph.connectionIndexes.append(newConIndex);
+        if (PATHFINDING_DEBUG) {
+            std.debug.print("   added connection {} to rec {}.", .{ newConIndex, addConnectionbToGraph.index });
+            printGraphData(addConnectionbToGraph);
+        }
+        return true;
+    }
+    return false;
+}
+
+fn printGraphData(addConnectionbToGraph: *const ChunkGraphRectangle) void {
+    std.debug.print("rec(id: {}, topLeft: {}|{}, c:{}, r:{}, connections:{any})\n", .{
+        addConnectionbToGraph.index,
+        addConnectionbToGraph.tileRectangle.topLeftTileXY.tileX,
+        addConnectionbToGraph.tileRectangle.topLeftTileXY.tileY,
+        addConnectionbToGraph.tileRectangle.columnCount,
+        addConnectionbToGraph.tileRectangle.rowCount,
+        addConnectionbToGraph.connectionIndexes.items,
+    });
 }
 
 fn connectionsIndexesContains(indexes: []usize, checkIndex: usize) bool {
@@ -280,7 +340,7 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirecti
                     rightRectangle.tileRectangle.columnCount += @as(u32, @intCast(rightRectangle.tileRectangle.topLeftTileXY.tileX - tileRectangle.topLeftTileXY.tileX));
                     rightRectangle.tileRectangle.topLeftTileXY.tileX = tileRectangle.topLeftTileXY.tileX;
                     try setPaththingDataRectangle(tileRectangle, rightRectangle.index, state);
-                    if (PATHFINDING_DEBUG) std.debug.print("merge right {}, {}, mergedWith: {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index, tileRectangle });
+                    if (PATHFINDING_DEBUG) std.debug.print("    merge right {}, {}, mergedWith: {}\n", .{ rightRectangle.tileRectangle, rightRectangle.index, tileRectangle });
                     return rightRectangle.index;
                 }
             }
@@ -297,7 +357,7 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirecti
                     downRectangle.tileRectangle.rowCount += @as(u32, @intCast(downRectangle.tileRectangle.topLeftTileXY.tileY - tileRectangle.topLeftTileXY.tileY));
                     downRectangle.tileRectangle.topLeftTileXY.tileY = tileRectangle.topLeftTileXY.tileY;
                     try setPaththingDataRectangle(tileRectangle, downRectangle.index, state);
-                    if (PATHFINDING_DEBUG) std.debug.print("merge down {}, {}\n", .{ downRectangle.tileRectangle, downRectangle.index });
+                    if (PATHFINDING_DEBUG) std.debug.print("    merge down {}, {}\n", .{ downRectangle.tileRectangle, downRectangle.index });
                     return downRectangle.index;
                 }
             }
@@ -313,7 +373,7 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirecti
                     // can be merged
                     leftRectangle.tileRectangle.columnCount += tileRectangle.columnCount;
                     try setPaththingDataRectangle(tileRectangle, leftRectangle.index, state);
-                    if (PATHFINDING_DEBUG) std.debug.print("merge left {}, {}\n", .{ leftRectangle.tileRectangle, leftRectangle.index });
+                    if (PATHFINDING_DEBUG) std.debug.print("    merge left {}, {}\n", .{ leftRectangle.tileRectangle, leftRectangle.index });
                     return leftRectangle.index;
                 }
             }
@@ -329,7 +389,7 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirecti
                     // can be merged
                     upRectangle.tileRectangle.rowCount += tileRectangle.rowCount;
                     try setPaththingDataRectangle(tileRectangle, upRectangle.index, state);
-                    if (PATHFINDING_DEBUG) std.debug.print("merge up {}, {}\n", .{ upRectangle.tileRectangle, upRectangle.index });
+                    if (PATHFINDING_DEBUG) std.debug.print("    merge up {}, {}\n", .{ upRectangle.tileRectangle, upRectangle.index });
                     return upRectangleIndex;
                 }
             }
@@ -340,7 +400,10 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, skipDirecti
 
 fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
     const removedGraph = state.pathfindingData.graphRectangles.swapRemove(graphIndex);
-    if (PATHFINDING_DEBUG) std.debug.print("swap remove {},  {},\n", .{ graphIndex, removedGraph.tileRectangle });
+    if (PATHFINDING_DEBUG) {
+        std.debug.print("   swap remove {}. ", .{graphIndex});
+        printGraphData(&removedGraph);
+    }
     const oldIndex = state.pathfindingData.graphRectangles.items.len;
     // remove existing connections to removedGraph
     for (removedGraph.connectionIndexes.items) |conIndex| {
@@ -348,7 +411,10 @@ fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
         for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
             if (checkIndex == graphIndex) {
                 _ = connectedGraph.connectionIndexes.swapRemove(i);
-                if (PATHFINDING_DEBUG) std.debug.print("removed connection {}, {} -> {},\n", .{ connectedGraph.tileRectangle, graphIndex, connectedGraph.index });
+                if (PATHFINDING_DEBUG) {
+                    std.debug.print("       removed connection {} from rec {}. ", .{ checkIndex, connectedGraph.index });
+                    printGraphData(connectedGraph);
+                }
                 break;
             }
         }
@@ -357,13 +423,21 @@ fn swapRemoveGraphIndex(graphIndex: usize, state: *main.ChatSimState) !void {
     // change indexes of newAtIndex
     if (graphIndex >= oldIndex) return;
     const newAtIndex = &state.pathfindingData.graphRectangles.items[graphIndex];
+    if (PATHFINDING_DEBUG) {
+        std.debug.print("   changed index rec {} -> {}. ", .{ newAtIndex.index, graphIndex });
+        printGraphData(newAtIndex);
+    }
     newAtIndex.index = graphIndex;
     for (newAtIndex.connectionIndexes.items) |conIndex| {
         const connectedGraph = &state.pathfindingData.graphRectangles.items[conIndex];
         for (connectedGraph.connectionIndexes.items, 0..) |checkIndex, i| {
             if (checkIndex == oldIndex) {
                 connectedGraph.connectionIndexes.items[i] = graphIndex;
-                if (PATHFINDING_DEBUG) std.debug.print("updated connection index, rec:{},{}, change: {} -> {},\n", .{ connectedGraph.tileRectangle, connectedGraph.index, oldIndex, graphIndex });
+                if (PATHFINDING_DEBUG) {
+                    std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectedGraph.index, oldIndex, graphIndex });
+                    printGraphData(connectedGraph);
+                }
+
                 break;
             }
         }
