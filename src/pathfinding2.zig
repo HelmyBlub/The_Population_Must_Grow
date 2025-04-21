@@ -176,7 +176,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 if (PATHFINDING_DEBUG) std.debug.print("    checking rec {} conIndex {}\n", .{ toSplitGraphRectangle.index, conIndex });
                 const connectionGraphRectanglePtr = &state.pathfindingData.graphRectangles.items[conIndex];
                 const rect1 = connectionGraphRectanglePtr.tileRectangle;
-                var connectionGraphReplacedOld = false;
+                var removeOldRequired = true;
                 for (graphRectangleForUpdateIndexes) |optIndex| {
                     if (optIndex) |index| {
                         if (index == conIndex) continue;
@@ -188,40 +188,14 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                             if (rect1.topLeftTileXY.tileX < rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)) and rect2.topLeftTileXY.tileX <= rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)) or
                                 rect1.topLeftTileXY.tileY <= rect2.topLeftTileXY.tileY + @as(i32, @intCast(rect2.rowCount)) and rect2.topLeftTileXY.tileY <= rect1.topLeftTileXY.tileY + @as(i32, @intCast(rect1.rowCount)))
                             {
-                                var replacedNew = false;
-                                if (!connectionGraphReplacedOld) {
-                                    for (0..connectionGraphRectanglePtr.connectionIndexes.items.len) |conIndexIndex| {
-                                        if (connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] == toSplitGraphRectangle.index) {
-                                            connectionGraphReplacedOld = true;
-                                            if (connectionsIndexesContains(connectionGraphRectanglePtr.connectionIndexes.items, toSplitGraphRectangle.index)) {
-                                                if (toSplitGraphRectangle.index != newGraphRectanglePtr.index) {
-                                                    _ = connectionGraphRectanglePtr.connectionIndexes.swapRemove(conIndexIndex);
-                                                    if (PATHFINDING_DEBUG) {
-                                                        std.debug.print("       removed connection {} in rec {}. ", .{ toSplitGraphRectangle.index, connectionGraphRectanglePtr.index });
-                                                        printGraphData(connectionGraphRectanglePtr);
-                                                    }
-                                                }
-                                            } else {
-                                                replacedNew = true;
-                                                connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] = newGraphRectanglePtr.index;
-                                                if (PATHFINDING_DEBUG) {
-                                                    std.debug.print("       update connection in rec {} from {} to {}. ", .{ connectionGraphRectanglePtr.index, toSplitGraphRectangle.index, newGraphRectanglePtr.index });
-                                                    printGraphData(connectionGraphRectanglePtr);
-                                                }
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
+                                if (toSplitGraphRectangle.index == index) removeOldRequired = false;
                                 _ = try appendConnectionWithCheck(newGraphRectanglePtr, connectionGraphRectanglePtr.index);
-                                if (!replacedNew) {
-                                    _ = try appendConnectionWithCheck(connectionGraphRectanglePtr, newGraphRectanglePtr.index);
-                                }
+                                _ = try appendConnectionWithCheck(connectionGraphRectanglePtr, newGraphRectanglePtr.index);
                             }
                         }
                     }
                 }
-                if (!connectionGraphReplacedOld) {
+                if (removeOldRequired) {
                     for (0..connectionGraphRectanglePtr.connectionIndexes.items.len) |conIndexIndex| {
                         if (connectionGraphRectanglePtr.connectionIndexes.items[conIndexIndex] == toSplitGraphRectangle.index) {
                             _ = connectionGraphRectanglePtr.connectionIndexes.swapRemove(conIndexIndex);
