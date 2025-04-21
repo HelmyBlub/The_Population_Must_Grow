@@ -3,7 +3,7 @@ const mapZig = @import("map.zig");
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 
-const PATHFINDING_DEBUG = false;
+const PATHFINDING_DEBUG = true;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -251,39 +251,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
 
                 if (lastMergedTileRectanlge) |tileRec| {
                     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(tileRec.topLeftTileXY)]) |anotherMergeCheckGraphIndex| {
-                        const anotherMergeCheckGraphRectangle = state.pathfindingData.graphRectangles.items[anotherMergeCheckGraphIndex];
-                        if (try checkMergeGraphRectangles(anotherMergeCheckGraphRectangle.tileRectangle, 5, chunk, state)) |mergeIndex| {
-                            const mergedToGraphRectangle = &state.pathfindingData.graphRectangles.items[mergeIndex];
-                            // another merge, clean up
-                            if (PATHFINDING_DEBUG) {
-                                std.debug.print("   merged rec {} with {}\n", .{ mergeIndex, anotherMergeCheckGraphRectangle.index });
-                            }
-                            for (anotherMergeCheckGraphRectangle.connectionIndexes.items) |conIndex| {
-                                if (mergeIndex == conIndex) continue;
-                                const connectionGraphRectangle = &state.pathfindingData.graphRectangles.items[conIndex];
-                                for (connectionGraphRectangle.connectionIndexes.items, 0..) |mergedToConIndex, mergeToIndexIndex| {
-                                    if (mergedToConIndex == anotherMergeCheckGraphIndex) {
-                                        if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, mergeIndex)) {
-                                            connectionGraphRectangle.connectionIndexes.items[mergeToIndexIndex] = mergeIndex;
-                                            if (PATHFINDING_DEBUG) {
-                                                std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
-                                                printGraphData(connectionGraphRectangle);
-                                            }
-                                        } else {
-                                            _ = connectionGraphRectangle.connectionIndexes.swapRemove(mergeToIndexIndex);
-                                            if (PATHFINDING_DEBUG) {
-                                                std.debug.print("       removed connection {} from rec {}. ", .{ mergedToConIndex, connectionGraphRectangle.index });
-                                                printGraphData(connectionGraphRectangle);
-                                            }
-                                        }
-                                        _ = try appendConnectionWithCheck(mergedToGraphRectangle, conIndex);
-                                        break;
-                                    }
-                                }
-                            }
-                            try swapRemoveGraphIndex(anotherMergeCheckGraphRectangle.index, state);
-                            anotherMergeCheckGraphRectangle.connectionIndexes.deinit();
-                        }
+                        _ = try checkForGraphMergeAndDoIt(anotherMergeCheckGraphIndex, chunk, state);
                     }
                 }
             }
@@ -292,6 +260,44 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
     } else {
         //TODO
     }
+}
+
+/// returns true if something merged
+fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) !bool {
+    const graphRectForMergeCheck = state.pathfindingData.graphRectangles.items[graphRectForMergeCheckIndex];
+    if (try checkMergeGraphRectangles(graphRectForMergeCheck.tileRectangle, 5, chunk, state)) |mergeIndex| {
+        const mergedToGraphRectangle = &state.pathfindingData.graphRectangles.items[mergeIndex];
+        if (PATHFINDING_DEBUG) {
+            std.debug.print("   merged rec {} with {}\n", .{ mergeIndex, graphRectForMergeCheck.index });
+        }
+        for (graphRectForMergeCheck.connectionIndexes.items) |conIndex| {
+            if (mergeIndex == conIndex) continue;
+            const connectionGraphRectangle = &state.pathfindingData.graphRectangles.items[conIndex];
+            for (connectionGraphRectangle.connectionIndexes.items, 0..) |mergedToConIndex, mergeToIndexIndex| {
+                if (mergedToConIndex == graphRectForMergeCheck.index) {
+                    if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, mergeIndex)) {
+                        connectionGraphRectangle.connectionIndexes.items[mergeToIndexIndex] = mergeIndex;
+                        if (PATHFINDING_DEBUG) {
+                            std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
+                            printGraphData(connectionGraphRectangle);
+                        }
+                    } else {
+                        _ = connectionGraphRectangle.connectionIndexes.swapRemove(mergeToIndexIndex);
+                        if (PATHFINDING_DEBUG) {
+                            std.debug.print("       removed connection {} from rec {}. ", .{ mergedToConIndex, connectionGraphRectangle.index });
+                            printGraphData(connectionGraphRectangle);
+                        }
+                    }
+                    _ = try appendConnectionWithCheck(mergedToGraphRectangle, conIndex);
+                    break;
+                }
+            }
+        }
+        try swapRemoveGraphIndex(graphRectForMergeCheck.index, state);
+        graphRectForMergeCheck.connectionIndexes.deinit();
+        return true;
+    }
+    return false;
 }
 
 /// returns true if appended
