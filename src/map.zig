@@ -686,7 +686,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         },
                         .inConstruction = true,
                         .type = building.type,
-                        .woodRequired = 1,
+                        .woodRequired = 16,
                     };
                     _ = try placeBuilding(newBuilding, state, false);
                     continue :nextTile;
