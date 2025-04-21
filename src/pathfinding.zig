@@ -192,7 +192,7 @@ pub fn pathfindAStar(
     }
 }
 
-pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) void {
+pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
     _ = state;
 }
 

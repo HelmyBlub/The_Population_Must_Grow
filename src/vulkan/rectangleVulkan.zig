@@ -76,7 +76,7 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
             break;
         }
     }
-    main.pathfindingZig.paintDebugPathfindingVisualization(state);
+    try main.pathfindingZig.paintDebugPathfindingVisualization(state);
     try setupVertexDataForGPU(&state.vkState);
 }
 

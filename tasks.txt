@@ -2,8 +2,10 @@ tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile placed
         - big buildings
-        - restrict path search distance
+            - visulize chunk.pathfinding data
+            - change big building wood cost back to 16
     - setup graph after blocking tile delete
+    - restrict path search distance
     - compare performance to pathfind1
 
 - features:

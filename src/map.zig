@@ -589,7 +589,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
     for (corners) |corner| {
         const optBuilding = try getBuildingOnPosition(.{ .x = corner.x, .y = corner.y }, state);
         if (optBuilding) |cornerBuilding| {
-            building.woodRequired -= 1;
+            if (building.woodRequired > 1) building.woodRequired -= 1;
             const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, state);
             for (chunk.citizens.items, 0..) |*citizen, i| {
                 if (citizen.homePosition != null and citizen.homePosition.?.x == cornerBuilding.position.x and citizen.homePosition.?.y == cornerBuilding.position.y) {
@@ -686,7 +686,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         },
                         .inConstruction = true,
                         .type = building.type,
-                        .woodRequired = 16,
+                        .woodRequired = 1,
                     };
                     _ = try placeBuilding(newBuilding, state, false);
                     continue :nextTile;
