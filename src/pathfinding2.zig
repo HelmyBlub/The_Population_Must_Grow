@@ -3,7 +3,7 @@ const mapZig = @import("map.zig");
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 
-const PATHFINDING_DEBUG = true;
+const PATHFINDING_DEBUG = false;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -117,18 +117,6 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 if (toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileX <= adjacentTile.tileX and adjacentTile.tileX <= toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(toSplitGraphRectangle.tileRectangle.columnCount)) - 1 and toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileY <= adjacentTile.tileY and adjacentTile.tileY <= toSplitGraphRectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(toSplitGraphRectangle.tileRectangle.rowCount)) - 1) {
                     newTileRetangles[i] = createAjdacentTileRectangle(adjacentTile, i, toSplitGraphRectangle);
                     if (PATHFINDING_DEBUG) std.debug.print("        added tile rectangle: {}\n", .{newTileRetangles[i].?});
-                }
-            }
-            // check merges
-            var lastMergedTileRectanlge: ?mapZig.MapTileRectangle = null;
-            for (newTileRetangles, 0..) |optTileRectangle, i| {
-                if (optTileRectangle) |tileRectangle| {
-                    if (try checkMergeGraphRectangles(tileRectangle, i, chunk, state)) |mergeIndex| {
-                        lastMergedTileRectanlge = tileRectangle;
-                        newTileRetangles[i] = null;
-                        graphRectangleForUpdateIndexes[graphRectangleForUpdateIndex] = mergeIndex;
-                        graphRectangleForUpdateIndex += 1;
-                    }
                 }
             }
             // create new rectangles which could not merge
@@ -248,10 +236,18 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
             }
             if (!originalReplaced) {
                 try swapRemoveGraphIndex(toSplitGraphRectangle.index, state);
-
-                if (lastMergedTileRectanlge) |tileRec| {
-                    if (chunk.pathingData.pathingData[getPathingIndexForTileXY(tileRec.topLeftTileXY)]) |anotherMergeCheckGraphIndex| {
-                        _ = try checkForGraphMergeAndDoIt(anotherMergeCheckGraphIndex, chunk, state);
+            }
+            for (newTileRetangles) |optTileRectangle| {
+                if (optTileRectangle) |tileRectangle| {
+                    if (PATHFINDING_DEBUG) {
+                        std.debug.print("   Check Merge: {} \n", .{tileRectangle});
+                    }
+                    const pathingDataTileIndex = getPathingIndexForTileXY(tileRectangle.topLeftTileXY);
+                    var continueMergeCheck = true;
+                    while (continueMergeCheck) {
+                        if (chunk.pathingData.pathingData[pathingDataTileIndex]) |anotherMergeCheckGraphIndex| {
+                            continueMergeCheck = try checkForGraphMergeAndDoIt(anotherMergeCheckGraphIndex, chunk, state);
+                        }
                     }
                 }
             }
@@ -268,7 +264,7 @@ fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.
     if (try checkMergeGraphRectangles(graphRectForMergeCheck.tileRectangle, 5, chunk, state)) |mergeIndex| {
         const mergedToGraphRectangle = &state.pathfindingData.graphRectangles.items[mergeIndex];
         if (PATHFINDING_DEBUG) {
-            std.debug.print("   merged rec {} with {}\n", .{ mergeIndex, graphRectForMergeCheck.index });
+            std.debug.print("       merged rec {} with {}\n", .{ mergeIndex, graphRectForMergeCheck.index });
         }
         for (graphRectForMergeCheck.connectionIndexes.items) |conIndex| {
             if (mergeIndex == conIndex) continue;
@@ -278,13 +274,13 @@ fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.
                     if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, mergeIndex)) {
                         connectionGraphRectangle.connectionIndexes.items[mergeToIndexIndex] = mergeIndex;
                         if (PATHFINDING_DEBUG) {
-                            std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
+                            std.debug.print("           updated connection in rec {} from {} to {}. ", .{ connectionGraphRectangle.index, mergedToConIndex, mergeIndex });
                             printGraphData(connectionGraphRectangle);
                         }
                     } else {
                         _ = connectionGraphRectangle.connectionIndexes.swapRemove(mergeToIndexIndex);
                         if (PATHFINDING_DEBUG) {
-                            std.debug.print("       removed connection {} from rec {}. ", .{ mergedToConIndex, connectionGraphRectangle.index });
+                            std.debug.print("           removed connection {} from rec {}. ", .{ mergedToConIndex, connectionGraphRectangle.index });
                             printGraphData(connectionGraphRectangle);
                         }
                     }
