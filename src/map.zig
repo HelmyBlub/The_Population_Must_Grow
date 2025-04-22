@@ -415,6 +415,11 @@ pub fn mapTileXyToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) mai
     return mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, camera);
 }
 
+pub fn mapTileXyMiddleToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.Position {
+    const mapPosition = mapTileXyToTileMiddlePosition(tileXY);
+    return mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, camera);
+}
+
 pub fn mapPositionToTileXy(position: main.Position) TileXY {
     return TileXY{
         .tileX = @intFromFloat(@floor(position.x / GameMap.TILE_SIZE)),

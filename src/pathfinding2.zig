@@ -132,12 +132,56 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
                     try clearChunkGraph(chunk, state);
                 } else {
-                    //TODO
-                    //determine overlap of chunk and tileRectangle
-                    // check each tile if blocking and if it should not block anymore
-                    // if changed add graph rectangle and check for merge
+                    const chunkTileRectangle: mapZig.MapTileRectangle = .{
+                        .topLeftTileXY = .{ .tileX = mapZig.GameMap.CHUNK_LENGTH * chunk.chunkXY.chunkX, .tileY = mapZig.GameMap.CHUNK_LENGTH * chunk.chunkXY.chunkY },
+                        .columnCount = mapZig.GameMap.CHUNK_LENGTH,
+                        .rowCount = mapZig.GameMap.CHUNK_LENGTH,
+                    };
+                    const overlappingRectangle = getOverlappingRectangle(rectangle, chunkTileRectangle);
+                    try checkForPathingBlockRemovalsInChunk(chunk, overlappingRectangle, state);
                 }
             }
+        }
+    }
+}
+
+fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
+    // check each tile if blocking and if it should not block anymore
+    for (0..rectangle.columnCount) |x| {
+        for (0..rectangle.rowCount) |y| {
+            const tileXY: mapZig.TileXY = .{
+                .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
+                .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
+            };
+            const pathingIndex = getPathingIndexForTileXY(tileXY);
+            if (chunk.pathingData.pathingData[pathingIndex] != null) continue;
+            if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTilePosition(tileXY), state) != null) {
+                continue;
+            }
+            // change tile to not blocking
+            var newGraphRectangle: ChunkGraphRectangle = .{
+                .tileRectangle = .{ .topLeftTileXY = tileXY, .columnCount = 1, .rowCount = 1 },
+                .index = state.pathfindingData.graphRectangles.items.len,
+                .connectionIndexes = std.ArrayList(usize).init(state.allocator),
+            };
+            chunk.pathingData.pathingData[pathingIndex] = newGraphRectangle.index;
+            //check neighbors
+
+            const neighborTileXYs = [_]mapZig.TileXY{
+                .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY },
+                .{ .tileX = tileXY.tileX + 1, .tileY = tileXY.tileY },
+                .{ .tileX = tileXY.tileX, .tileY = tileXY.tileY - 1 },
+                .{ .tileX = tileXY.tileX, .tileY = tileXY.tileY + 1 },
+            };
+            for (neighborTileXYs) |neighborTileXY| {
+                const neighborPathingIndex = getPathingIndexForTileXY(neighborTileXY);
+                if (chunk.pathingData.pathingData[neighborPathingIndex]) |neighborGraphIndex| {
+                    const neighborGraphRectangle = &state.pathfindingData.graphRectangles.items[neighborGraphIndex];
+                    try newGraphRectangle.connectionIndexes.append(neighborGraphIndex);
+                    try neighborGraphRectangle.connectionIndexes.append(newGraphRectangle.index);
+                }
+            }
+            try state.pathfindingData.graphRectangles.append(newGraphRectangle);
         }
     }
 }
