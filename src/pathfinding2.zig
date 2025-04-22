@@ -182,6 +182,12 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
                 }
             }
             try state.pathfindingData.graphRectangles.append(newGraphRectangle);
+            var continueMergeCheck = true;
+            while (continueMergeCheck) {
+                if (chunk.pathingData.pathingData[pathingIndex]) |anotherMergeCheckGraphIndex| {
+                    continueMergeCheck = try checkForGraphMergeAndDoIt(anotherMergeCheckGraphIndex, chunk, state);
+                }
+            }
         }
     }
 }
