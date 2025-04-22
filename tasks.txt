@@ -8,6 +8,7 @@ tasks:
             - check affected chunks
             - handle each chunk by adjusted delete rectangle
         - check optimize graph?
+    - bug: diagonal graph connections should not happen
     - restrict path search distance
     - random move around only on pathes
     - compare performance to pathfind1

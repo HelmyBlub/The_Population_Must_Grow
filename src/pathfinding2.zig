@@ -960,12 +960,9 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
             var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
             var conTileXy: mapZig.TileXY = conRect.topLeftTileXY;
             if (rectangle.tileRectangle.topLeftTileXY.tileY < conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount))) {
-                var middleY: i32 = 0;
-                if (rectangle.tileRectangle.rowCount < conRect.rowCount) {
-                    middleY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.rowCount, 2)));
-                } else {
-                    middleY = conRect.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(conRect.rowCount, 2)));
-                }
+                const maxTop = @max(rectangle.tileRectangle.topLeftTileXY.tileY, conRect.topLeftTileXY.tileY);
+                const minBottom = @min(rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)), conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)));
+                const middleY = @divFloor(maxTop + minBottom, 2);
                 rectTileXy.tileY = middleY;
                 conTileXy.tileY = middleY;
                 if (rectTileXy.tileX < conTileXy.tileX) {
@@ -974,12 +971,9 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
                     conTileXy.tileX = rectTileXy.tileX - 1;
                 }
             } else if (rectangle.tileRectangle.topLeftTileXY.tileX < conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount))) {
-                var middleX: i32 = 0;
-                if (rectangle.tileRectangle.columnCount < conRect.columnCount) {
-                    middleX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.columnCount, 2)));
-                } else {
-                    middleX = conRect.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.columnCount, 2)));
-                }
+                const maxLeft = @max(rectangle.tileRectangle.topLeftTileXY.tileX, conRect.topLeftTileXY.tileX);
+                const minRight = @min(rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)), conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)));
+                const middleX = @divFloor(maxLeft + minRight, 2);
                 rectTileXy.tileX = middleX;
                 conTileXy.tileX = middleX;
                 if (rectTileXy.tileY < conTileXy.tileY) {
