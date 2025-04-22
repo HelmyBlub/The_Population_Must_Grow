@@ -1,6 +1,15 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile delete
+        - chunk has no blocking tiles anymore 
+            - make one graph rectangle for chunk
+        - delete single blocking tile 
+            - add single tile rectangle and connect
+            - check for merge options
+        - delete multiple tiles
+            - check affected chunks
+            - handle each chunk by adjusted delete rectangle
+        - check optimize graph?
     - restrict path search distance
     - random move around only on pathes
     - compare performance to pathfind1

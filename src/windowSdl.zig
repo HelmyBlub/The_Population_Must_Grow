@@ -236,6 +236,9 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
             }
         }
     }
+    if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
+        try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, state);
+    }
 }
 
 pub fn mouseWindowPositionToGameMapPoisition(x: f32, y: f32, camera: main.Camera) main.Position {

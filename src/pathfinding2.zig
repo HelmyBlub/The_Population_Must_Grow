@@ -4,7 +4,7 @@ const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const fontVulkanZig = @import("vulkan/fontVulkan.zig");
 
-const PATHFINDING_DEBUG = false;
+const PATHFINDING_DEBUG = true;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -95,7 +95,6 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 if (PATHFINDING_DEBUG) std.debug.print("start change graph\n", .{});
                 if (PATHFINDING_DEBUG) std.debug.print("    placed blocking rectangle: {}\n", .{chunkXYRectangle});
                 const graphRectangleIndexes = try getGraphRectanglesOfRectangle(chunkXYRectangle, chunk, state);
-                if (PATHFINDING_DEBUG) std.debug.print("test print {any}\n", .{graphRectangleIndexes});
                 for (0..chunkXYRectangle.columnCount) |x| {
                     for (0..chunkXYRectangle.rowCount) |y| {
                         const pathingIndex = getPathingIndexForTileXY(.{
@@ -108,14 +107,98 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 for (graphRectangleIndexes) |graphRectangleIndex| {
                     const graphTileRectangle = state.pathfindingData.graphRectangles.items[graphRectangleIndex].tileRectangle;
                     const rectangleLimitedToGraphRectangle: mapZig.MapTileRectangle = getOverlappingRectangle(chunkXYRectangle, graphTileRectangle);
-                    if (PATHFINDING_DEBUG) std.debug.print("test print2 {any}\n", .{rectangleLimitedToGraphRectangle});
                     try splitGraphRectangle(rectangleLimitedToGraphRectangle, graphRectangleIndex, chunk, state);
                 }
             }
         }
     } else {
-        //TODO
+        if (PATHFINDING_DEBUG) std.debug.print("delete rectangle {}\n", .{rectangle});
+        const startChunkX = @divFloor(rectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH);
+        const startChunkY = @divFloor(rectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH);
+        var maxChunkX = @divFloor(rectangle.columnCount, mapZig.GameMap.CHUNK_LENGTH) + 1;
+        if (@mod(rectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @as(i32, @intCast(rectangle.columnCount)) > mapZig.GameMap.CHUNK_LENGTH) {
+            maxChunkX += 1;
+        }
+        var maxChunkY = @divFloor(rectangle.rowCount, mapZig.GameMap.CHUNK_LENGTH) + 1;
+        if (@mod(rectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) + @as(i32, @intCast(rectangle.rowCount)) > mapZig.GameMap.CHUNK_LENGTH) {
+            maxChunkY += 1;
+        }
+        for (0..maxChunkX) |chunkAddX| {
+            for (0..maxChunkY) |chunkAddY| {
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{
+                    .chunkX = startChunkX + @as(i32, @intCast(chunkAddX)),
+                    .chunkY = startChunkY + @as(i32, @intCast(chunkAddY)),
+                }, state);
+                if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
+                    try clearChunkGraph(chunk, state);
+                }
+            }
+        }
     }
+}
+
+fn clearChunkGraph(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+    if (chunk.buildings.items.len > 0 or chunk.bigBuildings.items.len > 0) return;
+    if (PATHFINDING_DEBUG) std.debug.print("clear chunk graph {}\n", .{chunk.chunkXY});
+
+    var graphRectangleIndexes = std.ArrayList(usize).init(state.allocator);
+    defer graphRectangleIndexes.deinit();
+    for (0..chunk.pathingData.pathingData.len) |pathingDataIndex| {
+        if (chunk.pathingData.pathingData[pathingDataIndex]) |graphIndex| {
+            var exists = false;
+            for (graphRectangleIndexes.items) |item| {
+                if (item == graphIndex) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) try graphRectangleIndexes.append(graphIndex);
+        }
+    }
+    var newGraphRectangleIndex: ?usize = null;
+    for (graphRectangleIndexes.items) |graphIndex| {
+        if (newGraphRectangleIndex == null) newGraphRectangleIndex = graphIndex;
+        const graphRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];
+        if (newGraphRectangleIndex == graphIndex) {
+            var currentDeleteIndex: usize = 0;
+            while (graphRectangle.connectionIndexes.items.len > currentDeleteIndex) {
+                var removed = false;
+                for (graphRectangleIndexes.items) |deleteIndex| {
+                    if (deleteIndex == graphRectangle.connectionIndexes.items[currentDeleteIndex]) {
+                        _ = graphRectangle.connectionIndexes.swapRemove(currentDeleteIndex);
+                        removed = true;
+                        break;
+                    }
+                }
+                if (!removed) currentDeleteIndex += 1;
+            }
+            graphRectangle.tileRectangle = .{
+                .topLeftTileXY = .{ .tileX = chunk.chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH, .tileY = chunk.chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH },
+                .columnCount = mapZig.GameMap.CHUNK_LENGTH,
+                .rowCount = mapZig.GameMap.CHUNK_LENGTH,
+            };
+        } else {
+            nextCon: for (graphRectangle.connectionIndexes.items) |conIndex| {
+                for (graphRectangleIndexes.items) |skipGraphIndex| {
+                    if (skipGraphIndex == conIndex) continue :nextCon;
+                }
+                const newGraphRectangle = &state.pathfindingData.graphRectangles.items[newGraphRectangleIndex.?];
+                const otherGraphRectangle = &state.pathfindingData.graphRectangles.items[conIndex];
+                if (try appendConnectionWithCheck(newGraphRectangle, conIndex)) {
+                    _ = try appendConnectionWithCheck(otherGraphRectangle, newGraphRectangleIndex.?);
+                }
+            }
+        }
+    }
+    std.mem.sort(usize, graphRectangleIndexes.items, {}, comptime std.sort.desc(usize));
+    for (graphRectangleIndexes.items) |graphIndex| {
+        if (newGraphRectangleIndex == graphIndex) continue;
+        const toRemoveGraphRectangle = state.pathfindingData.graphRectangles.items[graphIndex];
+        try swapRemoveGraphIndex(graphIndex, state);
+        toRemoveGraphRectangle.connectionIndexes.deinit();
+    }
+    const newGraphRectangle = &state.pathfindingData.graphRectangles.items[newGraphRectangleIndex.?];
+    try setPaththingDataRectangle(newGraphRectangle.tileRectangle, newGraphRectangleIndex.?, state);
 }
 
 /// does not check if overlapping

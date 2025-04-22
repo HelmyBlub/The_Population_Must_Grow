@@ -177,8 +177,6 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             }
 
             if (building.citizensSpawned == 0) {
-                const buildRectangle = get1x1RectangleFromPosition(building.position);
-                try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.slow, state);
                 _ = chunk.buildings.swapRemove(i);
             }
             return;
@@ -201,8 +199,6 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             }
 
             if (building.citizensSpawned == 0) {
-                const buildRectangle = getBigBuildingRectangle(building.position);
-                try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.slow, state);
                 _ = chunk.bigBuildings.swapRemove(i);
             }
             return;
