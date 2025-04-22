@@ -6,3 +6,4 @@
 .zig-cache/*
 zig-out/*
 *.o
+temp*.txt

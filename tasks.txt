@@ -1,9 +1,7 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile delete
-        - chunk has no blocking tiles anymore 
-            - make one graph rectangle for chunk
-        - delete single blocking tile 
+        - continue: delete single blocking tile 
             - add single tile rectangle and connect
             - check for merge options
         - delete multiple tiles

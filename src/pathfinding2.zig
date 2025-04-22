@@ -131,6 +131,11 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 }, state);
                 if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
                     try clearChunkGraph(chunk, state);
+                } else {
+                    //TODO
+                    //determine overlap of chunk and tileRectangle
+                    // check each tile if blocking and if it should not block anymore
+                    // if changed add graph rectangle and check for merge
                 }
             }
         }
