@@ -258,7 +258,6 @@ fn clearChunkGraph(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
 
 /// does not check if overlapping
 fn getOverlappingRectangle(rect1: mapZig.MapTileRectangle, rect2: mapZig.MapTileRectangle) mapZig.MapTileRectangle {
-    std.debug.print("tempOverlapping: {}, {}\n", .{ rect1, rect2 });
     const left = @max(rect1.topLeftTileXY.tileX, rect2.topLeftTileXY.tileX);
     const top = @max(rect1.topLeftTileXY.tileY, rect2.topLeftTileXY.tileY);
     const right = @min(rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)), rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)));
