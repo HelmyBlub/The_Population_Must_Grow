@@ -1,12 +1,6 @@
 tasks:
 - pathfinding version 2, use "graph"
     - setup graph after blocking tile delete
-        - delete single blocking tile 
-            - add single tile rectangle and connect
-            - check for merge options
-        - delete multiple tiles
-            - check affected chunks
-            - handle each chunk by adjusted delete rectangle
         - check optimize graph?
     - bug: diagonal graph connections should not happen
     - restrict path search distance

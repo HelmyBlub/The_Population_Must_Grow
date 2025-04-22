@@ -4,7 +4,7 @@ const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const fontVulkanZig = @import("vulkan/fontVulkan.zig");
 
-const PATHFINDING_DEBUG = true;
+const PATHFINDING_DEBUG = false;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -115,12 +115,12 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
         if (PATHFINDING_DEBUG) std.debug.print("delete rectangle {}\n", .{rectangle});
         const startChunkX = @divFloor(rectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH);
         const startChunkY = @divFloor(rectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH);
-        var maxChunkX = @divFloor(rectangle.columnCount, mapZig.GameMap.CHUNK_LENGTH) + 1;
-        if (@mod(rectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @as(i32, @intCast(rectangle.columnCount)) > mapZig.GameMap.CHUNK_LENGTH) {
+        var maxChunkX = @divFloor(rectangle.columnCount - 1, mapZig.GameMap.CHUNK_LENGTH) + 1;
+        if (@mod(rectangle.topLeftTileXY.tileX, mapZig.GameMap.CHUNK_LENGTH) + @mod(@as(i32, @intCast(rectangle.columnCount)), mapZig.GameMap.CHUNK_LENGTH) > mapZig.GameMap.CHUNK_LENGTH) {
             maxChunkX += 1;
         }
-        var maxChunkY = @divFloor(rectangle.rowCount, mapZig.GameMap.CHUNK_LENGTH) + 1;
-        if (@mod(rectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) + @as(i32, @intCast(rectangle.rowCount)) > mapZig.GameMap.CHUNK_LENGTH) {
+        var maxChunkY = @divFloor(rectangle.rowCount - 1, mapZig.GameMap.CHUNK_LENGTH) + 1;
+        if (@mod(rectangle.topLeftTileXY.tileY, mapZig.GameMap.CHUNK_LENGTH) + @mod(@as(i32, @intCast(rectangle.rowCount)), mapZig.GameMap.CHUNK_LENGTH) > mapZig.GameMap.CHUNK_LENGTH) {
             maxChunkY += 1;
         }
         for (0..maxChunkX) |chunkAddX| {
@@ -258,6 +258,7 @@ fn clearChunkGraph(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
 
 /// does not check if overlapping
 fn getOverlappingRectangle(rect1: mapZig.MapTileRectangle, rect2: mapZig.MapTileRectangle) mapZig.MapTileRectangle {
+    std.debug.print("tempOverlapping: {}, {}\n", .{ rect1, rect2 });
     const left = @max(rect1.topLeftTileXY.tileX, rect2.topLeftTileXY.tileX);
     const top = @max(rect1.topLeftTileXY.tileY, rect2.topLeftTileXY.tileY);
     const right = @min(rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)), rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)));
