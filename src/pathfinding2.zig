@@ -956,35 +956,41 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
             if (state.pathfindingData.graphRectangles.items.len <= conIndex) {
                 std.debug.print("beforeCrash: {}, {}\n", .{ rectangle.tileRectangle, rectangle.index });
             }
-            const conRect = state.pathfindingData.graphRectangles.items[conIndex];
-            var conTileXy: mapZig.TileXY = .{
-                .tileX = conRect.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.tileRectangle.columnCount + 1, 2))),
-                .tileY = conRect.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(conRect.tileRectangle.rowCount + 1, 2))),
-            };
-            var rectTileXy: mapZig.TileXY = .{
-                .tileX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.columnCount + 1, 2))),
-                .tileY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.rowCount + 1, 2))),
-            };
-            const recOffsetX = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.columnCount)), 3);
-            const conOffsetX = @divFloor(@as(i32, @intCast(conRect.tileRectangle.columnCount)), 3);
-            if (conRect.tileRectangle.topLeftTileXY.tileX > rectangle.tileRectangle.topLeftTileXY.tileX) {
-                conTileXy.tileX -= conOffsetX;
-                rectTileXy.tileX += recOffsetX;
-            } else if (conRect.tileRectangle.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX) {
-                conTileXy.tileX += conOffsetX;
-                rectTileXy.tileX -= recOffsetX;
+            const conRect = state.pathfindingData.graphRectangles.items[conIndex].tileRectangle;
+            var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
+            var conTileXy: mapZig.TileXY = conRect.topLeftTileXY;
+            if (rectangle.tileRectangle.topLeftTileXY.tileX > conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) - 1 or conRect.topLeftTileXY.tileX > rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)) - 1) {
+                var middleY: i32 = 0;
+                if (rectangle.tileRectangle.rowCount < conRect.rowCount) {
+                    middleY = rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.rowCount, 2)));
+                } else {
+                    middleY = conRect.topLeftTileXY.tileY + @as(i32, @intCast(@divFloor(conRect.rowCount, 2)));
+                }
+                rectTileXy.tileY = middleY;
+                conTileXy.tileY = middleY;
+                if (rectTileXy.tileX < conTileXy.tileX) {
+                    rectTileXy.tileX = conTileXy.tileX - 1;
+                } else {
+                    conTileXy.tileX = rectTileXy.tileX - 1;
+                }
+            } else if (rectangle.tileRectangle.topLeftTileXY.tileY > conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) - 1 or conRect.topLeftTileXY.tileY > rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)) - 1) {
+                var middleX: i32 = 0;
+                if (rectangle.tileRectangle.columnCount < conRect.columnCount) {
+                    middleX = rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(rectangle.tileRectangle.columnCount, 2)));
+                } else {
+                    middleX = conRect.topLeftTileXY.tileX + @as(i32, @intCast(@divFloor(conRect.columnCount, 2)));
+                }
+                rectTileXy.tileX = middleX;
+                conTileXy.tileX = middleX;
+                if (rectTileXy.tileY < conTileXy.tileY) {
+                    rectTileXy.tileY = conTileXy.tileY - 1;
+                } else {
+                    conTileXy.tileY = rectTileXy.tileY - 1;
+                }
             }
-            const recOffsetY = @divFloor(@as(i32, @intCast(rectangle.tileRectangle.rowCount)), 3);
-            const conOffsetY = @divFloor(@as(i32, @intCast(conRect.tileRectangle.rowCount)), 3);
-            if (conRect.tileRectangle.topLeftTileXY.tileY > rectangle.tileRectangle.topLeftTileXY.tileY) {
-                conTileXy.tileY -= conOffsetY;
-                rectTileXy.tileY += recOffsetY;
-            } else if (conRect.tileRectangle.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY) {
-                conTileXy.tileY += conOffsetY;
-                rectTileXy.tileY -= recOffsetY;
-            }
-            const conArrowEndVulkan = mapZig.mapTileXyToVulkanSurfacePosition(conTileXy, state.camera);
-            const arrowStartVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectTileXy, state.camera);
+
+            const conArrowEndVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(conTileXy, state.camera);
+            const arrowStartVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(rectTileXy, state.camera);
             state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = connectionRectangleColor };
             state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ arrowStartVulkan.x, arrowStartVulkan.y }, .color = connectionRectangleColor };
 
