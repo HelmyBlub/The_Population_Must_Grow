@@ -151,17 +151,22 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
 
 fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
     // check each tile if blocking and if it should not block anymore
+    if (PATHFINDING_DEBUG) std.debug.print("checkForPathingBlockRemovalsInChunk {}\n", .{rectangle});
     for (0..rectangle.columnCount) |x| {
         for (0..rectangle.rowCount) |y| {
             const tileXY: mapZig.TileXY = .{
                 .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
                 .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
             };
+            if (PATHFINDING_DEBUG) std.debug.print("temp1\n", .{});
             const pathingIndex = getPathingIndexForTileXY(tileXY);
             if (chunk.pathingData.pathingData[pathingIndex] != null) continue;
-            if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTilePosition(tileXY), state) != null) {
+            if (PATHFINDING_DEBUG) std.debug.print("temp2\n", .{});
+            if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTileMiddlePosition(tileXY), state)) |thebuilding| {
+                if (PATHFINDING_DEBUG) std.debug.print("temp3 {}\n", .{thebuilding.*});
                 continue;
             }
+            if (PATHFINDING_DEBUG) std.debug.print("temp4\n", .{});
             // change tile to not blocking
             var newGraphRectangle: ChunkGraphRectangle = .{
                 .tileRectangle = .{ .topLeftTileXY = tileXY, .columnCount = 1, .rowCount = 1 },
@@ -462,8 +467,8 @@ pub fn splitGraphRectangle(rectangle: mapZig.MapTileRectangle, graphIndex: usize
                 if (rect1.topLeftTileXY.tileX <= rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)) and rect2.topLeftTileXY.tileX <= rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)) and
                     rect1.topLeftTileXY.tileY <= rect2.topLeftTileXY.tileY + @as(i32, @intCast(rect2.rowCount)) and rect2.topLeftTileXY.tileY <= rect1.topLeftTileXY.tileY + @as(i32, @intCast(rect1.rowCount)))
                 {
-                    if (rect1.topLeftTileXY.tileX < rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)) and rect2.topLeftTileXY.tileX <= rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)) or
-                        rect1.topLeftTileXY.tileY <= rect2.topLeftTileXY.tileY + @as(i32, @intCast(rect2.rowCount)) and rect2.topLeftTileXY.tileY <= rect1.topLeftTileXY.tileY + @as(i32, @intCast(rect1.rowCount)))
+                    if (rect1.topLeftTileXY.tileX < rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount)) and rect2.topLeftTileXY.tileX < rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount)) or
+                        rect1.topLeftTileXY.tileY < rect2.topLeftTileXY.tileY + @as(i32, @intCast(rect2.rowCount)) and rect2.topLeftTileXY.tileY < rect1.topLeftTileXY.tileY + @as(i32, @intCast(rect1.rowCount)))
                     {
                         if (toSplitGraphRectangle.index == index) removeOldRequired = false;
                         _ = try appendConnectionWithCheck(newGraphRectanglePtr, connectionGraphRectanglePtr.index);
