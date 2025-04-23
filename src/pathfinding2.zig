@@ -956,7 +956,8 @@ pub fn pathfindAStar(
 pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !main.Position {
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
     var result = citizen.position;
-    if (chunk.pathingData.pathingData[getPathingIndexForTileXY(mapZig.mapPositionToTileXy(citizen.position))]) |graphIndex| {
+    const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
+    if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
         var currentRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];
         const rand = std.crypto.random;
         for (0..2) |_| {
@@ -966,12 +967,23 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
         }
         const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
         const homePos: main.Position = if (citizen.homePosition) |homePosition| homePosition else .{ .x = 0, .y = 0 };
-        if (main.calculateDistance(randomReachableGraphTopLeftPos, homePos) < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5) {
+        const distanceHomeRandomPosition = main.calculateDistance(randomReachableGraphTopLeftPos, homePos);
+        if (distanceHomeRandomPosition < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5 or main.calculateDistance(homePos, citizen.position) > distanceHomeRandomPosition) {
             const finalRandomPosition = main.Position{
                 .x = randomReachableGraphTopLeftPos.x + @as(f32, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
                 .y = randomReachableGraphTopLeftPos.y + @as(f32, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
             };
             result = finalRandomPosition;
+        }
+    } else {
+        if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 }, state)) {
+            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 });
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 }, state)) {
+            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 });
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY }, state)) {
+            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY });
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY }, state)) {
+            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY });
         }
     }
     return result;
