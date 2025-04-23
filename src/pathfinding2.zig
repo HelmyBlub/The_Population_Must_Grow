@@ -158,15 +158,11 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
                 .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
                 .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
             };
-            if (PATHFINDING_DEBUG) std.debug.print("temp1\n", .{});
             const pathingIndex = getPathingIndexForTileXY(tileXY);
             if (chunk.pathingData.pathingData[pathingIndex] != null) continue;
-            if (PATHFINDING_DEBUG) std.debug.print("temp2\n", .{});
-            if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTileMiddlePosition(tileXY), state)) |thebuilding| {
-                if (PATHFINDING_DEBUG) std.debug.print("temp3 {}\n", .{thebuilding.*});
+            if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTileMiddlePosition(tileXY), state) != null) {
                 continue;
             }
-            if (PATHFINDING_DEBUG) std.debug.print("temp4\n", .{});
             // change tile to not blocking
             var newGraphRectangle: ChunkGraphRectangle = .{
                 .tileRectangle = .{ .topLeftTileXY = tileXY, .columnCount = 1, .rowCount = 1 },

@@ -160,7 +160,7 @@ pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *
     return getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
 }
 
-pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimState) !void {
+pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.ChatSimState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.buildings.items, 0..) |*building, i| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
@@ -182,27 +182,40 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
             return;
         }
     }
-    for (chunk.bigBuildings.items, 0..) |*building, i| {
-        if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
-            var index = chunk.citizens.items.len;
-            while (index > 0 and state.citizenCounter > building.citizensSpawned) {
-                if (building.citizensSpawned == 0) {
-                    break;
+    if (optEntireDemolishRectangle) |entireDemolishRectangle| {
+        for (chunk.bigBuildings.items, 0..) |*building, i| {
+            if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
+                const tileXYOfBuilding = mapPositionToTileXy(building.position);
+                const buildingTileRectangle: MapTileRectangle = .{
+                    .topLeftTileXY = .{ .tileX = tileXYOfBuilding.tileX - 1, .tileY = tileXYOfBuilding.tileY - 1 },
+                    .columnCount = 2,
+                    .rowCount = 2,
+                };
+                //deletion rectangle need to be over entire building
+                if (entireDemolishRectangle.topLeftTileXY.tileX > buildingTileRectangle.topLeftTileXY.tileX or
+                    entireDemolishRectangle.topLeftTileXY.tileX + @as(i32, @intCast(entireDemolishRectangle.columnCount)) < buildingTileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(buildingTileRectangle.columnCount)) or
+                    entireDemolishRectangle.topLeftTileXY.tileY > buildingTileRectangle.topLeftTileXY.tileY or
+                    entireDemolishRectangle.topLeftTileXY.tileY + @as(i32, @intCast(entireDemolishRectangle.rowCount)) < buildingTileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(buildingTileRectangle.rowCount))) return;
+                var index = chunk.citizens.items.len;
+                while (index > 0 and state.citizenCounter > building.citizensSpawned) {
+                    if (building.citizensSpawned == 0) {
+                        break;
+                    }
+                    index -= 1;
+                    const citizen = chunk.citizens.items[index];
+                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                        citizen.moveTo.deinit();
+                        _ = chunk.citizens.swapRemove(index);
+                        state.citizenCounter -= 1;
+                        building.citizensSpawned -= 1;
+                    }
                 }
-                index -= 1;
-                const citizen = chunk.citizens.items[index];
-                if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
-                    citizen.moveTo.deinit();
-                    _ = chunk.citizens.swapRemove(index);
-                    state.citizenCounter -= 1;
-                    building.citizensSpawned -= 1;
-                }
-            }
 
-            if (building.citizensSpawned == 0) {
-                _ = chunk.bigBuildings.swapRemove(i);
+                if (building.citizensSpawned == 0) {
+                    _ = chunk.bigBuildings.swapRemove(i);
+                }
+                return;
             }
-            return;
         }
     }
     for (chunk.trees.items, 0..) |tree, i| {
@@ -607,7 +620,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
                     break;
                 }
             }
-            try demolishAnythingOnPosition(cornerBuilding.position, state);
+            try demolishAnythingOnPosition(cornerBuilding.position, null, state);
         }
     }
 }

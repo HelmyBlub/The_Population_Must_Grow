@@ -203,7 +203,7 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
                 chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, state);
             }
             if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
-                try mapZig.demolishAnythingOnPosition(position, state);
+                try mapZig.demolishAnythingOnPosition(position, mapTileRectangle, state);
                 continue;
             }
 
@@ -217,7 +217,7 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
                 const newBuilding: mapZig.Building = .{
                     .position = .{ .x = position.x + mapZig.GameMap.TILE_SIZE / 2, .y = position.y + mapZig.GameMap.TILE_SIZE / 2 },
                     .type = mapZig.BUILDING_TYPE_BIG_HOUSE,
-                    .woodRequired = 16,
+                    .woodRequired = 1,
                 };
                 _ = try mapZig.placeBuilding(newBuilding, state, true);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {

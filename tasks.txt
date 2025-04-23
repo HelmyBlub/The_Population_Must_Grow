@@ -1,6 +1,5 @@
 tasks:
 - pathfinding version 2, use "graph"
-    - bug: diagonal graph connections should not happen
     - restrict path search distance
     - random move around only on pathes
     - compare performance to pathfind1
