@@ -4,7 +4,7 @@ const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const fontVulkanZig = @import("vulkan/fontVulkan.zig");
 
-const PATHFINDING_DEBUG = false;
+const PATHFINDING_DEBUG = true;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -13,6 +13,7 @@ pub const PathfindingData = struct {
     neighbors: std.ArrayList(*ChunkGraphRectangle),
     graphRectangles: std.ArrayList(ChunkGraphRectangle),
     tempUsizeList: std.ArrayList(usize),
+    tempUsizeList2: std.ArrayList(usize),
 };
 
 pub const ChunkGraphRectangle = struct {
@@ -94,20 +95,23 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 if (PATHFINDING_DEBUG) std.debug.print("start change graph\n", .{});
                 if (PATHFINDING_DEBUG) std.debug.print("    placed blocking rectangle: {}\n", .{chunkXYRectangle});
-                const graphRectangleIndexes = try getGraphRectanglesOfRectangle(chunkXYRectangle, chunk, state);
-                for (0..chunkXYRectangle.columnCount) |x| {
-                    for (0..chunkXYRectangle.rowCount) |y| {
-                        const pathingIndex = getPathingIndexForTileXY(.{
-                            .tileX = chunkXYRectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
-                            .tileY = chunkXYRectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
-                        });
-                        chunk.pathingData.pathingData[pathingIndex] = null;
+                const pathingIndexForGraphRectangleIndexes = try getPathingIndexesForUniqueGraphRectanglesOfRectangle(chunkXYRectangle, chunk, state);
+                for (pathingIndexForGraphRectangleIndexes) |pathingIndex| {
+                    if (chunk.pathingData.pathingData[pathingIndex]) |graphIndex| {
+                        const graphTileRectangle = state.pathfindingData.graphRectangles.items[graphIndex].tileRectangle;
+                        const rectangleLimitedToGraphRectangle: mapZig.MapTileRectangle = getOverlappingRectangle(chunkXYRectangle, graphTileRectangle);
+                        for (0..rectangleLimitedToGraphRectangle.columnCount) |x| {
+                            for (0..rectangleLimitedToGraphRectangle.rowCount) |y| {
+                                const pathingIndexOverlapping = getPathingIndexForTileXY(.{
+                                    .tileX = rectangleLimitedToGraphRectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
+                                    .tileY = rectangleLimitedToGraphRectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
+                                });
+                                chunk.pathingData.pathingData[pathingIndexOverlapping] = null;
+                            }
+                        }
+
+                        try splitGraphRectangle(rectangleLimitedToGraphRectangle, graphIndex, chunk, state);
                     }
-                }
-                for (graphRectangleIndexes) |graphRectangleIndex| {
-                    const graphTileRectangle = state.pathfindingData.graphRectangles.items[graphRectangleIndex].tileRectangle;
-                    const rectangleLimitedToGraphRectangle: mapZig.MapTileRectangle = getOverlappingRectangle(chunkXYRectangle, graphTileRectangle);
-                    try splitGraphRectangle(rectangleLimitedToGraphRectangle, graphRectangleIndex, chunk, state);
                 }
             }
         }
@@ -272,10 +276,12 @@ fn getOverlappingRectangle(rect1: mapZig.MapTileRectangle, rect2: mapZig.MapTile
     };
 }
 
-fn getGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, state: *main.ChatSimState) ![]usize {
+fn getPathingIndexesForUniqueGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, state: *main.ChatSimState) ![]usize {
     state.pathfindingData.tempUsizeList.clearRetainingCapacity();
+    state.pathfindingData.tempUsizeList2.clearRetainingCapacity();
 
-    var result = &state.pathfindingData.tempUsizeList;
+    var graphRecIndexes = &state.pathfindingData.tempUsizeList;
+    var result = &state.pathfindingData.tempUsizeList2;
     for (0..rectangle.columnCount) |x| {
         for (0..rectangle.rowCount) |y| {
             const pathingIndex = getPathingIndexForTileXY(.{
@@ -285,14 +291,15 @@ fn getGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *map
             const optGraphIndex = chunk.pathingData.pathingData[pathingIndex];
             if (optGraphIndex) |graphIndex| {
                 var exists = false;
-                for (result.items) |item| {
+                for (graphRecIndexes.items) |item| {
                     if (item == graphIndex) {
                         exists = true;
                         break;
                     }
                 }
                 if (!exists) {
-                    try result.append(graphIndex);
+                    try result.append(pathingIndex);
+                    try graphRecIndexes.append(graphIndex);
                 }
             }
         }
@@ -549,14 +556,14 @@ fn appendConnectionWithCheck(addConnectionbToGraph: *ChunkGraphRectangle, newCon
     return false;
 }
 
-fn printGraphData(addConnectionbToGraph: *const ChunkGraphRectangle) void {
+fn printGraphData(graphRectangle: *const ChunkGraphRectangle) void {
     std.debug.print("rec(id: {}, topLeft: {}|{}, c:{}, r:{}, connections:{any})\n", .{
-        addConnectionbToGraph.index,
-        addConnectionbToGraph.tileRectangle.topLeftTileXY.tileX,
-        addConnectionbToGraph.tileRectangle.topLeftTileXY.tileY,
-        addConnectionbToGraph.tileRectangle.columnCount,
-        addConnectionbToGraph.tileRectangle.rowCount,
-        addConnectionbToGraph.connectionIndexes.items,
+        graphRectangle.index,
+        graphRectangle.tileRectangle.topLeftTileXY.tileX,
+        graphRectangle.tileRectangle.topLeftTileXY.tileY,
+        graphRectangle.tileRectangle.columnCount,
+        graphRectangle.tileRectangle.rowCount,
+        graphRectangle.connectionIndexes.items,
     });
 }
 
@@ -759,6 +766,7 @@ pub fn createPathfindingData(allocator: std.mem.Allocator) !PathfindingData {
         .graphRectangles = std.ArrayList(ChunkGraphRectangle).init(allocator),
         .neighbors = std.ArrayList(*ChunkGraphRectangle).init(allocator),
         .tempUsizeList = std.ArrayList(usize).init(allocator),
+        .tempUsizeList2 = std.ArrayList(usize).init(allocator),
     };
 }
 
@@ -776,6 +784,7 @@ pub fn destoryPathfindingData(data: *PathfindingData) void {
     }
     data.graphRectangles.deinit();
     data.tempUsizeList.deinit();
+    data.tempUsizeList2.deinit();
 }
 
 pub fn heuristic(a: *ChunkGraphRectangle, b: *ChunkGraphRectangle) i32 {

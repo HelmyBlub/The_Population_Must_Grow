@@ -192,6 +192,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, state: *main.ChatSimS
                 index -= 1;
                 const citizen = chunk.citizens.items[index];
                 if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                    citizen.moveTo.deinit();
                     _ = chunk.citizens.swapRemove(index);
                     state.citizenCounter -= 1;
                     building.citizensSpawned -= 1;
@@ -489,6 +490,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
+        try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.slow, state);
         try chunk.bigBuildings.append(tempBuilding);
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
