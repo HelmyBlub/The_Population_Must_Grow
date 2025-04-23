@@ -1,7 +1,8 @@
 tasks:
 - pathfinding version 2, use "graph"
-    - restrict path search distance
     - random move around only on pathes
+    - restrict path search distance
+        - check once with building bad pathing
     - compare performance to pathfind1
 
 - features:

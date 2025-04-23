@@ -17,6 +17,7 @@ pub const Citizen: type = struct {
     homePosition: ?Position = null,
     foodLevel: f32 = 1,
     deadUntil: ?u32 = null,
+    pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
 
     pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{
@@ -251,7 +252,7 @@ pub const Citizen: type = struct {
 
         var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
         var iteration: u8 = 0;
-        const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+        const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
         while (closestCitizen == null and iteration < maxIterations) {
             const loops = iteration * 2 + 1;
             for (0..loops) |x| {
@@ -300,7 +301,7 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
     var resultPotatoField: ?*mapZig.PotatoField = null;
     var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
     var iteration: u8 = 0;
-    const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+    const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
     while (resultPotatoField == null and iteration < maxIterations) {
         const loops = iteration * 2 + 1;
         for (0..loops) |x| {
@@ -335,7 +336,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
     var fastestDistance: f32 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
     var iteration: u8 = 0;
-    const maxIterations: u8 = @divFloor(50, mapZig.GameMap.CHUNK_LENGTH);
+    const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
     while (closestTree == null and iteration < maxIterations) {
         const loops = iteration * 2 + 1;
         for (0..loops) |x| {
@@ -369,14 +370,6 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
 }
 
 fn setRandomMoveTo(citizen: *Citizen, state: *main.ChatSimState) !void {
-    const rand = std.crypto.random;
-    var randomPos: main.Position = .{
-        .x = rand.float(f32) * 400.0 - 200.0,
-        .y = rand.float(f32) * 400.0 - 200.0,
-    };
-    if (citizen.homePosition) |pos| {
-        randomPos.x += pos.x;
-        randomPos.y += pos.y;
-    }
+    const randomPos = try main.pathfindingZig.getRandomClosePathingPosition(citizen, state);
     try citizen.moveToPosition(randomPos, state);
 }

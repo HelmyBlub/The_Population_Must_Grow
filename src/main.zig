@@ -276,7 +276,7 @@ fn tick(state: *ChatSimState) !void {
 
     for (0..state.map.activeChunkKeys.items.len) |i| {
         const chunkKey = state.map.activeChunkKeys.items[i];
-        try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 20);
+        try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
         const chunk = state.map.chunks.getPtr(chunkKey).?;
         try Citizen.citizensTick(chunk, state);
         for (chunk.trees.items) |*tree| {

@@ -238,6 +238,13 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
     }
 }
 
+pub fn getTileRectangleMiddlePosition(tileRectangle: MapTileRectangle) main.Position {
+    return .{
+        .x = @as(f32, @floatFromInt(tileRectangle.topLeftTileXY.tileX * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.columnCount * GameMap.TILE_SIZE, 2))))),
+        .y = @as(f32, @floatFromInt(tileRectangle.topLeftTileXY.tileY * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.rowCount * GameMap.TILE_SIZE, 2))))),
+    };
+}
+
 pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !?MapObject {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.buildings.items) |*building| {

@@ -891,6 +891,7 @@ pub fn pathfindAStar(
         .priority = heuristic(start, goal),
     };
     try openSet.append(startNode);
+    const maxSearchDistance = (main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE + mapZig.GameMap.CHUNK_LENGTH * 2) * mapZig.GameMap.TILE_SIZE;
 
     while (openSet.items.len > 0) {
         var currentIndex: usize = 0;
@@ -914,7 +915,12 @@ pub fn pathfindAStar(
             if (state.pathfindingData.graphRectangles.items.len <= conIndex) {
                 if (PATHFINDING_DEBUG) std.debug.print("beforePathfinding crash: {}, {}", .{ current.rectangle.tileRectangle, current.rectangle.index });
             }
-            try neighbors.append(&state.pathfindingData.graphRectangles.items[conIndex]);
+            const neighborGraph = &state.pathfindingData.graphRectangles.items[conIndex];
+            const neighborMiddle = mapZig.getTileRectangleMiddlePosition(neighborGraph.tileRectangle);
+            const citizenDistancePos = if (citizen.homePosition) |homePosition| homePosition else citizen.position;
+            if (@abs(neighborMiddle.x - citizenDistancePos.x) < maxSearchDistance and @abs(neighborMiddle.y - citizenDistancePos.y) < maxSearchDistance) {
+                try neighbors.append(neighborGraph);
+            }
         }
 
         for (neighbors.items) |neighbor| {
@@ -945,6 +951,30 @@ pub fn pathfindAStar(
         }
     }
     if (PATHFINDING_DEBUG) std.debug.print("pathfindings found no available path", .{});
+}
+
+pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !main.Position {
+    const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
+    var result = citizen.position;
+    if (chunk.pathingData.pathingData[getPathingIndexForTileXY(mapZig.mapPositionToTileXy(citizen.position))]) |graphIndex| {
+        var currentRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];
+        const rand = std.crypto.random;
+        for (0..2) |_| {
+            if (currentRectangle.connectionIndexes.items.len == 0) break;
+            const randomConnectionIndex: usize = @intFromFloat(rand.float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
+            currentRectangle = &state.pathfindingData.graphRectangles.items[currentRectangle.connectionIndexes.items[randomConnectionIndex]];
+        }
+        const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
+        const homePos: main.Position = if (citizen.homePosition) |homePosition| homePosition else .{ .x = 0, .y = 0 };
+        if (main.calculateDistance(randomReachableGraphTopLeftPos, homePos) < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5) {
+            const finalRandomPosition = main.Position{
+                .x = randomReachableGraphTopLeftPos.x + @as(f32, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
+                .y = randomReachableGraphTopLeftPos.y + @as(f32, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
+            };
+            result = finalRandomPosition;
+        }
+    }
+    return result;
 }
 
 pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
