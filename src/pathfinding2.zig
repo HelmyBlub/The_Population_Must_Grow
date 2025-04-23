@@ -4,7 +4,7 @@ const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const fontVulkanZig = @import("vulkan/fontVulkan.zig");
 
-const PATHFINDING_DEBUG = true;
+const PATHFINDING_DEBUG = false;
 
 pub const PathfindingData = struct {
     openSet: std.ArrayList(Node),
@@ -170,17 +170,22 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
                 .connectionIndexes = std.ArrayList(usize).init(state.allocator),
             };
             chunk.pathingData.pathingData[pathingIndex] = newGraphRectangle.index;
-            //check neighbors
 
+            //check neighbors
             const neighborTileXYs = [_]mapZig.TileXY{
                 .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY },
                 .{ .tileX = tileXY.tileX + 1, .tileY = tileXY.tileY },
                 .{ .tileX = tileXY.tileX, .tileY = tileXY.tileY - 1 },
                 .{ .tileX = tileXY.tileX, .tileY = tileXY.tileY + 1 },
             };
+            var neighborChunk = chunk;
             for (neighborTileXYs) |neighborTileXY| {
+                const chunkXY = mapZig.getChunkXyForTileXy(neighborTileXY);
+                if (chunkXY.chunkX != neighborChunk.chunkXY.chunkX or chunkXY.chunkY != neighborChunk.chunkXY.chunkY) {
+                    neighborChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+                }
                 const neighborPathingIndex = getPathingIndexForTileXY(neighborTileXY);
-                if (chunk.pathingData.pathingData[neighborPathingIndex]) |neighborGraphIndex| {
+                if (neighborChunk.pathingData.pathingData[neighborPathingIndex]) |neighborGraphIndex| {
                     const neighborGraphRectangle = &state.pathfindingData.graphRectangles.items[neighborGraphIndex];
                     try newGraphRectangle.connectionIndexes.append(neighborGraphIndex);
                     try neighborGraphRectangle.connectionIndexes.append(newGraphRectangle.index);
@@ -1017,7 +1022,9 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
             const conRect = state.pathfindingData.graphRectangles.items[conIndex].tileRectangle;
             var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
             var conTileXy: mapZig.TileXY = conRect.topLeftTileXY;
-            if (rectangle.tileRectangle.topLeftTileXY.tileY < conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount))) {
+            if (rectangle.tileRectangle.topLeftTileXY.tileY < conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)) and
+                rectangle.tileRectangle.topLeftTileXY.tileX <= conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX <= rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)))
+            {
                 const maxTop = @max(rectangle.tileRectangle.topLeftTileXY.tileY, conRect.topLeftTileXY.tileY);
                 const minBottom = @min(rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)), conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)));
                 const middleY = @divFloor(maxTop + minBottom, 2);
@@ -1028,7 +1035,9 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
                 } else {
                     conTileXy.tileX = rectTileXy.tileX - 1;
                 }
-            } else if (rectangle.tileRectangle.topLeftTileXY.tileX < conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount))) {
+            } else if (rectangle.tileRectangle.topLeftTileXY.tileX < conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)) and
+                rectangle.tileRectangle.topLeftTileXY.tileY <= conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY <= rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)))
+            {
                 const maxLeft = @max(rectangle.tileRectangle.topLeftTileXY.tileX, conRect.topLeftTileXY.tileX);
                 const minRight = @min(rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)), conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)));
                 const middleX = @divFloor(maxLeft + minRight, 2);
