@@ -1,8 +1,6 @@
 tasks:
 - pathfinding version 2, use "graph"
-    - citizens who can not find a path to destination should no check each tick again
-    - compare performance to pathfind1
-        - clean up pathfind1
+    - clean up pathfind1
 
 - features:
     - walking pathes
