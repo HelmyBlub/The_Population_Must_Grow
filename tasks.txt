@@ -1,9 +1,8 @@
 tasks:
 - pathfinding version 2, use "graph"
-    - random move around only on pathes
-    - restrict path search distance
-        - check once with building bad pathing
+    - citizens who can not find a path to destination should no check each tick again
     - compare performance to pathfind1
+        - clean up pathfind1
 
 - features:
     - walking pathes
@@ -13,9 +12,8 @@ tasks:
     - paint order?
     - window resizing?
     - animations?
-    - decoration?
-    - UX?
     - sound?
+    - UX?
 
 - performance and multicore when all features implemented
 - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%

@@ -853,15 +853,16 @@ pub fn reconstructPath(
     }
 }
 
+// returns false if no path found
 pub fn pathfindAStar(
     startTile: mapZig.TileXY,
     goalTile: mapZig.TileXY,
     citizen: *main.Citizen,
     state: *main.ChatSimState,
-) !void {
+) !bool {
     if (try isTilePathBlocking(goalTile, state)) {
         if (PATHFINDING_DEBUG) std.debug.print("goal on blocking tile {}\n", .{goalTile});
-        return;
+        return false;
     }
     var openSet = &state.pathfindingData.openSet;
     openSet.clearRetainingCapacity();
@@ -882,7 +883,7 @@ pub fn pathfindAStar(
             startRecIndex = rightOfStart;
         } else {
             if (PATHFINDING_DEBUG) std.debug.print("stuck on blocking tile", .{});
-            return;
+            return false;
         }
     }
     const start = &state.pathfindingData.graphRectangles.items[startRecIndex.?];
@@ -910,7 +911,7 @@ pub fn pathfindAStar(
 
         if (cameFrom.ctx.eql(current.rectangle, goal)) {
             try reconstructPath(cameFrom, current.rectangle, goalTile, citizen);
-            return;
+            return true;
         }
 
         _ = openSet.swapRemove(currentIndex);
@@ -956,6 +957,7 @@ pub fn pathfindAStar(
         }
     }
     if (PATHFINDING_DEBUG) std.debug.print("pathfindings found no available path", .{});
+    return false;
 }
 
 pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !main.Position {

@@ -17,7 +17,9 @@ pub const Citizen: type = struct {
     homePosition: ?Position = null,
     foodLevel: f32 = 1,
     deadUntil: ?u32 = null,
+    pathSearchFailedTimeMs: ?u32 = null,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
+    pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
 
     pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{
@@ -53,10 +55,20 @@ pub const Citizen: type = struct {
         // try self.moveTo.append(target);
         const start = mapZig.mapPositionToTileXy(self.position);
         const goal = mapZig.mapPositionToTileXy(target);
-        try main.pathfindingZig.pathfindAStar(start, goal, self, state);
+        const foundPath = try main.pathfindingZig.pathfindAStar(start, goal, self, state);
+        if (!foundPath) {
+            self.pathSearchFailedTimeMs = state.gameTimeMs;
+        }
     }
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
+        if (citizen.pathSearchFailedTimeMs) |failedSearchTime| {
+            if (failedSearchTime + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS < state.gameTimeMs) {
+                citizen.pathSearchFailedTimeMs = null;
+            } else {
+                return;
+            }
+        }
         if (citizen.potatoPosition) |potatoPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getPotatoFieldOnPosition(potatoPosition, state)) |farmTile| {
