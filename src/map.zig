@@ -257,14 +257,15 @@ pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !
             return .{ .bigBuilding = building };
         }
     }
-    for (chunk.trees.items) |*tree| {
-        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
-            return .{ .tree = tree };
-        }
-    }
+
     for (chunk.potatoFields.items) |*field| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
             return .{ .potatoField = field };
+        }
+    }
+    for (chunk.trees.items) |*tree| {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+            return .{ .tree = tree };
         }
     }
     for (chunk.pathes.items) |*pathPos| {

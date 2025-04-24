@@ -16,15 +16,17 @@ pub const Citizen: type = struct {
     hasWood: bool = false,
     homePosition: ?Position = null,
     foodLevel: f32 = 1,
-    deadUntil: ?u32 = null,
-    pathSearchFailedTimeMs: ?u32 = null,
+    actionFailedWaitUntilTimeMs: ?u32 = null,
+    foodSearchRepeatWaitUntilTimeMs: ?u32 = null,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
     pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
+    pub const MOVE_SPEED_STARVING = 0.5;
+    pub const MOVE_SPEED_NORMAL = 2.0;
 
     pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{
             .position = .{ .x = 0, .y = 0 },
-            .moveSpeed = 2.0,
+            .moveSpeed = Citizen.MOVE_SPEED_NORMAL,
             .moveTo = std.ArrayList(main.Position).init(allocator),
         };
     }
@@ -38,15 +40,8 @@ pub const Citizen: type = struct {
     pub fn citizensTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
         for (0..chunk.citizens.items.len) |i| {
             const citizen: *Citizen = &chunk.citizens.items[i];
-            if (citizen.deadUntil) |deadUntil| {
-                if (state.gameTimeMs > deadUntil) {
-                    citizen.deadUntil = null;
-                    citizen.foodLevel = 1;
-                }
-            } else {
-                try foodTick(citizen, state);
-                try citizenMove(citizen, state);
-            }
+            try foodTick(citizen, state);
+            try citizenMove(citizen, state);
         }
     }
 
@@ -57,14 +52,14 @@ pub const Citizen: type = struct {
         const goal = mapZig.mapPositionToTileXy(target);
         const foundPath = try main.pathfindingZig.pathfindAStar(start, goal, self, state);
         if (!foundPath) {
-            self.pathSearchFailedTimeMs = state.gameTimeMs;
+            self.actionFailedWaitUntilTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
         }
     }
 
     pub fn citizenMove(citizen: *Citizen, state: *main.ChatSimState) !void {
-        if (citizen.pathSearchFailedTimeMs) |failedSearchTime| {
-            if (failedSearchTime + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS < state.gameTimeMs) {
-                citizen.pathSearchFailedTimeMs = null;
+        if (citizen.actionFailedWaitUntilTimeMs) |waitUntilTime| {
+            if (waitUntilTime < state.gameTimeMs) {
+                citizen.actionFailedWaitUntilTimeMs = null;
             } else {
                 return;
             }
@@ -83,6 +78,9 @@ pub const Citizen: type = struct {
                             citizen.potatoPosition = null;
                             citizen.foodLevel += 0.5;
                             citizen.executingUntil = null;
+                            if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
+                                citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
+                            }
                         }
                     } else {
                         try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y }, state);
@@ -295,16 +293,19 @@ pub const Citizen: type = struct {
 
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const hungryBefore = !(citizen.foodLevel > 0.5);
-    citizen.foodLevel -= 1.0 / 60.0 / 60.0;
+    citizen.foodLevel -= 2.0 / 60.0 / 60.0;
+    if (citizen.foodSearchRepeatWaitUntilTimeMs != null and citizen.foodSearchRepeatWaitUntilTimeMs.? > state.gameTimeMs) return;
     if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.executingUntil != null or (hungryBefore and citizen.moveTo.items.len > 0)) return;
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
         potato.citizenOnTheWay += 1;
         citizen.potatoPosition = potato.position;
         citizen.moveTo.clearAndFree();
-    } else if (citizen.foodLevel <= 0) {
-        citizen.deadUntil = state.gameTimeMs + 60_000;
-        if (citizen.homePosition) |pos| citizen.position = pos;
-        std.debug.print("citizen starved to death\n", .{});
+    } else {
+        citizen.foodSearchRepeatWaitUntilTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+        if (citizen.moveSpeed == Citizen.MOVE_SPEED_NORMAL and citizen.foodLevel <= 0) {
+            citizen.moveSpeed = Citizen.MOVE_SPEED_STARVING;
+            std.debug.print("citizen starving\n", .{});
+        }
     }
 }
 
