@@ -1,9 +1,19 @@
 tasks:
 
 - features:
-    - day/night cycle? citizen go home to sleep at night?
-    - paint order?
+    - paint order / depth buffering?
+        - follow tutorial:
+            - https://vulkan-tutorial.com/Depth_buffering
+            - globalAlpha now working anymore
+            - zig test does again not stop anymore
+        - compare performance
+            - performance before: 
+                - gamespeed 0.1 => 1049 fps (but display top left seemed higher)
+                - gamespeed 1 => 410
     - window resizing?
+        - follow tutorial:
+            - https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
+        - also affects paint order/ depth buffering
     - animations?
     - sound?
     - UX?

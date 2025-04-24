@@ -14,7 +14,8 @@ layout(location = 1) out uint spriteIndex;
 layout(location = 2) out uint size;
 
 void main() {
-    gl_Position = ubo.transformation * vec4(inPosition + ubo.translate, 1.0, 1);
+    gl_Position = ubo.transformation * vec4(inPosition + ubo.translate, 1, 1);
+    gl_Position[2] = 1 - (gl_Position[1] + 1) / 2 / gl_Position[3];
     spriteIndex = inSpriteIndex;
     scale[0] = ubo.transformation[0][0];
     scale[1] = ubo.transformation[1][1];

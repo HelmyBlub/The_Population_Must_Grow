@@ -9,4 +9,5 @@ layout(binding = 1) uniform sampler2D texSampler[];
 
 void main() {
     outColor = texture(texSampler[nonuniformEXT(spriteIndex)], fragTexCoord);
+    if (outColor.a < 0.01) discard;
 }

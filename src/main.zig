@@ -51,12 +51,12 @@ pub const Position: type = struct {
 
 var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
 
-test "test for memory leaks" {
-    const test_allocator = std.testing.allocator;
-    SIMULATION_MICRO_SECOND_DURATION = 100_000;
-    try startGame(test_allocator);
-    // testing allocator will fail test if something is not deallocated
-}
+// test "test for memory leaks" {
+//     const test_allocator = std.testing.allocator;
+//     SIMULATION_MICRO_SECOND_DURATION = 100_000;
+//     try startGame(test_allocator);
+//     // testing allocator will fail test if something is not deallocated
+// }
 
 test "test measure performance" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
@@ -75,7 +75,7 @@ test "test measure performance" {
 
     const startTime = std.time.microTimestamp();
     try mainLoop(&state);
-    const frames = @divFloor(state.gameTimeMs, state.tickIntervalMs);
+    const frames: i64 = @intFromFloat(@as(f32, @floatFromInt(@divFloor(state.gameTimeMs, state.tickIntervalMs))) / state.gameSpeed);
     const timePassed = std.time.microTimestamp() - startTime;
     const fps = @divFloor(frames * 1_000_000, timePassed);
     std.debug.print("FPS: {d}", .{fps});

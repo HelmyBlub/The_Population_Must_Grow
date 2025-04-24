@@ -136,6 +136,7 @@ pub fn initFont(state: *main.ChatSimState) !void {
         state.vkState.font.textureImage,
         vk.VK_FORMAT_R8G8B8A8_SRGB,
         state.vkState.font.mipLevels,
+        vk.VK_IMAGE_ASPECT_COLOR_BIT,
         &state.vkState,
     );
 }
