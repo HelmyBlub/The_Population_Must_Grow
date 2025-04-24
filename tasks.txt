@@ -1,10 +1,6 @@
 tasks:
 
 - features:
-    - change penalty for not enough food?
-        - low on food => slower, less productive citizen, might not work most tasks, only does potato planting
-    - bug: potato not planted   
-        - reproduce: tree on farm tile?
     - day/night cycle? citizen go home to sleep at night?
     - paint order?
     - window resizing?

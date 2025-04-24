@@ -293,7 +293,7 @@ pub const Citizen: type = struct {
 
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const hungryBefore = !(citizen.foodLevel > 0.5);
-    citizen.foodLevel -= 2.0 / 60.0 / 60.0;
+    citizen.foodLevel -= 1.0 / 60.0 / 60.0;
     if (citizen.foodSearchRepeatWaitUntilTimeMs != null and citizen.foodSearchRepeatWaitUntilTimeMs.? > state.gameTimeMs) return;
     if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.executingUntil != null or (hungryBefore and citizen.moveTo.items.len > 0)) return;
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
