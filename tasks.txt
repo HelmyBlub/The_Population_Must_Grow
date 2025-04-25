@@ -1,16 +1,36 @@
 tasks:
 
 - features:
-    - window resizing?
-        - bug: minimize? does not like width height 0?
-        - follow tutorial:
-            - https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
     - animations?
+        - different based on zoom
+        - citizen
+            - moving 4 directions
+                - far away
+                    - simple 4 directions, single image
+                - else
+                    - moving hands/ears/feet/?eyes? animation
+                    - thin version when starving
+            - only if when zoom not to far away
+                - tree cutting  
+                    - move hands
+                    - visulize swinging axe for cutting tree
+                - carrying wood
+                    - wood planks carrying over head with hands
+                - construct building
+                    - visulize swinging hammer with hands
+                - planting tree/potato
+                    - hands down and moving around a bit
+                - harvest potato
+                    - pick up potato
+                - eating potato
+                    - potato and hands to mouth, mouth moving, potato bites bit by bit
+
     - sound?
     - UX?
     - performance
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
+    - save game progress?
 
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
