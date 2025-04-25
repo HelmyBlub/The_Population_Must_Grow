@@ -2,9 +2,9 @@ tasks:
 
 - features:
     - window resizing?
+        - bug: minimize? does not like width height 0?
         - follow tutorial:
             - https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
-        - also affects paint order/ depth buffering
     - animations?
     - sound?
     - UX?

@@ -36,7 +36,7 @@ pub const Vk_State = struct {
     pipeline_layout: vk.VkPipelineLayout = undefined,
     graphics_pipeline: vk.VkPipeline = undefined,
     graphicsPipelineLayer2: vk.VkPipeline = undefined,
-    framebuffers: []vk.VkFramebuffer = undefined,
+    framebuffers: ?[]vk.VkFramebuffer = null,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
     imageAvailableSemaphore: []vk.VkSemaphore = undefined,
@@ -270,11 +270,12 @@ fn cleanupSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) void {
         vk.vkDestroyImageView(vkState.logicalDevice, imgvw, null);
     }
     allocator.free(vkState.swapchain_imageviews);
-    for (vkState.framebuffers) |fb| {
+    for (vkState.framebuffers.?) |fb| {
         vk.vkDestroyFramebuffer(vkState.logicalDevice, fb, null);
     }
     vk.vkDestroySwapchainKHR(vkState.logicalDevice, vkState.swapchain, null);
-    allocator.free(vkState.framebuffers);
+    allocator.free(vkState.framebuffers.?);
+    vkState.framebuffers = null;
     allocator.free(vkState.swapchain_info.images);
     allocator.free(vkState.swapchain_info.support.formats);
     allocator.free(vkState.swapchain_info.support.presentModes);
@@ -284,12 +285,26 @@ fn recreateSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
 
     cleanupSwapChain(vkState, allocator);
+    _ = try createSwapChainRelatedStuffAndCheckWindowSize(vkState, allocator);
+}
 
-    try createSwapChain(vkState, allocator);
-    try createImageViews(vkState, allocator);
-    try createColorResources(vkState);
-    try createDepthResources(vkState, allocator);
-    try createFramebuffers(vkState, allocator);
+/// returns true if stuff exists or is created
+fn createSwapChainRelatedStuffAndCheckWindowSize(vkState: *Vk_State, allocator: std.mem.Allocator) !bool {
+    if (vkState.framebuffers == null) {
+        var capabilities: vk.VkSurfaceCapabilitiesKHR = undefined;
+        _ = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkState.physical_device, vkState.surface, &capabilities);
+        if (capabilities.currentExtent.width == 0 or capabilities.currentExtent.height == 0) {
+            return false;
+        }
+
+        try createSwapChain(vkState, allocator);
+        try createImageViews(vkState, allocator);
+        try createColorResources(vkState);
+        try createDepthResources(vkState, allocator);
+        try createFramebuffers(vkState, allocator);
+        return true;
+    }
+    return true;
 }
 
 fn createDepthResources(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -837,6 +852,8 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
 
 pub fn drawFrame(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
+
+    if (!try createSwapChainRelatedStuffAndCheckWindowSize(vkState, state.allocator)) return;
     try updateUniformBuffer(state);
 
     fontVulkanZig.clear(&vkState.font);
@@ -938,7 +955,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     const renderPassInfo = vk.VkRenderPassBeginInfo{
         .sType = vk.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = vkState.render_pass,
-        .framebuffer = vkState.framebuffers[imageIndex],
+        .framebuffer = vkState.framebuffers.?[imageIndex],
         .renderArea = vk.VkRect2D{
             .offset = vk.VkOffset2D{ .x = 0, .y = 0 },
             .extent = vkState.swapchain_info.extent,
@@ -1030,7 +1047,7 @@ fn createFramebuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
             .height = vkState.swapchain_info.extent.height,
             .layers = 1,
         };
-        try vkcheck(vk.vkCreateFramebuffer(vkState.logicalDevice, &framebufferInfo, null, &vkState.framebuffers[i]), "Failed to create Framebuffer.");
+        try vkcheck(vk.vkCreateFramebuffer(vkState.logicalDevice, &framebufferInfo, null, &vkState.framebuffers.?[i]), "Failed to create Framebuffer.");
         std.debug.print("Framebuffer Created\n", .{});
     }
 }
