@@ -950,6 +950,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
 
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1), 0);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, 0, 0);
+
+    vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
@@ -995,7 +997,7 @@ fn createFramebuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
             .layers = 1,
         };
         try vkcheck(vk.vkCreateFramebuffer(vkState.logicalDevice, &framebufferInfo, null, &vkState.framebuffers[i]), "Failed to create Framebuffer.");
-        std.debug.print("Framebuffer Created : {any}\n", .{vkState.pipeline_layout});
+        std.debug.print("Framebuffer Created\n", .{});
     }
 }
 
@@ -1046,13 +1048,20 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .layout = vk.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    var subpass = vk.VkSubpassDescription{
+    const subpass = vk.VkSubpassDescription{
         .pipelineBindPoint = vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &colorAttachmentRef,
         .pResolveAttachments = &colorAttachmentResolveRef,
         .pDepthStencilAttachment = &depthAttachmentRef,
     };
+    const subpassWihtoutDepth = vk.VkSubpassDescription{
+        .pipelineBindPoint = vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentRef,
+        .pResolveAttachments = &colorAttachmentResolveRef,
+    };
+    const subpasses = [_]vk.VkSubpassDescription{ subpass, subpassWihtoutDepth };
 
     var dependency: vk.VkSubpassDependency = .{
         .srcSubpass = vk.VK_SUBPASS_EXTERNAL,
@@ -1068,8 +1077,8 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .sType = vk.VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachments.len,
         .pAttachments = &attachments,
-        .subpassCount = 1,
-        .pSubpasses = &subpass,
+        .subpassCount = subpasses.len,
+        .pSubpasses = &subpasses,
         .dependencyCount = 1,
         .pDependencies = &dependency,
     };

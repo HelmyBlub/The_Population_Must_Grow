@@ -3,7 +3,7 @@ tasks:
 - features:
     - paint order / depth buffering?
         - follow tutorial:
-            - continue:  use multiple render passes and other stuff for one which does not use depth buffering
+            - use multiple render passes and other stuff for one which does not use depth buffering
             - zig test does again not stop anymore
             - https://vulkan-tutorial.com/Depth_buffering
                 - done?
@@ -11,6 +11,9 @@ tasks:
             - performance before: 
                 - gamespeed 0.1 => 1049 fps (but display top left seemed higher)
                 - gamespeed 1 => 410
+            - performance with depth but incorrect ordering:
+                - gamespeed 1 => 402
+                - gamespeed 0.1 => 1115
     - window resizing?
         - follow tutorial:
             - https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation

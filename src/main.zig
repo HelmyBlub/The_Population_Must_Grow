@@ -51,12 +51,12 @@ pub const Position: type = struct {
 
 var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
 
-// test "test for memory leaks" {
-//     const test_allocator = std.testing.allocator;
-//     SIMULATION_MICRO_SECOND_DURATION = 100_000;
-//     try startGame(test_allocator);
-//     // testing allocator will fail test if something is not deallocated
-// }
+test "test for memory leaks" {
+    const test_allocator = std.testing.allocator;
+    SIMULATION_MICRO_SECOND_DURATION = 100_000;
+    try startGame(test_allocator);
+    // testing allocator will fail test if something is not deallocated
+}
 
 test "test measure performance" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
@@ -71,7 +71,7 @@ test "test measure performance" {
     }
     Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, &state));
     state.fpsLimiter = false;
-    state.gameSpeed = 1;
+    state.gameSpeed = 0.1;
 
     const startTime = std.time.microTimestamp();
     try mainLoop(&state);

@@ -450,7 +450,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pDynamicState = &dynamicState,
         .layout = vkState.font.pipelineLayout,
         .renderPass = vkState.render_pass,
-        .subpass = 0,
+        .subpass = 1,
         .basePipelineHandle = null,
         .pNext = null,
     };
