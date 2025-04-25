@@ -35,6 +35,7 @@ pub const Vk_State = struct {
     render_pass: vk.VkRenderPass = undefined,
     pipeline_layout: vk.VkPipelineLayout = undefined,
     graphics_pipeline: vk.VkPipeline = undefined,
+    graphicsPipelineLayer2: vk.VkPipeline = undefined,
     framebuffers: []vk.VkFramebuffer = undefined,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
@@ -720,6 +721,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkFreeMemory(vkState.logicalDevice, vkState.vertexBufferMemory, null);
     vk.vkDestroyCommandPool(vkState.logicalDevice, vkState.command_pool, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphics_pipeline, null);
+    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
     vk.vkDestroySwapchainKHR(vkState.logicalDevice, vkState.swapchain, null);
@@ -949,6 +951,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     );
 
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1), 0);
+    vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
+    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineLayer2);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, 0, 0);
 
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
@@ -1048,7 +1052,13 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .layout = vk.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    const subpass = vk.VkSubpassDescription{
+    const subpassLayer1 = vk.VkSubpassDescription{
+        .pipelineBindPoint = vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentRef,
+        .pResolveAttachments = &colorAttachmentResolveRef,
+    };
+    const subpassLayer2 = vk.VkSubpassDescription{
         .pipelineBindPoint = vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &colorAttachmentRef,
@@ -1061,7 +1071,7 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .pColorAttachments = &colorAttachmentRef,
         .pResolveAttachments = &colorAttachmentResolveRef,
     };
-    const subpasses = [_]vk.VkSubpassDescription{ subpass, subpassWihtoutDepth };
+    const subpasses = [_]vk.VkSubpassDescription{ subpassLayer1, subpassLayer2, subpassWihtoutDepth };
 
     var dependency: vk.VkSubpassDependency = .{
         .srcSubpass = vk.VK_SUBPASS_EXTERNAL,
@@ -1240,9 +1250,29 @@ fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
         .subpass = 0,
         .basePipelineHandle = null,
         .pNext = null,
-        .pDepthStencilState = &vkState.depthStencil,
     };
     try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.graphics_pipeline), "Failed to create graphics pipeline.");
+
+    var pipelineInfo2 = vk.VkGraphicsPipelineCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = shaderStages.len,
+        .pStages = &shaderStages,
+        .pVertexInputState = &vertexInputInfo,
+        .pInputAssemblyState = &inputAssembly,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState,
+        .layout = vkState.pipeline_layout,
+        .renderPass = vkState.render_pass,
+        .subpass = 1,
+        .basePipelineHandle = null,
+        .pNext = null,
+        .pDepthStencilState = &vkState.depthStencil,
+    };
+    try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2), "Failed to create graphics pipeline2.");
+
     std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }
 
