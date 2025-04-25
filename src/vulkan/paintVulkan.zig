@@ -302,6 +302,8 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(vkState: *Vk_State, allocator: 
         try createColorResources(vkState);
         try createDepthResources(vkState, allocator);
         try createFramebuffers(vkState, allocator);
+        windowSdlZig.windowData.widthFloat = @floatFromInt(capabilities.currentExtent.width);
+        windowSdlZig.windowData.heightFloat = @floatFromInt(capabilities.currentExtent.height);
         return true;
     }
     return true;
