@@ -180,7 +180,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 state,
             );
             for (chunk.citizens.items) |*citizen| {
-                vkState.vertices[indexLayer1] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = imageZig.IMAGE_DOG, .size = mapZig.GameMap.TILE_SIZE };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
                 indexLayer1 += 1;
             }
             for (chunk.trees.items) |*tree| {

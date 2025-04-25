@@ -2,10 +2,12 @@ const std = @import("std");
 const main = @import("main.zig");
 const Position = main.Position;
 const mapZig = @import("map.zig");
+const imageZig = @import("image.zig");
 
 pub const Citizen: type = struct {
     position: Position,
     moveTo: std.ArrayList(main.Position),
+    imageIndex: u8 = imageZig.IMAGE_CITIZEN_FRONT,
     executingUntil: ?u32 = null,
     moveSpeed: f16,
     idle: bool = true,
@@ -53,6 +55,8 @@ pub const Citizen: type = struct {
         const foundPath = try main.pathfindingZig.pathfindAStar(start, goal, self, state);
         if (!foundPath) {
             self.actionFailedWaitUntilTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+        } else {
+            recalculateCitizenImageIndex(self);
         }
     }
 
@@ -234,6 +238,7 @@ pub const Citizen: type = struct {
         } else {
             if (@abs(citizen.position.x - citizen.moveTo.getLast().x) < citizen.moveSpeed and @abs(citizen.position.y - citizen.moveTo.getLast().y) < citizen.moveSpeed) {
                 _ = citizen.moveTo.pop();
+                recalculateCitizenImageIndex(citizen);
                 return;
             }
         }
@@ -244,6 +249,7 @@ pub const Citizen: type = struct {
             citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
             if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
                 _ = citizen.moveTo.pop();
+                recalculateCitizenImageIndex(citizen);
             }
         }
     }
@@ -290,6 +296,28 @@ pub const Citizen: type = struct {
         return closestCitizen;
     }
 };
+
+fn recalculateCitizenImageIndex(citizen: *Citizen) void {
+    if (citizen.moveTo.items.len > 0) {
+        const xDiff = citizen.moveTo.getLast().x - citizen.position.x;
+        const yDiff = citizen.moveTo.getLast().y - citizen.position.y;
+        if (@abs(xDiff) > @abs(yDiff)) {
+            if (xDiff > 0) {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_RIGHT;
+            } else {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_LEFT;
+            }
+        } else {
+            if (yDiff < 0) {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_BACK;
+            } else {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_FRONT;
+            }
+        }
+    } else {
+        citizen.imageIndex = imageZig.IMAGE_CITIZEN_FRONT;
+    }
+}
 
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const hungryBefore = !(citizen.foodLevel > 0.5);
