@@ -259,6 +259,39 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try rectangleVulkanZig.initRectangle(state);
 }
 
+fn cleanupSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) void {
+    vk.vkDestroyImageView(vkState.logicalDevice, vkState.depth.imageView, null);
+    vk.vkDestroyImage(vkState.logicalDevice, vkState.depth.image, null);
+    vk.vkFreeMemory(vkState.logicalDevice, vkState.depth.imageMemory, null);
+    vk.vkDestroyImageView(vkState.logicalDevice, vkState.colorImageView, null);
+    vk.vkDestroyImage(vkState.logicalDevice, vkState.colorImage, null);
+    vk.vkFreeMemory(vkState.logicalDevice, vkState.colorImageMemory, null);
+    for (vkState.swapchain_imageviews) |imgvw| {
+        vk.vkDestroyImageView(vkState.logicalDevice, imgvw, null);
+    }
+    allocator.free(vkState.swapchain_imageviews);
+    for (vkState.framebuffers) |fb| {
+        vk.vkDestroyFramebuffer(vkState.logicalDevice, fb, null);
+    }
+    vk.vkDestroySwapchainKHR(vkState.logicalDevice, vkState.swapchain, null);
+    allocator.free(vkState.framebuffers);
+    allocator.free(vkState.swapchain_info.images);
+    allocator.free(vkState.swapchain_info.support.formats);
+    allocator.free(vkState.swapchain_info.support.presentModes);
+}
+
+fn recreateSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
+
+    cleanupSwapChain(vkState, allocator);
+
+    try createSwapChain(vkState, allocator);
+    try createImageViews(vkState, allocator);
+    try createColorResources(vkState);
+    try createDepthResources(vkState, allocator);
+    try createFramebuffers(vkState, allocator);
+}
+
 fn createDepthResources(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     const depthFormat: vk.VkFormat = try findDepthFormat(vkState, allocator);
     try createImage(
@@ -683,20 +716,8 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
         }
     }
 
-    vk.vkDestroyImageView(vkState.logicalDevice, vkState.depth.imageView, null);
-    vk.vkDestroyImage(vkState.logicalDevice, vkState.depth.image, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.depth.imageMemory, null);
+    cleanupSwapChain(vkState, allocator);
 
-    vk.vkDestroyImageView(vkState.logicalDevice, vkState.colorImageView, null);
-    vk.vkDestroyImage(vkState.logicalDevice, vkState.colorImage, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.colorImageMemory, null);
-    for (vkState.swapchain_imageviews) |imgvw| {
-        vk.vkDestroyImageView(vkState.logicalDevice, imgvw, null);
-    }
-    allocator.free(vkState.swapchain_imageviews);
-    for (vkState.framebuffers) |fb| {
-        vk.vkDestroyFramebuffer(vkState.logicalDevice, fb, null);
-    }
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         vk.vkDestroySemaphore(vkState.logicalDevice, vkState.imageAvailableSemaphore[i], null);
         vk.vkDestroySemaphore(vkState.logicalDevice, vkState.renderFinishedSemaphore[i], null);
@@ -724,7 +745,6 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
-    vk.vkDestroySwapchainKHR(vkState.logicalDevice, vkState.swapchain, null);
     vk.vkDestroyDevice(vkState.logicalDevice, null);
     vk.vkDestroySurfaceKHR(vkState.instance, vkState.surface, null);
     vk.vkDestroyInstance(vkState.instance, null);
@@ -740,10 +760,6 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     allocator.free(vkState.renderFinishedSemaphore);
     allocator.free(vkState.inFlightFence);
     allocator.free(vkState.command_buffer);
-    allocator.free(vkState.framebuffers);
-    allocator.free(vkState.swapchain_info.images);
-    allocator.free(vkState.swapchain_info.support.formats);
-    allocator.free(vkState.swapchain_info.support.presentModes);
     allocator.free(vkState.textureImage);
     allocator.free(vkState.textureImageMemory);
     allocator.free(vkState.mipLevels);
@@ -846,7 +862,14 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);
 
     var imageIndex: u32 = undefined;
-    _ = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
+    const acquireImageResult = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
+
+    if (acquireImageResult == vk.VK_ERROR_OUT_OF_DATE_KHR) {
+        try recreateSwapChain(vkState, state.allocator);
+        return;
+    } else if (acquireImageResult != vk.VK_SUCCESS and acquireImageResult != vk.VK_SUBOPTIMAL_KHR) {
+        return error.failedToAcquireSwapChainImage;
+    }
 
     _ = vk.vkResetCommandBuffer(vkState.command_buffer[vkState.currentFrame], 0);
     try recordCommandBuffer(vkState.command_buffer[vkState.currentFrame], imageIndex, state);
@@ -871,7 +894,14 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
         .pSwapchains = &[_]vk.VkSwapchainKHR{vkState.swapchain},
         .pImageIndices = &imageIndex,
     };
-    try vkcheck(vk.vkQueuePresentKHR(vkState.queue, &presentInfo), "Failed to Queue Present KHR.");
+    const presentResult = vk.vkQueuePresentKHR(vkState.queue, &presentInfo);
+
+    if (presentResult == vk.VK_ERROR_OUT_OF_DATE_KHR or presentResult == vk.VK_SUBOPTIMAL_KHR) {
+        try recreateSwapChain(vkState, state.allocator);
+    } else if (presentResult != vk.VK_SUCCESS) {
+        return error.failedToPresentSwapChainImage;
+    }
+
     vkState.currentFrame = (vkState.currentFrame + 1) % Vk_State.MAX_FRAMES_IN_FLIGHT;
 }
 

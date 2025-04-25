@@ -1,19 +1,6 @@
 tasks:
 
 - features:
-    - paint order / depth buffering?
-        - follow tutorial:
-            - use multiple render passes and other stuff for one which does not use depth buffering
-            - zig test does again not stop anymore
-            - https://vulkan-tutorial.com/Depth_buffering
-                - done?
-        - compare performance
-            - performance before: 
-                - gamespeed 0.1 => 1049 fps (but display top left seemed higher)
-                - gamespeed 1 => 410
-            - performance with depth but incorrect ordering:
-                - gamespeed 1 => 402
-                - gamespeed 0.1 => 1115
     - window resizing?
         - follow tutorial:
             - https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
@@ -21,15 +8,15 @@ tasks:
     - animations?
     - sound?
     - UX?
+    - performance
+        - performance and multicore when all features implemented
+        - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 
-- performance and multicore when all features implemented
-- performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- 100_000 citizens in 32 seconds (14.04.2025)
 - zig build test: FPS: 407 (23.04.2025)
 
 Goal:
