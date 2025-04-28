@@ -81,6 +81,12 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.camera.position.y -= 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.camera.position.y += 100 / state.camera.zoom;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
+                state.gameSpeed *= 2;
+                if (state.gameSpeed > 64) state.gameSpeed = 64;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_MINUS) {
+                state.gameSpeed /= 2;
+                if (state.gameSpeed < 0.0625) state.gameSpeed = 0.0625;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
