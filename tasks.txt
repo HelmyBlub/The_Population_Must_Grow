@@ -42,7 +42,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test: FPS: 407 (23.04.2025)
+- zig build test: FPS: 403 (28.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

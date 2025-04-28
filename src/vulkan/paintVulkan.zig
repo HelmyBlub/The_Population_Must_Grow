@@ -36,6 +36,7 @@ pub const Vk_State = struct {
     pipeline_layout: vk.VkPipelineLayout = undefined,
     graphics_pipeline: vk.VkPipeline = undefined,
     graphicsPipelineLayer2: vk.VkPipeline = undefined,
+    graphicsPipelineCitizenComplex: vk.VkPipeline = undefined,
     framebuffers: ?[]vk.VkFramebuffer = null,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
@@ -64,6 +65,7 @@ pub const Vk_State = struct {
     colorImageMemory: vk.VkDeviceMemory = undefined,
     colorImageView: vk.VkImageView = undefined,
     entityPaintCountLayer1: u32 = 0,
+    entityPaintCountLayer1Citizen: u32 = 0,
     entityPaintCountLayer2: u32 = 0,
     vertices: []Vertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
@@ -122,6 +124,7 @@ pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCountLayer1: usize = 0;
+    var entityPaintCountLayer1Citizen: usize = 0;
     var entityPaintCountLayer2: usize = 0;
     var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
     const minSize = 8;
@@ -142,7 +145,7 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 },
                 state,
             );
-            entityPaintCountLayer1 += chunk.citizens.items.len;
+            entityPaintCountLayer1Citizen += chunk.citizens.items.len;
             entityPaintCountLayer1 += chunk.buildings.items.len;
             entityPaintCountLayer1 += chunk.bigBuildings.items.len;
             entityPaintCountLayer1 += chunk.trees.items.len;
@@ -152,8 +155,9 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         }
     }
     state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
+    state.vkState.entityPaintCountLayer1Citizen = @intCast(entityPaintCountLayer1Citizen);
     state.vkState.entityPaintCountLayer2 = @intCast(entityPaintCountLayer2);
-    const totalEntityCount = state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer2;
+    const totalEntityCount = state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer2 + state.vkState.entityPaintCountLayer1Citizen;
     // recreate buffer with new size
     if (vkState.vertexBufferSize == 0) return;
     if (vkState.vertexBufferCleanUp[vkState.currentFrame] != null) {
@@ -168,8 +172,9 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         try createVertexBuffer(vkState, totalEntityCount, state.allocator);
     }
 
-    var indexLayer1: u32 = 0;
-    var indexLayer2: u32 = state.vkState.entityPaintCountLayer1;
+    var indexLayer1Citizen: u32 = 0;
+    var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
+    var indexLayer2: u32 = indexLayer1 + state.vkState.entityPaintCountLayer1;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -180,8 +185,8 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 state,
             );
             for (chunk.citizens.items) |*citizen| {
-                vkState.vertices[indexLayer1] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
-                indexLayer1 += 1;
+                vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                indexLayer1Citizen += 1;
             }
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
@@ -241,7 +246,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createImageViews(vkState, state.allocator);
     try createRenderPass(vkState, state.allocator);
     try createDescriptorSetLayout(vkState);
-    try createGraphicsPipeline(vkState, state.allocator);
+    try createGraphicsPipelines(vkState, state.allocator);
     try createColorResources(vkState);
     try createDepthResources(vkState, state.allocator);
     try createFramebuffers(vkState, state.allocator);
@@ -760,6 +765,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkDestroyCommandPool(vkState.logicalDevice, vkState.command_pool, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphics_pipeline, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
+    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineCitizenComplex, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
     vk.vkDestroyDevice(vkState.logicalDevice, null);
@@ -999,10 +1005,14 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
         null,
     );
 
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1), 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer1Citizen), 0);
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineLayer2);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, @intCast(state.vkState.entityPaintCountLayer1Citizen), 0);
+    if (state.camera.zoom > 2) {
+        vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineCitizenComplex);
+    }
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1Citizen), 1, 0, 0);
 
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
@@ -1145,19 +1155,23 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     std.debug.print("Render Pass Created : {any}\n", .{vkState.render_pass});
 }
 
-fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     const vertShaderCode = try readShaderFile("shaders/compiled/vert.spv", allocator);
     defer allocator.free(vertShaderCode);
     const fragShaderCode = try readShaderFile("shaders/compiled/frag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const geomShaderCode = try readShaderFile("shaders/compiled/geom.spv", allocator);
     defer allocator.free(geomShaderCode);
+    const geomShaderCitizenComplexCode = try readShaderFile("shaders/compiled/citizenGeom.spv", allocator);
+    defer allocator.free(geomShaderCitizenComplexCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try createShaderModule(fragShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
     const geomShaderModule = try createShaderModule(geomShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
+    const geomCitizenComplexShaderModule = try createShaderModule(geomShaderCitizenComplexCode, vkState);
+    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomCitizenComplexShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -1180,7 +1194,15 @@ fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
         .pName = "main",
     };
 
+    const geomCitizenComplexShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = vk.VK_SHADER_STAGE_GEOMETRY_BIT,
+        .module = geomCitizenComplexShaderModule,
+        .pName = "main",
+    };
+
     const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
+    const shaderStagesCitizenComplex = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomCitizenComplexShaderStageInfo };
     const bindingDescription = Vertex.getBindingDescription();
     const attributeDescriptions = Vertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
@@ -1321,6 +1343,26 @@ fn createGraphicsPipeline(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
         .pDepthStencilState = &vkState.depthStencil,
     };
     try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2), "Failed to create graphics pipeline2.");
+
+    var pipelineInfoCitizenComplex = vk.VkGraphicsPipelineCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = shaderStagesCitizenComplex.len,
+        .pStages = &shaderStagesCitizenComplex,
+        .pVertexInputState = &vertexInputInfo,
+        .pInputAssemblyState = &inputAssembly,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState,
+        .layout = vkState.pipeline_layout,
+        .renderPass = vkState.render_pass,
+        .subpass = 1,
+        .basePipelineHandle = null,
+        .pNext = null,
+        .pDepthStencilState = &vkState.depthStencil,
+    };
+    try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfoCitizenComplex, null, &vkState.graphicsPipelineCitizenComplex), "Failed to create graphics pipelineCitizen.");
 
     std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }
