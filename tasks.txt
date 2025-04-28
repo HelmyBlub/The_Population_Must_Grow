@@ -3,7 +3,8 @@ tasks:
     - foot movement
     - hand movement
     - ear movement
-    
+    - left/right/up moving
+
     - create images for animating citizen
         - ear
         - head side mirror?

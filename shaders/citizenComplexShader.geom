@@ -6,6 +6,7 @@ layout(triangle_strip, max_vertices = 24) out;
 layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
 layout(location = 2) in uint animationTimer[];
+layout(location = 3) in float moveSpeed[];
 
 layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out uint spriteIndex;
@@ -32,18 +33,21 @@ void main(void)
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
     const float sizeFactor = 20.0 / 200.0 / 2;
+    const float footAnimationOffset = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 2;
+    const float handAnimationOffset = ( -sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 20;
+    const float handAnimationOffset2 = (sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 20;
     citizenParts = citizenPart[](
-        citizenPart(20 * sizeFactor, 52 * sizeFactor, IMAGE_CITIZEN_PAW, vec2( -2.5 * scale[0].x / zoom, 0.0)),
-        citizenPart(20 * sizeFactor, 52 * sizeFactor, IMAGE_CITIZEN_PAW, vec2( 2.5 * scale[0].x / zoom, 0.0)),
-        citizenPart(68 * sizeFactor, 84 * sizeFactor, IMAGE_CITIZEN_HEAD, vec2(0.0, -5 * scale[0].y / zoom)),
-        citizenPart(53 * sizeFactor, 75 * sizeFactor, IMAGE_CITIZEN_BODY, vec2(0.0, 0.0)),
-        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2( -1.5 * scale[0].x / zoom,  5 * scale[0].y / zoom)),
-        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2( 1.5 * scale[0].x / zoom,  5 * scale[0].y / zoom))
+        citizenPart(20 * sizeFactor, (52 - handAnimationOffset/2) * sizeFactor, IMAGE_CITIZEN_PAW,  vec2(-2.5, 0.0 - (handAnimationOffset - 5) * sizeFactor)),
+        citizenPart(20 * sizeFactor, (52 - handAnimationOffset2/2) * sizeFactor, IMAGE_CITIZEN_PAW,  vec2( 2.5, 0.0 - (handAnimationOffset2 - 5) * sizeFactor)),
+        citizenPart(68 * sizeFactor, 84 * sizeFactor, IMAGE_CITIZEN_HEAD, vec2( 0.0,-5 )),
+        citizenPart(53 * sizeFactor, 75 * sizeFactor, IMAGE_CITIZEN_BODY, vec2( 0.0, 0.0)),
+        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2(-1.5, 5 - footAnimationOffset)),
+        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2( 1.5, 5 + footAnimationOffset))
     );
 
     for(int i = 0; i < citizenParts.length(); i++ ){
         const citizenPart currentCitizenPart = citizenParts[i];
-        const vec4 partCenter = center + vec4(currentCitizenPart.offset, 0, 0);
+        const vec4 partCenter = center + vec4(currentCitizenPart.offset[0] * scale[0].x / zoom, currentCitizenPart.offset[1] * scale[0].y / zoom, 0, 0);
         const float width = (currentCitizenPart.width * scale[0].x) / zoom;
         const float height = (currentCitizenPart.height * scale[0].y) / zoom;
         // top-left vertex
