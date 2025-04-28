@@ -1,8 +1,12 @@
 tasks:
 - animations
+    - foot movement
+    - hand movement
+    - ear movement
+    
     - create images for animating citizen
-        - head, body
-        - eye, ear, hand, feet
+        - ear
+        - head side mirror?
         - mouth -> paint lines with vulkan?
 
 - features:

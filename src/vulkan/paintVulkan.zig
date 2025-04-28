@@ -9,6 +9,7 @@ const vk = @cImport({
 const main = @import("../main.zig");
 const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
+const citizenVulkanZig = @import("citizenVulkan.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -36,7 +37,6 @@ pub const Vk_State = struct {
     pipeline_layout: vk.VkPipelineLayout = undefined,
     graphics_pipeline: vk.VkPipeline = undefined,
     graphicsPipelineLayer2: vk.VkPipeline = undefined,
-    graphicsPipelineCitizenComplex: vk.VkPipeline = undefined,
     framebuffers: ?[]vk.VkFramebuffer = null,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
@@ -67,12 +67,13 @@ pub const Vk_State = struct {
     entityPaintCountLayer1: u32 = 0,
     entityPaintCountLayer1Citizen: u32 = 0,
     entityPaintCountLayer2: u32 = 0,
-    vertices: []Vertex = undefined,
+    vertices: []SpriteVertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
     font: fontVulkanZig.VkFont = .{},
+    citizen: citizenVulkanZig.VkCitizen = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
-    const MAX_FRAMES_IN_FLIGHT: u16 = 2;
-    const BUFFER_ADDITIOAL_SIZE: u16 = 50;
+    pub const MAX_FRAMES_IN_FLIGHT: u16 = 2;
+    pub const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };
 
 const VkCameraData = struct {
@@ -86,7 +87,7 @@ const SwapChainSupportDetails = struct {
     presentModes: []vk.VkPresentModeKHR,
 };
 
-const Vertex = struct {
+const SpriteVertex = struct {
     pos: [2]f32,
     imageIndex: u8,
     size: u8,
@@ -94,7 +95,7 @@ const Vertex = struct {
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
             .binding = 0,
-            .stride = @sizeOf(Vertex),
+            .stride = @sizeOf(SpriteVertex),
             .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
@@ -106,22 +107,22 @@ const Vertex = struct {
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset = @offsetOf(Vertex, "pos");
+        attributeDescriptions[0].offset = @offsetOf(SpriteVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = vk.VK_FORMAT_R8_UINT;
-        attributeDescriptions[1].offset = @offsetOf(Vertex, "imageIndex");
+        attributeDescriptions[1].offset = @offsetOf(SpriteVertex, "imageIndex");
         attributeDescriptions[2].binding = 0;
         attributeDescriptions[2].location = 2;
         attributeDescriptions[2].format = vk.VK_FORMAT_R8_UINT;
-        attributeDescriptions[2].offset = @offsetOf(Vertex, "size");
+        attributeDescriptions[2].offset = @offsetOf(SpriteVertex, "size");
         return attributeDescriptions;
     }
 };
 
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
-pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
+fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCountLayer1: usize = 0;
     var entityPaintCountLayer1Citizen: usize = 0;
@@ -155,7 +156,13 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
         }
     }
     state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
-    state.vkState.entityPaintCountLayer1Citizen = @intCast(entityPaintCountLayer1Citizen);
+    const doComplexCitizen = state.camera.zoom > state.vkState.citizen.switchToComplexZoomAmount;
+    if (doComplexCitizen) {
+        state.vkState.entityPaintCountLayer1Citizen = 0;
+        try citizenVulkanZig.setupVerticesForComplexCitizens(state, @intCast(entityPaintCountLayer1Citizen));
+    } else {
+        state.vkState.entityPaintCountLayer1Citizen = @intCast(entityPaintCountLayer1Citizen);
+    }
     state.vkState.entityPaintCountLayer2 = @intCast(entityPaintCountLayer2);
     const totalEntityCount = state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer2 + state.vkState.entityPaintCountLayer1Citizen;
     // recreate buffer with new size
@@ -184,9 +191,11 @@ pub fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 },
                 state,
             );
-            for (chunk.citizens.items) |*citizen| {
-                vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
-                indexLayer1Citizen += 1;
+            if (!doComplexCitizen) {
+                for (chunk.citizens.items) |*citizen| {
+                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                    indexLayer1Citizen += 1;
+                }
             }
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
@@ -255,6 +264,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createTextureImageView(vkState, state.allocator);
     try createTextureSampler(vkState);
     try fontVulkanZig.initFont(state);
+    try citizenVulkanZig.initCitizen(state);
     try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
@@ -714,9 +724,9 @@ pub fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, propert
 fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.Allocator) !void {
     if (vkState.vertexBufferSize != 0) allocator.free(vkState.vertices);
     vkState.vertexBufferSize = entityCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
-    vkState.vertices = try allocator.alloc(Vertex, vkState.vertexBufferSize);
+    vkState.vertices = try allocator.alloc(SpriteVertex, vkState.vertexBufferSize);
     try createBuffer(
-        @sizeOf(Vertex) * vkState.vertexBufferSize,
+        @sizeOf(SpriteVertex) * vkState.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.vertexBuffer,
@@ -729,6 +739,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
     rectangleVulkanZig.destroyRectangle(vkState, allocator);
     fontVulkanZig.destroyFont(vkState, allocator);
+    citizenVulkanZig.destroyCitizen(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -765,7 +776,6 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkDestroyCommandPool(vkState.logicalDevice, vkState.command_pool, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphics_pipeline, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
-    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineCitizenComplex, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
     vk.vkDestroyDevice(vkState.logicalDevice, null);
@@ -834,8 +844,8 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 
 pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(Vertex) * vkState.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-    const gpu_vertices: [*]Vertex = @ptrCast(@alignCast(data));
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(SpriteVertex) * vkState.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    const gpu_vertices: [*]SpriteVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.vertices[0..]);
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.vertexBufferMemory);
 }
@@ -860,6 +870,8 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
 
 pub fn drawFrame(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
+    try setupVerticesForCitizens(state);
+    try setupVertexDataForGPU(&state.vkState);
 
     if (!try createSwapChainRelatedStuffAndCheckWindowSize(vkState, state.allocator)) return;
     try updateUniformBuffer(state);
@@ -1009,10 +1021,11 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineLayer2);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, @intCast(state.vkState.entityPaintCountLayer1Citizen), 0);
-    if (state.camera.zoom > 2) {
-        vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineCitizenComplex);
+    if (state.camera.zoom > vkState.citizen.switchToComplexZoomAmount) {
+        try citizenVulkanZig.recordCitizenCommandBuffer(commandBuffer, state);
+    } else {
+        vk.vkCmdDraw(commandBuffer, @intCast(vkState.entityPaintCountLayer1Citizen), 1, 0, 0);
     }
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1Citizen), 1, 0, 0);
 
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
@@ -1162,16 +1175,12 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
     defer allocator.free(fragShaderCode);
     const geomShaderCode = try readShaderFile("shaders/compiled/geom.spv", allocator);
     defer allocator.free(geomShaderCode);
-    const geomShaderCitizenComplexCode = try readShaderFile("shaders/compiled/citizenGeom.spv", allocator);
-    defer allocator.free(geomShaderCitizenComplexCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try createShaderModule(fragShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
     const geomShaderModule = try createShaderModule(geomShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
-    const geomCitizenComplexShaderModule = try createShaderModule(geomShaderCitizenComplexCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomCitizenComplexShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -1194,17 +1203,9 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pName = "main",
     };
 
-    const geomCitizenComplexShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
-        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = vk.VK_SHADER_STAGE_GEOMETRY_BIT,
-        .module = geomCitizenComplexShaderModule,
-        .pName = "main",
-    };
-
     const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
-    const shaderStagesCitizenComplex = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomCitizenComplexShaderStageInfo };
-    const bindingDescription = Vertex.getBindingDescription();
-    const attributeDescriptions = Vertex.getAttributeDescriptions();
+    const bindingDescription = SpriteVertex.getBindingDescription();
+    const attributeDescriptions = SpriteVertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
@@ -1343,26 +1344,6 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pDepthStencilState = &vkState.depthStencil,
     };
     try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2), "Failed to create graphics pipeline2.");
-
-    var pipelineInfoCitizenComplex = vk.VkGraphicsPipelineCreateInfo{
-        .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = shaderStagesCitizenComplex.len,
-        .pStages = &shaderStagesCitizenComplex,
-        .pVertexInputState = &vertexInputInfo,
-        .pInputAssemblyState = &inputAssembly,
-        .pViewportState = &viewportState,
-        .pRasterizationState = &rasterizer,
-        .pMultisampleState = &multisampling,
-        .pColorBlendState = &colorBlending,
-        .pDynamicState = &dynamicState,
-        .layout = vkState.pipeline_layout,
-        .renderPass = vkState.render_pass,
-        .subpass = 1,
-        .basePipelineHandle = null,
-        .pNext = null,
-        .pDepthStencilState = &vkState.depthStencil,
-    };
-    try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfoCitizenComplex, null, &vkState.graphicsPipelineCitizenComplex), "Failed to create graphics pipelineCitizen.");
 
     std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }

@@ -5,7 +5,7 @@ layout(triangle_strip, max_vertices = 24) out;
 
 layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
-layout(location = 2) in uint inSize[];
+layout(location = 2) in uint animationTimer[];
 
 layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out uint spriteIndex;

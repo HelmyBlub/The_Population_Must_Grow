@@ -249,8 +249,6 @@ fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
-        try paintVulkanZig.setupVerticesForCitizens(state);
-        try paintVulkanZig.setupVertexDataForGPU(&state.vkState);
         try paintVulkanZig.drawFrame(state);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         if (state.fpsLimiter) {

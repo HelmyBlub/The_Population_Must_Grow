@@ -152,7 +152,7 @@ pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocat
     allocator.free(vkState.font.vertices);
 }
 
-pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
+fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
     if (vk.vkMapMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]FontVertex = @ptrCast(@alignCast(data));
