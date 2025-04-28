@@ -36,10 +36,10 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/potatoPlant.png" },
     .{ .path = "images/bigHouse.png" },
     .{ .path = "images/path.png" },
-    .{ .path = "images/citizenFront.png" },
-    .{ .path = "images/citizenLeft.png" },
-    .{ .path = "images/citizenRight.png" },
-    .{ .path = "images/citizenBack.png" },
+    .{ .path = "images/citizen/citizenFront.png" },
+    .{ .path = "images/citizen/citizenLeft.png" },
+    .{ .path = "images/citizen/citizenRight.png" },
+    .{ .path = "images/citizen/citizenBack.png" },
 };
 
 pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {

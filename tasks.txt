@@ -1,4 +1,9 @@
 tasks:
+- animations
+    - create images for animating citizen
+        - head, body
+        - eye, ear, hand, feet
+        - mouth -> paint lines with vulkan?
 
 - features:
     - animations?
