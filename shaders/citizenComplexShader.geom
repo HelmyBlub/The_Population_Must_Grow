@@ -1,7 +1,7 @@
 #version 450
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 24) out;
+layout(triangle_strip, max_vertices = 32) out;
 
 layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
@@ -16,7 +16,20 @@ struct citizenPart {
     float height;
     uint spriteIndex;
     vec2 offset;
-} citizenParts[6];
+    float angle;
+    vec2 rotatePivot;
+} citizenParts[8];
+
+vec2 rotateAroundPoint(vec2 point, vec2 pivot, float angle){
+    vec2 translated = point - pivot;
+
+    float s = sin(angle);
+    float c = cos(angle);
+    mat2 rot = mat2(c, -s, s, c);
+    vec2 rotated = rot * translated;
+
+    return rotated + pivot;
+}
 
 void main(void)
 {	
@@ -30,46 +43,65 @@ void main(void)
     const uint IMAGE_CITIZEN_HEAD = 15;
     const uint IMAGE_CITIZEN_PAW = 16;
     const uint IMAGE_CITIZEN_FOOT = 17;
+    const uint IMAGE_CITIZEN_EAR_FRONT = 18;
+    const uint IMAGE_CITIZEN_EAR_SIDE = 19;
+
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
-    const float sizeFactor = 20.0 / 200.0 / 2;
-    const float footAnimationOffset = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 2;
-    const float handAnimationOffset = ( -sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 20;
-    const float handAnimationOffset2 = (sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 20;
+    const float sizeFactor = 20.0 / 200.0;
+    const float sizeFactorHalve = 20.0 / 200.0 / 2;
+    const float footAnimationOffset = sin(animationTimer[0] / 100.0 * moveSpeed[0]);
+    const float handAnimationOffset = ( -sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 10;
+    const float handAnimationOffset2 = (sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 10;
+    const float earRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.25;
     citizenParts = citizenPart[](
-        citizenPart(20 * sizeFactor, (52 - handAnimationOffset/2) * sizeFactor, IMAGE_CITIZEN_PAW,  vec2(-2.5, 0.0 - (handAnimationOffset - 5) * sizeFactor)),
-        citizenPart(20 * sizeFactor, (52 - handAnimationOffset2/2) * sizeFactor, IMAGE_CITIZEN_PAW,  vec2( 2.5, 0.0 - (handAnimationOffset2 - 5) * sizeFactor)),
-        citizenPart(68 * sizeFactor, 84 * sizeFactor, IMAGE_CITIZEN_HEAD, vec2( 0.0,-5 )),
-        citizenPart(53 * sizeFactor, 75 * sizeFactor, IMAGE_CITIZEN_BODY, vec2( 0.0, 0.0)),
-        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2(-1.5, 5 - footAnimationOffset)),
-        citizenPart(20 * sizeFactor, 37 * sizeFactor, IMAGE_CITIZEN_FOOT, vec2( 1.5, 5 + footAnimationOffset))
+        citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0)),
+        citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0)),
+        citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0)),
+        citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor)),
+        citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor)),
+        citizenPart(53 * sizeFactorHalve, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0)),
+        citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0)),
+        citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0))
     );
-
+    
+    vec2 rotatedOffset;
     for(int i = 0; i < citizenParts.length(); i++ ){
         const citizenPart currentCitizenPart = citizenParts[i];
-        const vec4 partCenter = center + vec4(currentCitizenPart.offset[0] * scale[0].x / zoom, currentCitizenPart.offset[1] * scale[0].y / zoom, 0, 0);
-        const float width = (currentCitizenPart.width * scale[0].x) / zoom;
-        const float height = (currentCitizenPart.height * scale[0].y) / zoom;
+        const vec4 partCenter = center + vec4(currentCitizenPart.offset * scale[0] / zoom, 0, 0);
+        const float width = currentCitizenPart.width;
+        const float height = currentCitizenPart.height;
+        vec2 offsets[4] = vec2[](
+            vec2(-width, -height),
+            vec2( width, -height),
+            vec2(-width,  height),
+            vec2( width,  height)
+        );
+
         // top-left vertex
-        gl_Position = partCenter + vec4(-width, -height, 0.0, 0.0);
+        rotatedOffset = rotateAroundPoint(offsets[0], currentCitizenPart.rotatePivot, currentCitizenPart.angle) * scale[0] / zoom;
+        gl_Position = partCenter + vec4(rotatedOffset, 0.0, 0.0);
         fragTexCoord = vec2(0.0, 0.0);
         spriteIndex = currentCitizenPart.spriteIndex;
         EmitVertex();
 
         // top-right vertex
-        gl_Position = partCenter + vec4(width, -height, 0.0, 0.0);
+        rotatedOffset = rotateAroundPoint(offsets[1], currentCitizenPart.rotatePivot, currentCitizenPart.angle) * scale[0] / zoom;
+        gl_Position = partCenter + vec4(rotatedOffset, 0.0, 0.0);
         fragTexCoord = vec2(1.0, 0.0);
         spriteIndex = currentCitizenPart.spriteIndex;
         EmitVertex();
 
         // bottom-left vertex
-        gl_Position = partCenter + vec4(-width, height, 0.0, 0.0);
+        rotatedOffset = rotateAroundPoint(offsets[2], currentCitizenPart.rotatePivot, currentCitizenPart.angle) * scale[0] / zoom;
+        gl_Position = partCenter + vec4(rotatedOffset, 0.0, 0.0);
         fragTexCoord = vec2(0.0, 1.0);
         spriteIndex = currentCitizenPart.spriteIndex;
         EmitVertex();
 
         // bottom-right vertex
-        gl_Position = partCenter + vec4(width, height, 0.0, 0.0);
+        rotatedOffset = rotateAroundPoint(offsets[3], currentCitizenPart.rotatePivot, currentCitizenPart.angle) * scale[0] / zoom;
+        gl_Position = partCenter + vec4(rotatedOffset, 0.0, 0.0);
         fragTexCoord = vec2(1.0, 1.0);
         spriteIndex = currentCitizenPart.spriteIndex;
         EmitVertex();
