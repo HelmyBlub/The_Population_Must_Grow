@@ -1,10 +1,7 @@
 tasks:
 - animations
-    - foot movement
-    - continue: hand movement
-    - ear movement
-    - eyes
     - mouth
+    - tail
     - left/right/up moving
 
     - create images for animating citizen
