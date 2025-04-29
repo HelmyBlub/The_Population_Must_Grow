@@ -30,6 +30,7 @@ pub const IMAGE_CITIZEN_EYE_LEFT = 20;
 pub const IMAGE_CITIZEN_EYE_RIGHT = 21;
 pub const IMAGE_CITIZEN_PUPIL1 = 22;
 pub const IMAGE_CITIZEN_PUPIL2 = 23;
+pub const IMAGE_BLACK_PIXEL = 24;
 
 pub const ImageData = struct {
     path: []const u8,
@@ -60,6 +61,7 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/citizen/citizenPartEyeRight.png" },
     .{ .path = "images/citizen/citizenPartPupil1.png" },
     .{ .path = "images/citizen/citizenPartPupil2.png" },
+    .{ .path = "images/blackPixel.png" },
 };
 
 pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {

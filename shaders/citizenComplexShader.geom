@@ -1,7 +1,7 @@
 #version 450
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 48) out;
+layout(triangle_strip, max_vertices = 52) out;
 
 layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
@@ -19,7 +19,7 @@ struct citizenPart {
     float angle;
     vec2 rotatePivot;
 
-} citizenParts[12];
+} citizenParts[13];
 
 vec2 rotateAroundPoint(vec2 point, vec2 pivot, float angle){
     vec2 translated = point - pivot;
@@ -50,6 +50,7 @@ void main(void)
     const uint IMAGE_CITIZEN_EYE_RIGHT = 21;
     const uint IMAGE_CITIZEN_PUPIL1 = 22;
     const uint IMAGE_CITIZEN_PUPIL2 = 23;
+    const uint IMAGE_BLACK_PIXEL = 24;
 
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
@@ -70,6 +71,7 @@ void main(void)
         citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0)),
         citizenPart( 8 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL2, vec2( 14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0)),
         citizenPart(23 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_RIGHT, vec2( 14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0)),
+        citizenPart(30 * sizeFactorHalve, 2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 0.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0)),
         citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0)),
         citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0))
     );
