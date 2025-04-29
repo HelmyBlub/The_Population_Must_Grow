@@ -7,6 +7,7 @@ layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
 layout(location = 2) in uint animationTimer[];
 layout(location = 3) in float moveSpeed[];
+layout(location = 4) in uint booleans[];
 
 layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out uint spriteIndex;
@@ -34,6 +35,7 @@ vec2 rotateAroundPoint(vec2 point, vec2 pivot, float angle){
 
 void main(void)
 {	
+    bool isStarving = booleans[0] == 1 ? true : false;
     vec4 center = gl_in[0].gl_Position;
     const float zoom = center[3];
     center[0] = center[0] / zoom;
@@ -63,6 +65,7 @@ void main(void)
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
     const float sizeFactor = 20.0 / 200.0;
     const float sizeFactorHalve = 20.0 / 200.0 / 2;
+    const float bodyWidthFactor = isStarving ? 0.5 : 1;
     uint partsCount = citizenParts.length();
     switch(inSpriteIndex[0]){
         case IMAGE_CITIZEN_FRONT:{
@@ -75,7 +78,7 @@ void main(void)
                 citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false),
                 citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false),
                 citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false),
-                citizenPart(53 * sizeFactorHalve, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false),
+                citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false),
                 citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false),
                 citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false),
                 citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false),
@@ -96,7 +99,7 @@ void main(void)
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(-7.0 * sizeFactor, 71 * sizeFactor), baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(-7.0 * sizeFactor, 71 * sizeFactor), -baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-8 * sizeFactor, 56 * sizeFactor), baseRotate + 3.14, vec2(25 * sizeFactor, 0), false);
-            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(120 * sizeFactorHalve,82 * sizeFactorHalve, IMAGE_CITIZEN_HEAD_SIDE, vec2( -20.0 * sizeFactor,-44 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart( 6 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL1, vec2( -4 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( 0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
@@ -112,7 +115,7 @@ void main(void)
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(10.0 * sizeFactor, 71 * sizeFactor), baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), true);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(10.0 * sizeFactor, 71 * sizeFactor), -baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), true);
             citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-35 * sizeFactor, 56 * sizeFactor), baseRotate, vec2(25 * sizeFactor, 0), false);
-            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(120 * sizeFactorHalve,82 * sizeFactorHalve, IMAGE_CITIZEN_HEAD_SIDE, vec2( 22.0 * sizeFactor,-44 * sizeFactor), 0, vec2(0,0), true);
             citizenParts[partsCount++] = citizenPart( 6 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL1, vec2( 4 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( 0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
@@ -132,7 +135,7 @@ void main(void)
             citizenParts[2] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false);
             citizenParts[3] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false);
             citizenParts[4] = citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD_BACK, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false);
-            citizenParts[5] = citizenPart(53 * sizeFactorHalve, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[5] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[6] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false);
             citizenParts[7] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false);
             citizenParts[8] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false);

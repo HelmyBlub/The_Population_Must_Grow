@@ -26,6 +26,8 @@ const CitizenVertex = struct {
     imageIndex: u8,
     animationTimer: u32,
     moveSpeed: f32,
+    /// bit 0 => isStarving
+    booleans: u8,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -37,8 +39,8 @@ const CitizenVertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [4]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
+    fn getAttributeDescriptions() [5]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
@@ -55,6 +57,10 @@ const CitizenVertex = struct {
         attributeDescriptions[3].location = 3;
         attributeDescriptions[3].format = vk.VK_FORMAT_R32_SFLOAT;
         attributeDescriptions[3].offset = @offsetOf(CitizenVertex, "moveSpeed");
+        attributeDescriptions[4].binding = 0;
+        attributeDescriptions[4].location = 4;
+        attributeDescriptions[4].format = vk.VK_FORMAT_R8_UINT;
+        attributeDescriptions[4].offset = @offsetOf(CitizenVertex, "booleans");
         return attributeDescriptions;
     }
 };
@@ -103,6 +109,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
                     .imageIndex = citizen.imageIndex,
                     .animationTimer = animationTimer,
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,
+                    .booleans = if (citizen.foodLevel <= 0) 1 else 0,
                 };
                 index += 1;
             }

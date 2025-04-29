@@ -1,7 +1,5 @@
 tasks:
 - animations
-    - tail
-    - left/right/up moving
     - starving
 
     - create images for animating citizen
