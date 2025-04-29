@@ -18,7 +18,7 @@ pub const VkCitizen = struct {
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertexBufferCleanUp: []?vk.VkBuffer = undefined,
     vertexBufferMemoryCleanUp: []?vk.VkDeviceMemory = undefined,
-    switchToComplexZoomAmount: f32 = 2,
+    switchToComplexZoomAmount: f32 = 0.8,
 };
 
 const CitizenVertex = struct {

@@ -22,8 +22,8 @@ pub const Citizen: type = struct {
     foodSearchRepeatWaitUntilTimeMs: ?u32 = null,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
     pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
-    pub const MOVE_SPEED_STARVING = 0.25;
-    pub const MOVE_SPEED_NORMAL = 0.25;
+    pub const MOVE_SPEED_STARVING = 0.5;
+    pub const MOVE_SPEED_NORMAL = 2.0;
 
     pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{

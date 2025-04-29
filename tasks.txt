@@ -1,13 +1,11 @@
 tasks:
 - animations
-    - mouth
     - tail
     - left/right/up moving
+    - starving
 
     - create images for animating citizen
-        - ear
         - head side mirror?
-        - mouth -> paint lines with vulkan?
 
 - features:
     - animations?
