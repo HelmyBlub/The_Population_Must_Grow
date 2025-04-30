@@ -40,6 +40,7 @@ void main(void)
     bool hasWood = (booleans[0] & (1u << 2)) != 0u; 
     bool useHammer = (booleans[0] & (1u << 3)) != 0u; 
     bool isPlanting = (booleans[0] & (1u << 4)) != 0u; 
+    bool isEating = (booleans[0] & (1u << 5)) != 0u; 
     vec4 center = gl_in[0].gl_Position;
     const float zoom = center[3];
     center[0] = center[0] / zoom;
@@ -67,6 +68,7 @@ void main(void)
     const uint IMAGE_AXE = 29;
     const uint IMAGE_WOOD_PLANK_STACK = 30;
     const uint IMAGE_HAMMER = 31;
+    const uint IMAGE_POTATO = 32;
 
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
@@ -90,6 +92,23 @@ void main(void)
         citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve, 2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 0.0 * sizeFactor,0 * sizeFactor), 0, vec2(0,0), false);
         citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, 30  * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
         citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
+    }else if(isEating){
+        const float baseRotate = sin(animationTimer[0] / 100.0) * 0.5;
+        citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), baseRotate, vec2(25 * sizeFactor, 0), false);
+        citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor),0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart( 6 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL1, vec2( -10.0 * sizeFactor,-67 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart( 8 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL2, vec2( 10.0 * sizeFactor,-66 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_RIGHT, vec2( 14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve, 2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 0.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(45 * sizeFactorHalve, 33 * sizeFactorHalve, IMAGE_POTATO, vec2( 0 * sizeFactor, -10 * sizeFactor), 0,  vec2(0,0), false);
+        citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 42 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, 40 * sizeFactor), 2.84,  vec2(0,-20 * sizeFactor), false);
+        citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 42 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, 40 * sizeFactor), 3.44,  vec2(0,-20 * sizeFactor), false);
     }else{
         switch(inSpriteIndex[0]){
             case IMAGE_CITIZEN_FRONT:{

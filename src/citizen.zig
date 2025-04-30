@@ -16,6 +16,7 @@ pub const Citizen: type = struct {
     farmPosition: ?main.Position = null,
     potatoPosition: ?main.Position = null,
     hasWood: bool = false,
+    hasPotato: bool = false,
     homePosition: ?Position = null,
     foodLevel: f32 = 1,
     actionFailedWaitUntilTimeMs: ?u32 = null,
@@ -72,23 +73,29 @@ pub const Citizen: type = struct {
         if (citizen.potatoPosition) |potatoPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getPotatoFieldOnPosition(potatoPosition, state)) |farmTile| {
-                    if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                    if (main.calculateDistance(farmTile.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
                             if (farmTile.grow >= 1) {
-                                farmTile.grow = 0;
-                                farmTile.citizenOnTheWay -= 1;
-                                citizen.executingUntil = state.gameTimeMs + 1000;
+                                citizen.executingUntil = state.gameTimeMs + 1500;
                             }
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
-                            citizen.potatoPosition = null;
-                            citizen.foodLevel += 0.5;
-                            citizen.executingUntil = null;
-                            if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
-                                citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
+                            if (!citizen.hasPotato) {
+                                farmTile.grow = 0;
+                                farmTile.citizenOnTheWay -= 1;
+                                citizen.hasPotato = true;
+                                citizen.executingUntil = state.gameTimeMs + 1500;
+                            } else {
+                                citizen.hasPotato = false;
+                                citizen.potatoPosition = null;
+                                citizen.foodLevel += 0.5;
+                                citizen.executingUntil = null;
+                                if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
+                                    citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
+                                }
                             }
                         }
                     } else {
-                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y }, state);
+                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y - 8 }, state);
                     }
                 } else {
                     citizen.potatoPosition = null;
