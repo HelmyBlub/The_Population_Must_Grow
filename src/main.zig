@@ -308,7 +308,7 @@ fn tick(state: *ChatSimState) !void {
                             freeCitizen.buildingPosition = building.position;
                             freeCitizen.idle = false;
                             freeCitizen.moveTo.clearAndFree();
-                            if (buildOrder.materialCount > 0) {
+                            if (buildOrder.materialCount > 1) {
                                 buildOrder.materialCount -= 1;
                                 iterator += 1;
                             } else {

@@ -71,6 +71,7 @@ pub const Building = struct {
     inConstruction: bool = true,
     woodRequired: u8 = 1,
     citizensSpawned: u8 = 0,
+    constructionStartedTime: ?u32 = null,
 };
 
 pub const PotatoField = struct {

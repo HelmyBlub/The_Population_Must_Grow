@@ -9,11 +9,13 @@ layout(location = 0) in vec2 inPosition;
 layout(location = 1) in uint inSpriteIndex;
 layout(location = 2) in uint inSize;
 layout(location = 3) in float inRotate;
+layout(location = 4) in float inCutY;
 
 layout(location = 0) out vec2 scale;
 layout(location = 1) out uint spriteIndex;
 layout(location = 2) out uint size;
 layout(location = 3) out float rotate;
+layout(location = 4) out float cutY;
 
 void main() {
     gl_Position = ubo.transformation * vec4(inPosition + ubo.translate, 1, 1);
@@ -23,4 +25,5 @@ void main() {
     scale[1] = ubo.transformation[1][1];
     size = inSize;
     rotate = inRotate;
+    cutY = inCutY;
 }

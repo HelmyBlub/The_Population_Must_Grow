@@ -7,6 +7,7 @@ layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
 layout(location = 2) in uint inSize[];
 layout(location = 3) in float rotate[];
+layout(location = 4) in float cutY[];
 
 layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out uint spriteIndex;
@@ -33,16 +34,16 @@ void main(void)
     center[3] = 1;
 
     // top-left vertex
-    rotatedOffset = rotateAroundPoint(vec2(-size, -size), vec2(0, 8), rotate[0]) * scale[0] / zoom;
+    rotatedOffset = rotateAroundPoint(vec2(-size, -size * (1 - cutY[0] * 2)), vec2(0, 8), rotate[0]) * scale[0] / zoom;
     gl_Position = center + vec4(rotatedOffset, 0.0, 0.0);
-    fragTexCoord = vec2(0.0, 0.0);
+    fragTexCoord = vec2(0.0, cutY[0]);
     spriteIndex = inSpriteIndex[0];
     EmitVertex();
 
     // top-right vertex
-    rotatedOffset = rotateAroundPoint(vec2(size, -size), vec2(0, 8), rotate[0]) * scale[0] / zoom;
+    rotatedOffset = rotateAroundPoint(vec2(size, -size * (1 - cutY[0] * 2)), vec2(0, 8), rotate[0]) * scale[0] / zoom;
     gl_Position = center + vec4(rotatedOffset, 0.0, 0.0);
-    fragTexCoord = vec2(1.0, 0.0);
+    fragTexCoord = vec2(1.0, cutY[0]);
     spriteIndex = inSpriteIndex[0];
     EmitVertex();
 

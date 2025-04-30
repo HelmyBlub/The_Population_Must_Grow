@@ -168,6 +168,7 @@ pub const Citizen: type = struct {
                         if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE) {
                             if (citizen.executingUntil == null) {
                                 citizen.executingUntil = state.gameTimeMs + 3000;
+                                building.constructionStartedTime = state.gameTimeMs;
                             } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                 if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
                                     citizen.executingUntil = null;
@@ -176,6 +177,7 @@ pub const Citizen: type = struct {
                                     citizen.buildingPosition = null;
                                     citizen.moveTo.clearAndFree();
                                     citizen.idle = true;
+                                    building.constructionStartedTime = null;
                                     building.woodRequired -= 1;
                                     if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
                                         building.inConstruction = false;
@@ -206,7 +208,6 @@ pub const Citizen: type = struct {
                             }
                         } else {
                             const buildingXOffset: f32 = if (citizen.position.x < buildingPosition.x) -8 else 8;
-                            std.debug.print("test1", .{});
                             try citizen.moveToPosition(.{ .x = buildingPosition.x + buildingXOffset, .y = buildingPosition.y + 4 }, state);
                         }
                     } else {

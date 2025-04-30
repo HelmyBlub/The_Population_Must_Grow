@@ -121,9 +121,9 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
 fn packBools(citizen: *main.Citizen) u8 {
     var result: u8 = 0;
     if (citizen.foodLevel <= 0) result |= 1 << 0;
-    if (citizen.executingUntil != null and citizen.treePosition != null and citizen.buildingPosition != null) result |= 1 << 1;
+    if (citizen.executingUntil != null and citizen.treePosition != null and citizen.buildingPosition != null and citizen.potatoPosition == null) result |= 1 << 1; // axe
     if (citizen.hasWood) result |= 1 << 2;
-    if (citizen.executingUntil != null and citizen.treePosition == null and citizen.buildingPosition != null) result |= 1 << 3;
+    if (citizen.executingUntil != null and citizen.treePosition == null and citizen.buildingPosition != null and citizen.potatoPosition == null) result |= 1 << 3; // hammer
     return result;
 }
 

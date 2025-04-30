@@ -92,6 +92,8 @@ const SpriteVertex = struct {
     imageIndex: u8,
     size: u8,
     rotate: f32,
+    /// 0 => nothing cut, 1 => nothing left
+    cutY: f32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -103,8 +105,8 @@ const SpriteVertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [4]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
+    fn getAttributeDescriptions() [5]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
@@ -121,6 +123,10 @@ const SpriteVertex = struct {
         attributeDescriptions[3].location = 3;
         attributeDescriptions[3].format = vk.VK_FORMAT_R32_SFLOAT;
         attributeDescriptions[3].offset = @offsetOf(SpriteVertex, "rotate");
+        attributeDescriptions[4].binding = 0;
+        attributeDescriptions[4].location = 4;
+        attributeDescriptions[4].format = vk.VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[4].offset = @offsetOf(SpriteVertex, "cutY");
         return attributeDescriptions;
     }
 };
@@ -198,7 +204,7 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             );
             if (!doComplexCitizen) {
                 for (chunk.citizens.items) |*citizen| {
-                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
+                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
             }
@@ -220,34 +226,43 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                         rotate = fallingAngle;
                     }
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
                 indexLayer1 += 1;
             }
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
+                var cutY: f32 = 0;
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_HOUSE;
+                } else if (building.constructionStartedTime) |time| {
+                    imageIndex = imageZig.IMAGE_HOUSE;
+                    cutY = @max(1 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 3000.0, 0);
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
             for (chunk.bigBuildings.items) |*building| {
-                var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
-                if (!building.inConstruction) {
-                    imageIndex = imageZig.IMAGE_BIG_HOUSE;
+                var imageIndex: u8 = imageZig.IMAGE_BIG_HOUSE;
+                var cutY: f32 = 0;
+                if (building.inConstruction) {
+                    if (building.woodRequired > 15) {
+                        imageIndex = imageZig.IMAGE_WHITE_RECTANGLE;
+                    } else {
+                        cutY = @as(f32, @floatFromInt(building.woodRequired)) / 16.0 * 0.8 + 0.2;
+                    }
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0 };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
             for (chunk.potatoFields.items) |*field| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
+                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
                 const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
-                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0 };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                 indexLayer1 += 1;
             }
             for (chunk.pathes.items) |*pathPos| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
+                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
             }
         }
