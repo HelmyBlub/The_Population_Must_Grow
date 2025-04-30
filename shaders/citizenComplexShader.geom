@@ -35,7 +35,8 @@ vec2 rotateAroundPoint(vec2 point, vec2 pivot, float angle){
 
 void main(void)
 {	
-    bool isStarving = booleans[0] == 1 ? true : false;
+    bool isStarving = (booleans[0] & (1u << 0)) != 0u;
+    bool useAxe = (booleans[0] & (1u << 1)) != 0u; 
     vec4 center = gl_in[0].gl_Position;
     const float zoom = center[3];
     center[0] = center[0] / zoom;
@@ -60,6 +61,7 @@ void main(void)
     const uint IMAGE_CITIZEN_HEAD_BACK = 26;
     const uint IMAGE_CITIZEN_FOOT_SIDE = 27;
     const uint IMAGE_CITIZEN_HEAD_SIDE = 28;
+    const uint IMAGE_AXE = 29;
 
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
@@ -105,10 +107,16 @@ void main(void)
             citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( 0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve,  2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( -55.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(29 * sizeFactorHalve, 73 * sizeFactorHalve, IMAGE_CITIZEN_EAR_SIDE, vec2( 22 * sizeFactor, -40 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
-            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
+            if(useAxe){
+                const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
+                citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
+            } else{
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
+            }
             break;
         }
-        case IMAGE_CITIZEN_RIGHT:
+        case IMAGE_CITIZEN_RIGHT:{
             const float baseRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.5;
             partsCount = 0;
             citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(0 * sizeFactor, 30 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
@@ -121,8 +129,15 @@ void main(void)
             citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( 0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve,  2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 55.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false);
             citizenParts[partsCount++] = citizenPart(29 * sizeFactorHalve, 73 * sizeFactorHalve, IMAGE_CITIZEN_EAR_SIDE, vec2( -22 * sizeFactor, -40 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
-            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
+            if(useAxe){
+                const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
+                citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( 35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
+            }else{
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
+            }
             break;
+        }
         case IMAGE_CITIZEN_BACK:{
             const float footAnimationOffset = sin(animationTimer[0] / 100.0 * moveSpeed[0]);
             const float handAnimationOffset = ( -sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 10;

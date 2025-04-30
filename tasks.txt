@@ -1,20 +1,16 @@
 tasks:
 - animations
-    - starving
-
-    - create images for animating citizen
-        - head side mirror?
+    - tree cutting  
+        - move hands
+        - visulize swinging axe for cutting tree
+        - visualize tree falling
+    - citizens on different animations timer
+        - should not move all in sync
 
 - features:
     - animations?
         - different based on zoom
         - citizen
-            - moving 4 directions
-                - far away
-                    - simple 4 directions, single image
-                - else
-                    - moving hands/ears/feet/?eyes? animation
-                    - thin version when starving
             - only if when zoom not to far away
                 - tree cutting  
                     - move hands
@@ -42,7 +38,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test: FPS: 403 (28.04.2025)
+- zig build test: FPS: 403 (29.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

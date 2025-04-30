@@ -56,6 +56,7 @@ pub const Citizen: type = struct {
         if (!foundPath) {
             self.actionFailedWaitUntilTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
         } else {
+            self.moveTo.items[0] = target;
             recalculateCitizenImageIndex(self);
         }
     }
@@ -132,7 +133,7 @@ pub const Citizen: type = struct {
                         for (chunk.trees.items, 0..) |*tree, i| {
                             if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
                                 if (citizen.executingUntil == null) {
-                                    citizen.executingUntil = state.gameTimeMs + 1000;
+                                    citizen.executingUntil = state.gameTimeMs + 3000;
                                     return;
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;
@@ -150,7 +151,8 @@ pub const Citizen: type = struct {
                         }
                         citizen.treePosition = null;
                     } else {
-                        try citizen.moveToPosition(citizen.treePosition.?, state);
+                        const treeXOffset: f32 = if (citizen.position.x < citizen.treePosition.?.x) -8 else 8;
+                        try citizen.moveToPosition(.{ .x = citizen.treePosition.?.x + treeXOffset, .y = citizen.treePosition.?.y + 4 }, state);
                     }
                 } else if (citizen.treePosition == null and citizen.hasWood == true) {
                     if (try mapZig.getBuildingOnPosition(buildingPosition, state)) |building| {
@@ -315,7 +317,15 @@ fn recalculateCitizenImageIndex(citizen: *Citizen) void {
             }
         }
     } else {
-        citizen.imageIndex = imageZig.IMAGE_CITIZEN_FRONT;
+        if (citizen.treePosition) |treePosition| {
+            if (treePosition.x < citizen.position.x) {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_LEFT;
+            } else {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_RIGHT;
+            }
+        } else {
+            citizen.imageIndex = imageZig.IMAGE_CITIZEN_FRONT;
+        }
     }
 }
 

@@ -26,7 +26,7 @@ const CitizenVertex = struct {
     imageIndex: u8,
     animationTimer: u32,
     moveSpeed: f32,
-    /// bit 0 => isStarving
+    /// bit 0 => isStarving, bit 1 => useAxe
     booleans: u8,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -109,13 +109,20 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
                     .imageIndex = citizen.imageIndex,
                     .animationTimer = animationTimer,
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,
-                    .booleans = if (citizen.foodLevel <= 0) 1 else 0,
+                    .booleans = packBools(citizen),
                 };
                 index += 1;
             }
         }
     }
     try setupVertexDataForGPU(vkState);
+}
+
+fn packBools(citizen: *main.Citizen) u8 {
+    var result: u8 = 0;
+    if (citizen.foodLevel <= 0) result |= 1 << 0;
+    if (citizen.executingUntil != null and citizen.treePosition != null and citizen.buildingPosition != null) result |= 1 << 1;
+    return result;
 }
 
 pub fn recordCitizenCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {

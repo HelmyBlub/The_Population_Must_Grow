@@ -71,7 +71,7 @@ test "test measure performance" {
     }
     Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, &state));
     state.fpsLimiter = false;
-    state.gameSpeed = 0.1;
+    state.gameSpeed = 1;
 
     const startTime = std.time.microTimestamp();
     try mainLoop(&state);
