@@ -1,9 +1,6 @@
 tasks:
 - animations
-    - tree cutting  
-        - move hands
-        - visulize swinging axe for cutting tree
-        - visualize tree falling
+    - visualize tree falling
     - citizens on different animations timer
         - should not move all in sync
 
@@ -38,7 +35,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test: FPS: 403 (29.04.2025)
+- zig build test 1: FPS: 401 (30.04.2025)
+- zig build test 0.1: FPS: 779 (30.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

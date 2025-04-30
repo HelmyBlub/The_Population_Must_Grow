@@ -134,6 +134,7 @@ pub const Citizen: type = struct {
                             if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
                                 if (citizen.executingUntil == null) {
                                     citizen.executingUntil = state.gameTimeMs + 3000;
+                                    tree.beginCuttingTime = state.gameTimeMs;
                                     return;
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;

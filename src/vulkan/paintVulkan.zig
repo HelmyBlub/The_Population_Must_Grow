@@ -91,6 +91,7 @@ const SpriteVertex = struct {
     pos: [2]f32,
     imageIndex: u8,
     size: u8,
+    rotate: f32,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -102,8 +103,8 @@ const SpriteVertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [3]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [3]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined };
+    fn getAttributeDescriptions() [4]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
@@ -116,6 +117,10 @@ const SpriteVertex = struct {
         attributeDescriptions[2].location = 2;
         attributeDescriptions[2].format = vk.VK_FORMAT_R8_UINT;
         attributeDescriptions[2].offset = @offsetOf(SpriteVertex, "size");
+        attributeDescriptions[3].binding = 0;
+        attributeDescriptions[3].location = 3;
+        attributeDescriptions[3].format = vk.VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[3].offset = @offsetOf(SpriteVertex, "rotate");
         return attributeDescriptions;
     }
 };
@@ -193,7 +198,7 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             );
             if (!doComplexCitizen) {
                 for (chunk.citizens.items) |*citizen| {
-                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
                     indexLayer1Citizen += 1;
                 }
             }
@@ -204,7 +209,18 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                     size = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
                     imageIndex = imageZig.IMAGE_TREE;
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size };
+                var rotate: f32 = 0;
+                if (tree.beginCuttingTime) |cutTime| {
+                    const fallTime = 1000;
+                    const startFalling = 1000;
+                    const timePassed = state.gameTimeMs - cutTime;
+                    if (timePassed > startFalling) {
+                        const fallingTimePerCent = @min(@as(f32, @floatFromInt(timePassed - startFalling)) / fallTime, 1);
+                        const fallingAngle = std.math.pow(f32, fallingTimePerCent, 3.0) * std.math.pi / 2.0;
+                        rotate = fallingAngle;
+                    }
+                }
+                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate };
                 indexLayer1 += 1;
             }
             for (chunk.buildings.items) |*building| {
@@ -212,7 +228,7 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_HOUSE;
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
                 indexLayer1 += 1;
             }
             for (chunk.bigBuildings.items) |*building| {
@@ -220,18 +236,18 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 if (!building.inConstruction) {
                     imageIndex = imageZig.IMAGE_BIG_HOUSE;
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2 };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0 };
                 indexLayer1 += 1;
             }
             for (chunk.potatoFields.items) |*field| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE };
+                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
                 indexLayer2 += 1;
                 const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
-                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size };
+                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0 };
                 indexLayer1 += 1;
             }
             for (chunk.pathes.items) |*pathPos| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE };
+                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0 };
                 indexLayer2 += 1;
             }
         }

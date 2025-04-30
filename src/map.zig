@@ -60,6 +60,7 @@ pub const MapTree = struct {
     citizenOnTheWay: bool = false,
     ///  values from 0 to 1
     grow: f32 = 0,
+    beginCuttingTime: ?u32 = null,
     planted: bool = true,
     regrow: bool = false,
 };
