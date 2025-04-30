@@ -25,6 +25,7 @@ pub const Citizen: type = struct {
     pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
     pub const MOVE_SPEED_STARVING = 0.5;
     pub const MOVE_SPEED_NORMAL = 2.0;
+    pub const MOVE_SPEED_WODD_FACTOR = 0.75;
 
     pub fn createCitizen(allocator: std.mem.Allocator) Citizen {
         return Citizen{
@@ -258,8 +259,10 @@ pub const Citizen: type = struct {
         if (citizen.moveTo.items.len > 0) {
             const moveTo = citizen.moveTo.getLast();
             const direction: f32 = main.calculateDirection(citizen.position, moveTo);
-            citizen.position.x += std.math.cos(direction) * citizen.moveSpeed;
-            citizen.position.y += std.math.sin(direction) * citizen.moveSpeed;
+            var moveSpeed = citizen.moveSpeed;
+            if (citizen.hasWood) moveSpeed *= MOVE_SPEED_WODD_FACTOR;
+            citizen.position.x += std.math.cos(direction) * moveSpeed;
+            citizen.position.y += std.math.sin(direction) * moveSpeed;
             if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
                 _ = citizen.moveTo.pop();
                 recalculateCitizenImageIndex(citizen);

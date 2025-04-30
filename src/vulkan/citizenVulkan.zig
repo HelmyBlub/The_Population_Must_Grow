@@ -127,11 +127,12 @@ fn packBools(citizen: *main.Citizen) u8 {
             if (citizen.treePosition != null and citizen.potatoPosition == null) result |= 1 << 1; // axe
             if (citizen.treePosition == null and citizen.potatoPosition == null) result |= 1 << 3; // hammer
         } else {
-            if (citizen.hasPotato) {
-                result |= 1 << 5;
-            } else {
-                if (citizen.treePosition != null or citizen.farmPosition != null or citizen.potatoPosition != null) result |= 1 << 4; // plant
-            }
+            if (citizen.treePosition != null or citizen.farmPosition != null) result |= 1 << 4; // plant
+        }
+        if (citizen.hasPotato) {
+            result |= 1 << 5;
+        } else {
+            if (citizen.potatoPosition != null) result |= 1 << 4; // harvest potato
         }
     }
     return result;

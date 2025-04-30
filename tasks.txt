@@ -1,23 +1,8 @@
 tasks:
 - animations
-    - harvest potato
-        - pick up potato
-    - eating potato
-        - potato and hands to mouth, mouth moving, potato bites bit by bit
 
 
 - features:
-    - animations?
-        - citizen
-            - only if when zoom not to far away
-                - harvest potato
-                    - pick up potato
-                - eating potato
-                    - potato and hands to mouth, mouth moving, potato bites bit by bit
-        - change thoughs:
-            - citizen slower when carrying wood?
-            - citizen does not stop for food when carrying wood?
-
     - sound?
         - citizens on different animations timer
             - should not move all in sync    - UX?
