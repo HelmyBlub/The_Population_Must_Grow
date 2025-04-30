@@ -2,6 +2,7 @@ tasks:
 - animations
     - construct building
         - visulize swinging hammer with hands
+        - building up
 
 
 - features:

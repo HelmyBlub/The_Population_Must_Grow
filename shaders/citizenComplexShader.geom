@@ -38,6 +38,7 @@ void main(void)
     bool isStarving = (booleans[0] & (1u << 0)) != 0u;
     bool useAxe = (booleans[0] & (1u << 1)) != 0u; 
     bool hasWood = (booleans[0] & (1u << 2)) != 0u; 
+    bool useHammer = (booleans[0] & (1u << 3)) != 0u; 
     vec4 center = gl_in[0].gl_Position;
     const float zoom = center[3];
     center[0] = center[0] / zoom;
@@ -64,6 +65,7 @@ void main(void)
     const uint IMAGE_CITIZEN_HEAD_SIDE = 28;
     const uint IMAGE_AXE = 29;
     const uint IMAGE_WOOD_PLANK_STACK = 30;
+    const uint IMAGE_HAMMER = 31;
 
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
@@ -116,6 +118,10 @@ void main(void)
                 const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
                 citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
+            }else if(useHammer){
+                const float cutRotate = sin(animationTimer[0] / 100.0);
+                citizenParts[partsCount++] = citizenPart(38 * sizeFactorHalve, 93 * sizeFactorHalve, IMAGE_HAMMER, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
             }else if(hasWood){
                 citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
@@ -139,6 +145,10 @@ void main(void)
             if(useAxe){
                 const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
                 citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( 35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
+            }else if(useHammer){
+                const float cutRotate = sin(animationTimer[0] / 100.0);
+                citizenParts[partsCount++] = citizenPart(38 * sizeFactorHalve, 93 * sizeFactorHalve, IMAGE_HAMMER, vec2(  35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
             }else if(hasWood){
                 citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);

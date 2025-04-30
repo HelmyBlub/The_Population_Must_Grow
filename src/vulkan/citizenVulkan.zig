@@ -26,7 +26,7 @@ const CitizenVertex = struct {
     imageIndex: u8,
     animationTimer: u32,
     moveSpeed: f32,
-    /// bit 0 => isStarving, bit 1 => useAxe
+    /// bit 0 => isStarving, bit 1 => useAxe, bit 2 => carryWood, bit 3 => useHammer
     booleans: u8,
 
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -123,6 +123,7 @@ fn packBools(citizen: *main.Citizen) u8 {
     if (citizen.foodLevel <= 0) result |= 1 << 0;
     if (citizen.executingUntil != null and citizen.treePosition != null and citizen.buildingPosition != null) result |= 1 << 1;
     if (citizen.hasWood) result |= 1 << 2;
+    if (citizen.executingUntil != null and citizen.treePosition == null and citizen.buildingPosition != null) result |= 1 << 3;
     return result;
 }
 

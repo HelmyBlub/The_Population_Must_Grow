@@ -143,7 +143,6 @@ pub const Citizen: type = struct {
                                     tree.citizenOnTheWay = false;
                                     tree.beginCuttingTime = null;
                                     citizen.treePosition = null;
-                                    try citizen.moveToPosition(buildingPosition, state);
                                     if (!tree.regrow) {
                                         _ = chunk.trees.swapRemove(i);
                                     }
@@ -168,7 +167,7 @@ pub const Citizen: type = struct {
                         }
                         if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE) {
                             if (citizen.executingUntil == null) {
-                                citizen.executingUntil = state.gameTimeMs + 1000;
+                                citizen.executingUntil = state.gameTimeMs + 3000;
                             } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                 if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
                                     citizen.executingUntil = null;
@@ -206,7 +205,9 @@ pub const Citizen: type = struct {
                                 }
                             }
                         } else {
-                            try citizen.moveToPosition(buildingPosition, state);
+                            const buildingXOffset: f32 = if (citizen.position.x < buildingPosition.x) -8 else 8;
+                            std.debug.print("test1", .{});
+                            try citizen.moveToPosition(.{ .x = buildingPosition.x + buildingXOffset, .y = buildingPosition.y + 4 }, state);
                         }
                     } else {
                         citizen.hasWood = false;
@@ -321,6 +322,12 @@ fn recalculateCitizenImageIndex(citizen: *Citizen) void {
     } else {
         if (citizen.treePosition) |treePosition| {
             if (treePosition.x < citizen.position.x) {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_LEFT;
+            } else {
+                citizen.imageIndex = imageZig.IMAGE_CITIZEN_RIGHT;
+            }
+        } else if (citizen.buildingPosition) |buildingPosition| {
+            if (buildingPosition.x < citizen.position.x) {
                 citizen.imageIndex = imageZig.IMAGE_CITIZEN_LEFT;
             } else {
                 citizen.imageIndex = imageZig.IMAGE_CITIZEN_RIGHT;
