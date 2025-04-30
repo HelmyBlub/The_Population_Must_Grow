@@ -1,7 +1,7 @@
 tasks:
 - animations
-    - carrying wood
-        - wood planks carrying over head with hands
+    - construct building
+        - visulize swinging hammer with hands
 
 
 - features:
@@ -9,8 +9,6 @@ tasks:
         - different based on zoom
         - citizen
             - only if when zoom not to far away
-                - carrying wood
-                    - wood planks carrying over head with hands
                 - construct building
                     - visulize swinging hammer with hands
                 - planting tree/potato
@@ -19,6 +17,9 @@ tasks:
                     - pick up potato
                 - eating potato
                     - potato and hands to mouth, mouth moving, potato bites bit by bit
+        - change thoughs:
+            - citizen slower when carrying wood?
+            - citizen does not stop for food when carrying wood?
 
     - sound?
         - citizens on different animations timer

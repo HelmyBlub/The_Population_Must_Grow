@@ -141,6 +141,7 @@ pub const Citizen: type = struct {
                                     citizen.hasWood = true;
                                     tree.grow = 0;
                                     tree.citizenOnTheWay = false;
+                                    tree.beginCuttingTime = null;
                                     citizen.treePosition = null;
                                     try citizen.moveToPosition(buildingPosition, state);
                                     if (!tree.regrow) {
