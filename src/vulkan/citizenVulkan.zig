@@ -122,6 +122,7 @@ fn packBools(citizen: *main.Citizen) u8 {
     var result: u8 = 0;
     if (citizen.foodLevel <= 0) result |= 1 << 0;
     if (citizen.executingUntil != null and citizen.treePosition != null and citizen.buildingPosition != null) result |= 1 << 1;
+    if (citizen.hasWood) result |= 1 << 2;
     return result;
 }
 

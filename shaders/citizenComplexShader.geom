@@ -1,7 +1,7 @@
 #version 450
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 56) out;
+layout(triangle_strip, max_vertices = 60) out;
 
 layout(location = 0) in vec2 scale[];
 layout(location = 1) in uint inSpriteIndex[];
@@ -20,7 +20,7 @@ struct citizenPart {
     float angle;
     vec2 rotatePivot;
     bool spriteMirror;
-} citizenParts[14];
+} citizenParts[15];
 
 vec2 rotateAroundPoint(vec2 point, vec2 pivot, float angle){
     vec2 translated = point - pivot;
@@ -37,6 +37,7 @@ void main(void)
 {	
     bool isStarving = (booleans[0] & (1u << 0)) != 0u;
     bool useAxe = (booleans[0] & (1u << 1)) != 0u; 
+    bool hasWood = (booleans[0] & (1u << 2)) != 0u; 
     vec4 center = gl_in[0].gl_Position;
     const float zoom = center[3];
     center[0] = center[0] / zoom;
@@ -62,13 +63,14 @@ void main(void)
     const uint IMAGE_CITIZEN_FOOT_SIDE = 27;
     const uint IMAGE_CITIZEN_HEAD_SIDE = 28;
     const uint IMAGE_AXE = 29;
+    const uint IMAGE_WOOD_PLANK_STACK = 30;
 
     const uint TILE_SIZE = 20;
     const uint COMPLETE_CITIZEN_IMAGE_SIZE = 200;
     const float sizeFactor = 20.0 / 200.0;
     const float sizeFactorHalve = 20.0 / 200.0 / 2;
     const float bodyWidthFactor = isStarving ? 0.5 : 1;
-    uint partsCount = citizenParts.length();
+    uint partsCount = 0;
     switch(inSpriteIndex[0]){
         case IMAGE_CITIZEN_FRONT:{
             const float footAnimationOffset = sin(animationTimer[0] / 100.0 * moveSpeed[0]);
@@ -76,28 +78,31 @@ void main(void)
             const float handAnimationOffset2 = (sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 10;
             const float earRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.25 - 0.31;
             const float tailRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 1.57 + 1.57;
-            citizenParts = citizenPart[](
-                citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false),
-                citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false),
-                citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false),
-                citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false),
-                citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false),
-                citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart( 6 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL1, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart( 8 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL2, vec2( 14.0 * sizeFactor,-69 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(23 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_RIGHT, vec2( 14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(30 * sizeFactorHalve, 2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 0.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0), false),
-                citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0), false)
-            );
+            citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false);
+            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false);
+            citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false);
+            citizenParts[partsCount++] = citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart( 6 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL1, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(25 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_LEFT, vec2( -14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart( 8 * sizeFactorHalve,  8 * sizeFactorHalve, IMAGE_CITIZEN_PUPIL2, vec2( 14.0 * sizeFactor,-69 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 16 * sizeFactorHalve, IMAGE_CITIZEN_EYE_RIGHT, vec2( 14.0 * sizeFactor,-70 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve, 2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( 0.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false);
+            if(hasWood){
+                citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, 30 * sizeFactor), 3.14,  vec2(0,-20 * sizeFactor), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, 30 * sizeFactor), 3.14,  vec2(0,-20 * sizeFactor), false);
+            }else{
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0), false);
+            }
             break;
         }
         case IMAGE_CITIZEN_LEFT:{
             const float baseRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.5;
-            partsCount = 0;
-            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(0 * sizeFactor, 30 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
+            if(!hasWood) citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(0 * sizeFactor, 30 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(-7.0 * sizeFactor, 71 * sizeFactor), baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(-7.0 * sizeFactor, 71 * sizeFactor), -baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-8 * sizeFactor, 56 * sizeFactor), baseRotate + 3.14, vec2(25 * sizeFactor, 0), false);
@@ -111,14 +116,16 @@ void main(void)
                 const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
                 citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
-            } else{
+            }else if(hasWood){
+                citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
+            }else{
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
             }
             break;
         }
         case IMAGE_CITIZEN_RIGHT:{
             const float baseRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.5;
-            partsCount = 0;
             citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(0 * sizeFactor, 30 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(10.0 * sizeFactor, 71 * sizeFactor), baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), true);
             citizenParts[partsCount++] = citizenPart(42 * sizeFactorHalve, 21 * sizeFactorHalve, IMAGE_CITIZEN_FOOT_SIDE, vec2(10.0 * sizeFactor, 71 * sizeFactor), -baseRotate, vec2(0 * sizeFactor,-40 * sizeFactor), true);
@@ -133,6 +140,9 @@ void main(void)
                 const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
                 citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( 35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
+            }else if(hasWood){
+                citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
             }else{
                 citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -baseRotate, vec2(0,-20 * sizeFactor), false);
             }
@@ -144,16 +154,21 @@ void main(void)
             const float handAnimationOffset2 = (sin(animationTimer[0] / 100.0 * moveSpeed[0]) + 1) * 10;
             const float earRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 0.25 - 0.31;
             const float tailRotate = sin(animationTimer[0] / 100.0 * moveSpeed[0]) * 1.57 + 1.57;
-            partsCount = 9;
-            citizenParts[0] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0), false);
-            citizenParts[1] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0), false);
-            citizenParts[2] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false);
-            citizenParts[3] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false);
-            citizenParts[4] = citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD_BACK, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false);
-            citizenParts[5] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
-            citizenParts[6] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false);
-            citizenParts[7] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false);
-            citizenParts[8] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false);
+            if(hasWood){
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
+                citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
+            }else{
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2(-25 * sizeFactor, (30 - handAnimationOffset + 5) * sizeFactor), 0, vec2(0,0), false);
+                citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, (52 - handAnimationOffset2) * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 25 * sizeFactor, (30 - handAnimationOffset2 + 5) * sizeFactor), 0, vec2(0,0), false);
+            }
+            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2(-15 * sizeFactor, 75 * sizeFactor - footAnimationOffset), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 37 * sizeFactorHalve, IMAGE_CITIZEN_FOOT, vec2( 15 * sizeFactor, 75 * sizeFactor + footAnimationOffset), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(68 * sizeFactorHalve, 84 * sizeFactorHalve, IMAGE_CITIZEN_HEAD_BACK, vec2( 0.0,-44 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(53 * sizeFactorHalve * bodyWidthFactor, 75 * sizeFactorHalve, IMAGE_CITIZEN_BODY, vec2( 0.0, 30 * sizeFactor), 0, vec2(0,0), false);
+            citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2( -35 * sizeFactor, -50 * sizeFactor), earRotate, vec2(0,-20 * sizeFactor), false);
+            citizenParts[partsCount++] = citizenPart(23 * sizeFactorHalve, 61 * sizeFactorHalve, IMAGE_CITIZEN_EAR_FRONT, vec2(  35 * sizeFactor, -50 * sizeFactor),-earRotate, vec2(0,-20 * sizeFactor), false);
+            citizenParts[partsCount++] = citizenPart(51 * sizeFactorHalve, 11 * sizeFactorHalve, IMAGE_CITIZEN_TAIL, vec2(-25 * sizeFactor, 56 * sizeFactor), tailRotate, vec2(25 * sizeFactor, 0), false);
             break;
         }
     }

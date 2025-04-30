@@ -1,17 +1,14 @@
 tasks:
 - animations
-    - visualize tree falling
-    - citizens on different animations timer
-        - should not move all in sync
+    - carrying wood
+        - wood planks carrying over head with hands
+
 
 - features:
     - animations?
         - different based on zoom
         - citizen
             - only if when zoom not to far away
-                - tree cutting  
-                    - move hands
-                    - visulize swinging axe for cutting tree
                 - carrying wood
                     - wood planks carrying over head with hands
                 - construct building
@@ -24,7 +21,9 @@ tasks:
                     - potato and hands to mouth, mouth moving, potato bites bit by bit
 
     - sound?
-    - UX?
+        - citizens on different animations timer
+            - should not move all in sync    - UX?
+            - maybe would cause sounds to play in sync to much?
     - performance
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
