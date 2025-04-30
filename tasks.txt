@@ -1,16 +1,13 @@
 tasks:
 - animations
-    - construct building
-        - building up
+    - planting tree/potato
+        - hands down and moving around a bit
 
 
 - features:
     - animations?
-        - different based on zoom
         - citizen
             - only if when zoom not to far away
-                - construct building
-                    - visulize swinging hammer with hands
                 - planting tree/potato
                     - hands down and moving around a bit
                 - harvest potato

@@ -97,19 +97,19 @@ pub const Citizen: type = struct {
         } else if (citizen.farmPosition) |farmPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getPotatoFieldOnPosition(farmPosition, state)) |farmTile| {
-                    if (main.calculateDistance(farmTile.position, citizen.position) <= citizen.moveSpeed) {
+                    if (main.calculateDistance(farmTile.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
                             if (try mapZig.canBuildOrWaitForTreeCutdown(farmPosition, state)) {
-                                farmTile.planted = true;
-                                citizen.executingUntil = state.gameTimeMs + 1000;
+                                citizen.executingUntil = state.gameTimeMs + 1500;
                             }
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
+                            farmTile.planted = true;
                             citizen.executingUntil = null;
                             citizen.farmPosition = null;
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y }, state);
+                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y - 5 }, state);
                     }
                 } else {
                     citizen.farmPosition = null;
@@ -129,7 +129,7 @@ pub const Citizen: type = struct {
                     }
                 } else if (citizen.treePosition != null and citizen.hasWood == false) {
                     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.treePosition.?, state);
-                    if (main.calculateDistance(citizen.treePosition.?, citizen.position) < mapZig.GameMap.TILE_SIZE) {
+                    if (main.calculateDistance(citizen.treePosition.?, citizen.position) < mapZig.GameMap.TILE_SIZE / 2) {
                         for (chunk.trees.items, 0..) |*tree, i| {
                             if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
                                 if (citizen.executingUntil == null) {
@@ -165,7 +165,7 @@ pub const Citizen: type = struct {
                             citizen.idle = true;
                             return;
                         }
-                        if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE) {
+                        if (main.calculateDistance(citizen.position, buildingPosition) < mapZig.GameMap.TILE_SIZE / 2) {
                             if (citizen.executingUntil == null) {
                                 citizen.executingUntil = state.gameTimeMs + 3000;
                                 building.constructionStartedTime = state.gameTimeMs;
@@ -222,17 +222,17 @@ pub const Citizen: type = struct {
         } else if (citizen.treePosition != null) {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
                 if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |tree| {
-                    if (main.calculateDistance(citizen.position, tree.position) < mapZig.GameMap.TILE_SIZE) {
+                    if (main.calculateDistance(citizen.position, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
                             citizen.executingUntil = state.gameTimeMs + 1000;
-                            tree.planted = true;
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
+                            tree.planted = true;
                             citizen.executingUntil = null;
                             citizen.treePosition = null;
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveToPosition(tree.position, state);
+                        try citizen.moveToPosition(.{ .x = tree.position.x, .y = tree.position.y - 4 }, state);
                     }
                 } else {
                     citizen.treePosition = null;
