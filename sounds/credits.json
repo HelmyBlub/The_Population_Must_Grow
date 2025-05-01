@@ -1,0 +1,30 @@
+{
+    "sounds": {
+        "hammer base sound": {
+            "sound_url": "https://freesound.org/people/16GPanskaToman_Kristian/sounds/496262/",
+            "sound_name": "Hammer, wood",
+            "author_url": "https://freesound.org/people/16GPanskaToman_Kristian/",
+            "author_name": "16GPanskaToman_Kristian",
+            "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+            "license_name": "Creative Commons 0",
+            "helmiBlubComment": "shortened to single hit"
+        },
+        "axe tree cutting": {
+            "sound_url": "https://freesound.org/people/t-man95/sounds/553254/",
+            "sound_name": "axe cutting wood.wav",
+            "author_url": "https://freesound.org/people/t-man95/",
+            "author_name": "t-man95",
+            "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+            "license_name": "Creative Commons 0",
+            "helmiBlubComment": "took out multiple single chops to play randomly"
+        },
+        "tree falling": {
+            "sound_url": "https://freesound.org/people/Danielajq/sounds/441617/",
+            "sound_name": "38-arbol-cayendo.wav",
+            "author_url": "https://freesound.org/people/Danielajq/",
+            "author_name": "Danielajq",
+            "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+            "license_name": "Creative Commons 0"
+        }
+    }
+}
