@@ -16,7 +16,7 @@ pub const WindowData = struct {
 pub var windowData: WindowData = .{};
 
 pub fn initWindowSdl() !void {
-    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
+    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_AUDIO);
     const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
     windowData.window = try (sdl.SDL_CreateWindow("ChatSim", @intFromFloat(windowData.widthFloat), @intFromFloat(windowData.heightFloat), flags) orelse error.createWindow);
     _ = sdl.SDL_ShowWindow(windowData.window);
@@ -91,6 +91,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
                 buildModeChanged = true;
+                tmpAudio();
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
@@ -130,6 +131,62 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             state.gameEnd = true;
         }
     }
+}
+
+fn tmpAudio() void {
+    var audio_buf: [*]u8 = undefined;
+    var audio_len: u32 = 0;
+    var desired_spec = sdl.SDL_AudioSpec{
+        .format = sdl.SDL_AUDIO_S16,
+        .freq = 48000,
+        .channels = 1,
+    };
+
+    var spec: sdl.SDL_AudioSpec = undefined;
+
+    if (!sdl.SDL_LoadWAV("sounds/441617__danielajq__38-arbol-cayendo.wav", &spec, @ptrCast(&audio_buf), &audio_len)) {
+        std.debug.print("SDL_LoadWAV Error: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+    defer sdl.SDL_free(audio_buf);
+    std.debug.print("audioLen: {}\n", .{audio_len});
+
+    const stream = sdl.SDL_OpenAudioDeviceStream(sdl.SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired_spec, null, null);
+    // Create audio stream to feed audio data
+    if (stream == null) {
+        std.debug.print("Failed to create audio stream: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+    defer sdl.SDL_DestroyAudioStream(stream);
+
+    const device = sdl.SDL_GetAudioStreamDevice(stream);
+    if (device == 0) {
+        std.debug.print("Failed to open audio device: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+    defer sdl.SDL_CloseAudioDevice(device);
+
+    var obtained_spec: sdl.SDL_AudioSpec = undefined;
+
+    if (!sdl.SDL_GetAudioDeviceFormat(device, &obtained_spec, null)) {
+        std.debug.print("Could not get audio format: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+
+    if (!sdl.SDL_ResumeAudioDevice(device)) {
+        std.debug.print("Failed to resume audio device: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+
+    if (!sdl.SDL_PutAudioStreamData(stream, audio_buf, @intCast(audio_len))) {
+        std.debug.print("Failed to put data into audio stream: {s}\n", .{sdl.SDL_GetError()});
+        return;
+    }
+
+    for (0..200) |_| {
+        std.time.sleep(10_000_000);
+    }
+    std.debug.print("Playback finished\n", .{});
 }
 
 fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
