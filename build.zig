@@ -3,13 +3,14 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
-
     const exe = b.addExecutable(.{
         .name = "zig",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    exe.addIncludePath(b.path("dependencies"));
+    exe.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -32,6 +33,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    unit_tests.addIncludePath(b.path("dependencies"));
+    unit_tests.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
     unit_tests.root_module.linkLibrary(sdl_lib);
     const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");

@@ -4,6 +4,9 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_revision.h");
     @cInclude("SDL3/SDL_vulkan.h");
 });
+const minimp3 = @cImport({
+    @cInclude("minimp3_ex.h");
+});
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
@@ -91,7 +94,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
                 buildModeChanged = true;
-                tmpAudio();
+                try tmpAudio();
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
@@ -133,7 +136,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     }
 }
 
-fn tmpAudio() void {
+fn tmpAudio() !void {
     var audio_buf: [*]u8 = undefined;
     var audio_len: u32 = 0;
     var desired_spec = sdl.SDL_AudioSpec{
@@ -142,13 +145,33 @@ fn tmpAudio() void {
         .channels = 1,
     };
 
-    var spec: sdl.SDL_AudioSpec = undefined;
-
-    if (!sdl.SDL_LoadWAV("sounds/441617__danielajq__38-arbol-cayendo.wav", &spec, @ptrCast(&audio_buf), &audio_len)) {
-        std.debug.print("SDL_LoadWAV Error: {s}\n", .{sdl.SDL_GetError()});
+    var mp3 = minimp3.mp3dec_ex_t{};
+    if (minimp3.mp3dec_ex_open(&mp3, "sounds/553254__t-man95__axe-cutting-wood_chop_1.mp3", minimp3.MP3D_SEEK_TO_SAMPLE) != 0) {
+        std.debug.print("Failed to open MP3\n", .{});
         return;
     }
-    defer sdl.SDL_free(audio_buf);
+    defer minimp3.mp3dec_ex_close(&mp3);
+
+    // Allocate your own buffer for the decoded samples
+    const total_samples = mp3.samples; // number of samples (not bytes)
+    const sample_count: usize = @intCast(total_samples);
+    const allocator = std.heap.c_allocator;
+    const decoded = try allocator.alloc(i16, sample_count);
+    defer allocator.free(decoded);
+
+    // Read all samples
+    const samples_read = minimp3.mp3dec_ex_read(&mp3, decoded.ptr, sample_count);
+    std.debug.print("Decoded {} samples\n", .{samples_read});
+
+    audio_buf = @ptrCast(decoded.ptr);
+    audio_len = @intCast(samples_read * @sizeOf(i16));
+
+    // var spec: sdl.SDL_AudioSpec = undefined;
+    // if (!sdl.SDL_LoadWAV("sounds/441617__danielajq__38-arbol-cayendo.wav", &spec, @ptrCast(&audio_buf), &audio_len)) {
+    //     std.debug.print("SDL_LoadWAV Error: {s}\n", .{sdl.SDL_GetError()});
+    //     return;
+    // }
+    // defer sdl.SDL_free(audio_buf);
     std.debug.print("audioLen: {}\n", .{audio_len});
 
     const stream = sdl.SDL_OpenAudioDeviceStream(sdl.SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired_spec, null, null);
@@ -183,8 +206,9 @@ fn tmpAudio() void {
         return;
     }
 
-    for (0..200) |_| {
-        std.time.sleep(10_000_000);
+    for (0..20) |_| {
+        _ = sdl.SDL_PutAudioStreamData(stream, audio_buf, @intCast(audio_len));
+        std.time.sleep(100_000_000);
     }
     std.debug.print("Playback finished\n", .{});
 }

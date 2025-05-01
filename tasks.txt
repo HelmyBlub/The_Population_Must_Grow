@@ -1,12 +1,20 @@
 tasks:
-- animations
+    - sound 
+        - try out .mp3 file sound
+        - cutting tree
+        - falling tree
+        - hammering
+        - eating
+        - planting/harvesting
+        - background music
 
 
 - features:
     - sound?
         - citizens on different animations timer
-            - should not move all in sync    - UX?
+            - should not move all in sync  
             - maybe would cause sounds to play in sync to much?
+    - UX?
     - performance
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
