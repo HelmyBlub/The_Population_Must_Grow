@@ -215,13 +215,13 @@ pub fn setupRectangleData(state: *ChatSimState) void {
 }
 
 fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
-    try windowSdlZig.initWindowSdl();
+    try windowSdlZig.initWindowSdl(state.allocator);
     try paintVulkanZig.initVulkan(state);
 }
 
 fn destoryPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     try paintVulkanZig.destroyPaintVulkan(&state.vkState, state.allocator);
-    windowSdlZig.destroyWindowSdl();
+    windowSdlZig.destroyWindowSdl(state.allocator);
 }
 
 fn startGame(allocator: std.mem.Allocator) !void {
