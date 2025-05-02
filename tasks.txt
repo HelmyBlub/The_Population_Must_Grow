@@ -20,6 +20,7 @@ tasks:
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
     - save game progress?
+    - put on steam
 
 - lean more vulkan?
     - go over docu? https://docs.vulkan.org/spec/latest/index.html

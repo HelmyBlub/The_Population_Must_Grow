@@ -4,12 +4,11 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_revision.h");
     @cInclude("SDL3/SDL_vulkan.h");
 });
-const minimp3 = @cImport({
-    @cInclude("minimp3_ex.h");
-});
+
 const main = @import("main.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
+const soundMixerZig = @import("soundMixer.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -17,111 +16,18 @@ pub const WindowData = struct {
     heightFloat: f32 = 800,
 };
 
-const SoundFile = struct {
-    data: [*]u8,
-    len: u32,
-    mp3: ?[]i16,
-};
-
-pub const SoundData = struct {
-    stream: ?*sdl.SDL_AudioStream,
-    sounds: []SoundFile,
-};
-
 pub var windowData: WindowData = .{};
-pub var soundData: SoundData = undefined;
 
-pub fn initWindowSdl(allocator: std.mem.Allocator) !void {
+pub fn initWindowSdl() !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_AUDIO);
     const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
     windowData.window = try (sdl.SDL_CreateWindow("ChatSim", @intFromFloat(windowData.widthFloat), @intFromFloat(windowData.heightFloat), flags) orelse error.createWindow);
     _ = sdl.SDL_ShowWindow(windowData.window);
-    try initSounds(allocator);
 }
 
-pub fn destroyWindowSdl(allocator: std.mem.Allocator) void {
+pub fn destroyWindowSdl() void {
     sdl.SDL_DestroyWindow(windowData.window);
-    destorySounds(allocator);
     sdl.SDL_Quit();
-}
-
-fn initSounds(allocator: std.mem.Allocator) !void {
-    var desired_spec = sdl.SDL_AudioSpec{
-        .format = sdl.SDL_AUDIO_S16,
-        .freq = 48000,
-        .channels = 1,
-    };
-
-    const stream = sdl.SDL_OpenAudioDeviceStream(sdl.SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired_spec, null, null);
-    if (stream == null) {
-        std.debug.print("Failed to create audio stream: {s}\n", .{sdl.SDL_GetError()});
-        return;
-    }
-    const device = sdl.SDL_GetAudioStreamDevice(stream);
-    if (device == 0) {
-        std.debug.print("Failed to open audio device: {s}\n", .{sdl.SDL_GetError()});
-        return;
-    }
-    if (!sdl.SDL_ResumeAudioDevice(device)) {
-        std.debug.print("Failed to resume audio device: {s}\n", .{sdl.SDL_GetError()});
-        return;
-    }
-    const sounds = try allocator.alloc(SoundFile, 2);
-    sounds[0] = try loadSoundFile("sounds/441617__danielajq__38-arbol-cayendo.wav", allocator);
-    sounds[1] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_1.mp3", allocator);
-    soundData = .{
-        .stream = stream,
-        .sounds = sounds,
-    };
-}
-
-pub fn playSound(soundIndex: usize) void {
-    _ = sdl.SDL_PutAudioStreamData(soundData.stream, soundData.sounds[soundIndex].data, @intCast(soundData.sounds[soundIndex].len));
-}
-
-///support wav and mp3
-fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
-    var audio_buf: [*]u8 = undefined;
-    var audio_len: u32 = 0;
-    if (std.mem.endsWith(u8, path, ".wav")) {
-        var spec: sdl.SDL_AudioSpec = undefined;
-        if (!sdl.SDL_LoadWAV(@ptrCast(path), &spec, @ptrCast(&audio_buf), &audio_len)) {
-            return error.loadWav;
-        }
-
-        return .{ .data = audio_buf, .len = audio_len, .mp3 = null };
-        // defer sdl.SDL_free(audio_buf);
-    } else if (std.mem.endsWith(u8, path, ".mp3")) {
-        var mp3 = minimp3.mp3dec_ex_t{};
-        if (minimp3.mp3dec_ex_open(&mp3, path.ptr, minimp3.MP3D_SEEK_TO_SAMPLE) != 0) {
-            return error.openMp3;
-        }
-        defer minimp3.mp3dec_ex_close(&mp3);
-        // Allocate your own buffer for the decoded samples
-        const total_samples = mp3.samples; // number of samples (not bytes)
-        const sample_count: usize = @intCast(total_samples);
-        const decoded = try allocator.alloc(i16, sample_count);
-
-        // Read all samples
-        const samples_read = minimp3.mp3dec_ex_read(&mp3, decoded.ptr, sample_count);
-        audio_buf = @ptrCast(decoded.ptr);
-        audio_len = @intCast(samples_read * @sizeOf(i16));
-        return .{ .data = audio_buf, .len = audio_len, .mp3 = decoded };
-    } else {
-        return error.unknwonSoundFileType;
-    }
-}
-
-fn destorySounds(allocator: std.mem.Allocator) void {
-    sdl.SDL_DestroyAudioStream(soundData.stream);
-    for (soundData.sounds) |sound| {
-        if (sound.mp3) |dealocate| {
-            allocator.free(dealocate);
-        } else {
-            sdl.SDL_free(sound.data);
-        }
-    }
-    allocator.free(soundData.sounds);
 }
 
 pub fn getSurfaceForVulkan(instance: sdl.VkInstance) sdl.VkSurfaceKHR {
@@ -188,12 +94,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_SINGLE;
                 buildModeChanged = true;
-                playSound(0);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
                 state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
                 buildModeChanged = true;
-                playSound(1);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
                 state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
                 state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;

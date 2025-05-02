@@ -3,6 +3,7 @@ const main = @import("main.zig");
 const Position = main.Position;
 const mapZig = @import("map.zig");
 const imageZig = @import("image.zig");
+const soundMixerZig = @import("soundMixer.zig");
 
 pub const Citizen: type = struct {
     position: Position,
@@ -143,6 +144,13 @@ pub const Citizen: type = struct {
                                 if (citizen.executingUntil == null) {
                                     citizen.executingUntil = state.gameTimeMs + 3000;
                                     tree.beginCuttingTime = state.gameTimeMs;
+                                    const woodCutSoundInterval = 500; //@divFloor((std.math.pi * 2) * 1000, 75); //TODO
+                                    var temp: u32 = woodCutSoundInterval;
+                                    while (temp < 3000) {
+                                        try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_WOOD_CHOP, state.gameTimeMs + temp);
+                                        temp += woodCutSoundInterval;
+                                    }
+                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + 1000);
                                     return;
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;

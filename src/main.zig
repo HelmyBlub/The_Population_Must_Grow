@@ -4,6 +4,7 @@ pub const Citizen = @import("citizen.zig").Citizen;
 const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
+const soundMixerZig = @import("soundMixer.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -32,6 +33,7 @@ pub const ChatSimState: type = struct {
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
     pathfindingData: pathfindingZig.PathfindingData,
+    soundMixer: soundMixerZig.SoundMixer,
 };
 
 pub const VulkanRectangle = struct {
@@ -112,9 +114,11 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         },
         .allocator = allocator,
         .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
+        .soundMixer = undefined,
     };
     try mapZig.createSpawnChunk(allocator, state);
     try initPaintVulkanAndWindowSdl(state);
+    state.soundMixer = try soundMixerZig.createSoundMixer(state, allocator);
 }
 
 pub fn setupRectangleData(state: *ChatSimState) void {
@@ -215,13 +219,13 @@ pub fn setupRectangleData(state: *ChatSimState) void {
 }
 
 fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
-    try windowSdlZig.initWindowSdl(state.allocator);
+    try windowSdlZig.initWindowSdl();
     try paintVulkanZig.initVulkan(state);
 }
 
 fn destoryPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     try paintVulkanZig.destroyPaintVulkan(&state.vkState, state.allocator);
-    windowSdlZig.destroyWindowSdl(state.allocator);
+    windowSdlZig.destroyWindowSdl();
 }
 
 fn startGame(allocator: std.mem.Allocator) !void {
@@ -249,6 +253,7 @@ fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
+        try soundMixerZig.tickSoundMixer(state);
         try paintVulkanZig.drawFrame(state);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         if (state.fpsLimiter) {
@@ -340,6 +345,7 @@ fn tick(state: *ChatSimState) !void {
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {
+    soundMixerZig.destroySoundMixer(state);
     try destoryPaintVulkanAndWindowSdl(state);
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
