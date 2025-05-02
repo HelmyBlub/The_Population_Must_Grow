@@ -1,9 +1,7 @@
 tasks:
     - sound 
         - when to play citizen sound?
-            - when zoomed enough?
-            - zoom influences volume?
-            - to far away from camera should not play sound
+            - limit individual sound, so each sound type can happen, but not to often
         
         - cutting tree
         - falling tree

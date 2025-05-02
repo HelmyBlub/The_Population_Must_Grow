@@ -14,6 +14,12 @@ pub const SoundMixer = struct {
     soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
     soundsToPlay: std.ArrayList(SoundToPlay),
     soundData: SoundData,
+    countTreeFalling: u8 = 0,
+    countWoodCut: u8 = 0,
+    countHammer: u8 = 0,
+    pub const LIMIT_TREE_FALLING: u8 = 4;
+    pub const LIMIT_WOOD_CUT: u8 = 4;
+    pub const LIMIT_HAMMER: u8 = 4;
     pub const MAX_SOUNDS_AT_ONCE: u32 = 20;
 };
 
@@ -96,7 +102,21 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     var i: usize = 0;
     while (i < state.soundMixer.soundsToPlay.items.len) {
         if (state.soundMixer.soundsToPlay.items[i].dataIndex >= state.soundMixer.soundData.sounds[state.soundMixer.soundsToPlay.items[i].soundIndex].len) {
-            _ = state.soundMixer.soundsToPlay.swapRemove(i);
+            const removed = state.soundMixer.soundsToPlay.swapRemove(i);
+            switch (removed.soundIndex) {
+                SOUND_HAMMER_WOOD => {
+                    state.soundMixer.countHammer -= 1;
+                },
+                SOUND_TREE_FALLING => {
+                    state.soundMixer.countTreeFalling -= 1;
+                },
+                SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
+                    state.soundMixer.countWoodCut -= 1;
+                },
+                else => {
+                    unreachable;
+                },
+            }
         } else {
             i += 1;
         }
@@ -113,6 +133,23 @@ pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTi
 
 pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize, mapPosition: main.Position) !void {
     if (soundMixer.soundsToPlay.items.len < SoundMixer.MAX_SOUNDS_AT_ONCE) {
+        switch (soundIndex) {
+            SOUND_HAMMER_WOOD => {
+                if (soundMixer.countHammer >= SoundMixer.LIMIT_HAMMER) return;
+                soundMixer.countHammer += 1;
+            },
+            SOUND_TREE_FALLING => {
+                if (soundMixer.countTreeFalling >= SoundMixer.LIMIT_TREE_FALLING) return;
+                soundMixer.countTreeFalling += 1;
+            },
+            SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
+                if (soundMixer.countWoodCut >= SoundMixer.LIMIT_WOOD_CUT) return;
+                soundMixer.countWoodCut += 1;
+            },
+            else => {
+                unreachable;
+            },
+        }
         try soundMixer.soundsToPlay.append(.{
             .soundIndex = soundIndex,
             .dataIndex = offset,
