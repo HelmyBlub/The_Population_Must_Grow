@@ -1,7 +1,10 @@
 tasks:
     - sound 
+        - problem: how to handle so many sound sources?
         - when to play citizen sound?
-            - limit individual sound, so each sound type can happen, but not to often
+            - because sounds are limited in how often they can be played at once. It happens that sound far away might be played and not close one
+                - only mix loudest X of catergory., Allow more to be added for mixing
+            - reduce volume based on sound counter?
         
         - cutting tree
         - falling tree
@@ -28,8 +31,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test 1: FPS: 395 (30.04.2025)
-- zig build test 0.1: FPS: 765 (30.04.2025)
+- zig build test 1: FPS: 391 (02.05.2025)
+- zig build test 0.1: FPS: 751 (30.04.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
