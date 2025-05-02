@@ -146,11 +146,16 @@ pub const Citizen: type = struct {
                                     tree.beginCuttingTime = state.gameTimeMs;
                                     const woodCutSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
                                     var temp: u32 = @divFloor(woodCutSoundInterval, 2);
-                                    while (temp < main.CITIZEN_TREE_CUT_DURATION) {
-                                        try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.getRandomWoodChopIndex(), state.gameTimeMs + temp);
-                                        temp += woodCutSoundInterval;
+                                    if (state.camera.zoom > 0.5) {
+                                        const tooFarAwayFromCameraForSounds = main.calculateDistance(citizen.position, state.camera.position) > 1000;
+                                        if (!tooFarAwayFromCameraForSounds) {
+                                            while (temp < main.CITIZEN_TREE_CUT_DURATION) {
+                                                try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.getRandomWoodChopIndex(), state.gameTimeMs + temp, citizen.position);
+                                                temp += woodCutSoundInterval;
+                                            }
+                                            try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + main.CITIZEN_TREE_CUT_PART1_DURATION, citizen.position);
+                                        }
                                     }
-                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + main.CITIZEN_TREE_CUT_PART1_DURATION);
                                     return;
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;
@@ -185,11 +190,16 @@ pub const Citizen: type = struct {
                             if (citizen.executingUntil == null) {
                                 citizen.executingUntil = state.gameTimeMs + 3000;
                                 building.constructionStartedTime = state.gameTimeMs;
-                                const hammerSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
-                                var temp: u32 = @divFloor(hammerSoundInterval, 2);
-                                while (temp < 3000) {
-                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_HAMMER_WOOD, state.gameTimeMs + temp);
-                                    temp += hammerSoundInterval;
+                                if (state.camera.zoom > 0.5) {
+                                    const tooFarAwayFromCameraForSounds = main.calculateDistance(citizen.position, state.camera.position) > 1000;
+                                    if (!tooFarAwayFromCameraForSounds) {
+                                        const hammerSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
+                                        var temp: u32 = @divFloor(hammerSoundInterval, 2);
+                                        while (temp < 3000) {
+                                            try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_HAMMER_WOOD, state.gameTimeMs + temp, citizen.position);
+                                            temp += hammerSoundInterval;
+                                        }
+                                    }
                                 }
                             } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                 if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {

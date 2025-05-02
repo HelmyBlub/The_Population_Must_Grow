@@ -1,8 +1,9 @@
 tasks:
     - sound 
-        - make sound mixer for playing multiple sounds at once
-            - fix timing of tree cutting sounds
-            - fix only visible stuff should make sounds
+        - when to play citizen sound?
+            - when zoomed enough?
+            - zoom influences volume?
+            - to far away from camera should not play sound
         
         - cutting tree
         - falling tree

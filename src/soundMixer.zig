@@ -19,12 +19,14 @@ pub const SoundMixer = struct {
 
 const SoundToPlay = struct {
     soundIndex: usize,
-    position: usize = 0,
+    dataIndex: usize = 0,
+    mapPosition: main.Position,
 };
 
 const FutureSoundToPlay = struct {
     soundIndex: usize,
     startGameTimeMs: u32,
+    mapPosition: main.Position,
 };
 
 const SoundFile = struct {
@@ -61,7 +63,7 @@ pub fn tickSoundMixer(state: *main.ChatSimState) !void {
         if (item.startGameTimeMs <= state.gameTimeMs) {
             const removed = state.soundMixer.soundsFutureQueue.swapRemove(index);
             const offset = (state.gameTimeMs - removed.startGameTimeMs) * 48 * 2;
-            try playSound(&state.soundMixer, removed.soundIndex, offset);
+            try playSound(&state.soundMixer, removed.soundIndex, offset, removed.mapPosition);
         } else {
             index += 1;
         }
@@ -78,19 +80,22 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     defer state.allocator.free(buffer);
     @memset(buffer, 0);
 
+    const cameraZoomDistanceBonus: f32 = 500 / state.camera.zoom;
     for (state.soundMixer.soundsToPlay.items) |*sound| {
         var i: usize = 0;
-        while (i < sampleCount and sound.position < state.soundMixer.soundData.sounds[sound.soundIndex].len) {
+        while (i < sampleCount and sound.dataIndex < state.soundMixer.soundData.sounds[sound.soundIndex].len) {
             const data: [*]Sample = @ptrCast(@alignCast(state.soundMixer.soundData.sounds[sound.soundIndex].data));
-            buffer[i] +|= data[@divFloor(sound.position, 2)];
+            const distance: f32 = main.calculateDistance(sound.mapPosition, state.camera.position) + cameraZoomDistanceBonus;
+            const volume: f32 = @max(1 - (distance / 1000.0), 0);
+            buffer[i] +|= @intFromFloat(@as(f32, @floatFromInt(data[@divFloor(sound.dataIndex, 2)])) * volume);
             i += 1;
-            sound.position += 2;
+            sound.dataIndex += 2;
         }
     }
     _ = sdl.SDL_PutAudioStreamData(stream, buffer.ptr, additional_amount);
     var i: usize = 0;
     while (i < state.soundMixer.soundsToPlay.items.len) {
-        if (state.soundMixer.soundsToPlay.items[i].position >= state.soundMixer.soundData.sounds[state.soundMixer.soundsToPlay.items[i].soundIndex].len) {
+        if (state.soundMixer.soundsToPlay.items[i].dataIndex >= state.soundMixer.soundData.sounds[state.soundMixer.soundsToPlay.items[i].soundIndex].len) {
             _ = state.soundMixer.soundsToPlay.swapRemove(i);
         } else {
             i += 1;
@@ -98,18 +103,20 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     }
 }
 
-pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u32) !void {
-    try soundMixer.soundsFutureQueue.append(.{
+pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u32, mapPosition: main.Position) !void {
+    try soundMixer.soundsFutureQueue.append(FutureSoundToPlay{
         .soundIndex = soundIndex,
         .startGameTimeMs = startGameTimeMs,
+        .mapPosition = mapPosition,
     });
 }
 
-pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize) !void {
+pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize, mapPosition: main.Position) !void {
     if (soundMixer.soundsToPlay.items.len < SoundMixer.MAX_SOUNDS_AT_ONCE) {
         try soundMixer.soundsToPlay.append(.{
             .soundIndex = soundIndex,
-            .position = offset,
+            .dataIndex = offset,
+            .mapPosition = mapPosition,
         });
     }
 }
