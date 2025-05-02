@@ -93,7 +93,6 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
     }
 
     var index: u32 = 0;
-    const animationTimer = state.gameTimeMs;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -104,6 +103,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
                 state,
             );
             for (chunk.citizens.items) |*citizen| {
+                const animationTimer = if (citizen.executingUntil) |timer| timer - state.gameTimeMs else state.gameTimeMs;
                 vkState.citizen.vertices[index] = .{
                     .pos = .{ citizen.position.x, citizen.position.y },
                     .imageIndex = citizen.imageIndex,

@@ -152,13 +152,13 @@ void main(void)
                 citizenParts[partsCount++] = citizenPart(30 * sizeFactorHalve,  2 * sizeFactorHalve, IMAGE_BLACK_PIXEL, vec2( -55.0 * sizeFactor,-20 * sizeFactor), 0, vec2(0,0), false);
                 citizenParts[partsCount++] = citizenPart(29 * sizeFactorHalve, 73 * sizeFactorHalve, IMAGE_CITIZEN_EAR_SIDE, vec2( 22 * sizeFactor, -40 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
                 if(useAxe){
-                    const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
-                    citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
-                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
+                    const float cutRotate = -sin(animationTimer[0] / 100.0) * 0.75;
+                    citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( -35 * sizeFactor, -20 * sizeFactor), cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
+                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
                 }else if(useHammer){
                     const float cutRotate = sin(animationTimer[0] / 100.0);
-                    citizenParts[partsCount++] = citizenPart(38 * sizeFactorHalve, 93 * sizeFactorHalve, IMAGE_HAMMER, vec2( -35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
-                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
+                    citizenParts[partsCount++] = citizenPart(38 * sizeFactorHalve, 93 * sizeFactorHalve, IMAGE_HAMMER, vec2( -35 * sizeFactor, -20 * sizeFactor), cutRotate, vec2(35 * sizeFactor, 30 * sizeFactor), true);
+                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), cutRotate - 1.57, vec2(0,-20 * sizeFactor), false);
                 }else if(hasWood){
                     citizenParts[partsCount++] = citizenPart(179 * sizeFactorHalve, 111 * sizeFactorHalve, IMAGE_WOOD_PLANK_STACK, vec2( 0 * sizeFactor, -60 * sizeFactor), 0, vec2(0, 0), false);
                     citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), 3.14, vec2(0,-20 * sizeFactor), false);
@@ -181,8 +181,8 @@ void main(void)
                 citizenParts[partsCount++] = citizenPart(29 * sizeFactorHalve, 73 * sizeFactorHalve, IMAGE_CITIZEN_EAR_SIDE, vec2( -22 * sizeFactor, -40 * sizeFactor), baseRotate, vec2(0,-20 * sizeFactor), false);
                 if(useAxe){
                     const float cutRotate = sin(animationTimer[0] / 100.0) * 0.75;
-                    citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( 35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
-                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), -cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
+                    citizenParts[partsCount++] = citizenPart(100 * sizeFactorHalve, 100 * sizeFactorHalve, IMAGE_AXE, vec2( 35 * sizeFactor, -20 * sizeFactor), cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);
+                    citizenParts[partsCount++] = citizenPart(20 * sizeFactorHalve, 52 * sizeFactorHalve, IMAGE_CITIZEN_PAW, vec2( 0 * sizeFactor, 30 * sizeFactor), cutRotate + 1.57, vec2(0,-20 * sizeFactor), false);
                 }else if(useHammer){
                     const float cutRotate = sin(animationTimer[0] / 100.0);
                     citizenParts[partsCount++] = citizenPart(38 * sizeFactorHalve, 93 * sizeFactorHalve, IMAGE_HAMMER, vec2(  35 * sizeFactor, -20 * sizeFactor), -cutRotate, vec2(-35 * sizeFactor, 30 * sizeFactor), false);

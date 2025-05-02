@@ -217,8 +217,8 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 }
                 var rotate: f32 = 0;
                 if (tree.beginCuttingTime) |cutTime| {
-                    const fallTime = 1000;
-                    const startFalling = 1000;
+                    const fallTime = main.CITIZEN_TREE_CUT_PART2_DURATION_TREE_FALLING;
+                    const startFalling = main.CITIZEN_TREE_CUT_PART1_DURATION;
                     const timePassed = state.gameTimeMs - cutTime;
                     if (timePassed > startFalling) {
                         const fallingTimePerCent = @min(@as(f32, @floatFromInt(timePassed - startFalling)) / fallTime, 1);

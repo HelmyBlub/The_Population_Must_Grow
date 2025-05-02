@@ -1,6 +1,8 @@
 tasks:
     - sound 
         - make sound mixer for playing multiple sounds at once
+            - fix timing of tree cutting sounds
+            - fix only visible stuff should make sounds
         
         - cutting tree
         - falling tree

@@ -39,11 +39,12 @@ pub const SoundData = struct {
 };
 
 pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator) !SoundMixer {
-    const soundMixer: SoundMixer = .{
+    var soundMixer: SoundMixer = .{
         .soundsToPlay = std.ArrayList(SoundToPlay).init(allocator),
         .soundsFutureQueue = std.ArrayList(FutureSoundToPlay).init(allocator),
         .soundData = try initSounds(state, allocator),
     };
+    try soundMixer.soundsToPlay.ensureTotalCapacity(SoundMixer.MAX_SOUNDS_AT_ONCE);
     return soundMixer;
 }
 
@@ -56,11 +57,11 @@ pub fn destroySoundMixer(state: *main.ChatSimState) void {
 pub fn tickSoundMixer(state: *main.ChatSimState) !void {
     var index: usize = 0;
     while (index < state.soundMixer.soundsFutureQueue.items.len) {
-        std.debug.print("1", .{});
         const item = state.soundMixer.soundsFutureQueue.items[index];
         if (item.startGameTimeMs <= state.gameTimeMs) {
             const removed = state.soundMixer.soundsFutureQueue.swapRemove(index);
-            try playSound(&state.soundMixer, removed.soundIndex);
+            const offset = (state.gameTimeMs - removed.startGameTimeMs) * 48 * 2;
+            try playSound(&state.soundMixer, removed.soundIndex, offset);
         } else {
             index += 1;
         }
@@ -77,7 +78,7 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     defer state.allocator.free(buffer);
     @memset(buffer, 0);
 
-    for (state.soundMixer.soundsToPlay.items) |*sound| { //TODO thread safety issue
+    for (state.soundMixer.soundsToPlay.items) |*sound| {
         var i: usize = 0;
         while (i < sampleCount and sound.position < state.soundMixer.soundData.sounds[sound.soundIndex].len) {
             const data: [*]Sample = @ptrCast(@alignCast(state.soundMixer.soundData.sounds[sound.soundIndex].data));
@@ -104,16 +105,27 @@ pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTi
     });
 }
 
-pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize) !void {
+pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize) !void {
     if (soundMixer.soundsToPlay.items.len < SoundMixer.MAX_SOUNDS_AT_ONCE) {
         try soundMixer.soundsToPlay.append(.{
             .soundIndex = soundIndex,
+            .position = offset,
         });
     }
 }
 
+pub fn getRandomWoodChopIndex() usize {
+    const rand = std.crypto.random;
+    return @as(usize, @intFromFloat(rand.float(f32) * 5.0)) + 1;
+}
+
 pub const SOUND_TREE_FALLING = 0;
-pub const SOUND_WOOD_CHOP = 1;
+pub const SOUND_WOOD_CHOP_1 = 1;
+pub const SOUND_WOOD_CHOP_2 = 2;
+pub const SOUND_WOOD_CHOP_3 = 3;
+pub const SOUND_WOOD_CHOP_4 = 4;
+pub const SOUND_WOOD_CHOP_5 = 5;
+pub const SOUND_HAMMER_WOOD = 6;
 fn initSounds(state: *main.ChatSimState, allocator: std.mem.Allocator) !SoundData {
     var desired_spec = sdl.SDL_AudioSpec{
         .format = sdl.SDL_AUDIO_S16,
@@ -132,9 +144,14 @@ fn initSounds(state: *main.ChatSimState, allocator: std.mem.Allocator) !SoundDat
     if (!sdl.SDL_ResumeAudioDevice(device)) {
         return error.resumeAudioDevice;
     }
-    const sounds = try allocator.alloc(SoundFile, 2);
+    const sounds = try allocator.alloc(SoundFile, 7);
     sounds[SOUND_TREE_FALLING] = try loadSoundFile("sounds/441617__danielajq__38-arbol-cayendo.wav", allocator);
-    sounds[SOUND_WOOD_CHOP] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_1.mp3", allocator);
+    sounds[SOUND_WOOD_CHOP_1] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_1.mp3", allocator);
+    sounds[SOUND_WOOD_CHOP_2] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_2.mp3", allocator);
+    sounds[SOUND_WOOD_CHOP_3] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_3.mp3", allocator);
+    sounds[SOUND_WOOD_CHOP_4] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_4.mp3", allocator);
+    sounds[SOUND_WOOD_CHOP_5] = try loadSoundFile("sounds/553254__t-man95__axe-cutting-wood_chop_5.mp3", allocator);
+    sounds[SOUND_HAMMER_WOOD] = try loadSoundFile("sounds/496262__16gpanskatoman_kristian__hammer-wood_shortened.mp3", allocator);
     return .{
         .stream = stream,
         .sounds = sounds,

@@ -142,15 +142,15 @@ pub const Citizen: type = struct {
                         for (chunk.trees.items, 0..) |*tree, i| {
                             if (main.calculateDistance(citizen.treePosition.?, tree.position) < mapZig.GameMap.TILE_SIZE) {
                                 if (citizen.executingUntil == null) {
-                                    citizen.executingUntil = state.gameTimeMs + 3000;
+                                    citizen.executingUntil = state.gameTimeMs + main.CITIZEN_TREE_CUT_DURATION;
                                     tree.beginCuttingTime = state.gameTimeMs;
-                                    const woodCutSoundInterval = 500; //@divFloor((std.math.pi * 2) * 1000, 75); //TODO
-                                    var temp: u32 = woodCutSoundInterval;
-                                    while (temp < 3000) {
-                                        try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_WOOD_CHOP, state.gameTimeMs + temp);
+                                    const woodCutSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
+                                    var temp: u32 = @divFloor(woodCutSoundInterval, 2);
+                                    while (temp < main.CITIZEN_TREE_CUT_DURATION) {
+                                        try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.getRandomWoodChopIndex(), state.gameTimeMs + temp);
                                         temp += woodCutSoundInterval;
                                     }
-                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + 1000);
+                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + main.CITIZEN_TREE_CUT_PART1_DURATION);
                                     return;
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;
@@ -185,6 +185,12 @@ pub const Citizen: type = struct {
                             if (citizen.executingUntil == null) {
                                 citizen.executingUntil = state.gameTimeMs + 3000;
                                 building.constructionStartedTime = state.gameTimeMs;
+                                const hammerSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
+                                var temp: u32 = @divFloor(hammerSoundInterval, 2);
+                                while (temp < 3000) {
+                                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_HAMMER_WOOD, state.gameTimeMs + temp);
+                                    temp += hammerSoundInterval;
+                                }
                             } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                 if (try mapZig.canBuildOrWaitForTreeCutdown(buildingPosition, state)) {
                                     citizen.executingUntil = null;
