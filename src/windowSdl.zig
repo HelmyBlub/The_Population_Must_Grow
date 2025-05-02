@@ -20,7 +20,7 @@ pub const WindowData = struct {
 const SoundFile = struct {
     data: [*]u8,
     len: u32,
-    isMp3: bool,
+    mp3: ?[]i16,
 };
 
 pub const SoundData = struct {
@@ -89,7 +89,7 @@ fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
             return error.loadWav;
         }
 
-        return .{ .data = audio_buf, .len = audio_len, .isMp3 = false };
+        return .{ .data = audio_buf, .len = audio_len, .mp3 = null };
         // defer sdl.SDL_free(audio_buf);
     } else if (std.mem.endsWith(u8, path, ".mp3")) {
         var mp3 = minimp3.mp3dec_ex_t{};
@@ -106,7 +106,7 @@ fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
         const samples_read = minimp3.mp3dec_ex_read(&mp3, decoded.ptr, sample_count);
         audio_buf = @ptrCast(decoded.ptr);
         audio_len = @intCast(samples_read * @sizeOf(i16));
-        return .{ .data = audio_buf, .len = audio_len, .isMp3 = true };
+        return .{ .data = audio_buf, .len = audio_len, .mp3 = decoded };
     } else {
         return error.unknwonSoundFileType;
     }
@@ -115,8 +115,8 @@ fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
 fn destorySounds(allocator: std.mem.Allocator) void {
     sdl.SDL_DestroyAudioStream(soundData.stream);
     for (soundData.sounds) |sound| {
-        if (sound.isMp3) {
-            // allocator.free(sound.data);
+        if (sound.mp3) |dealocate| {
+            allocator.free(dealocate);
         } else {
             sdl.SDL_free(sound.data);
         }

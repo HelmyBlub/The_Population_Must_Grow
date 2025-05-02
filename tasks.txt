@@ -1,6 +1,7 @@
 tasks:
     - sound 
-        - try out .mp3 file sound
+        - make sound mixer for playing multiple sounds at once
+        
         - cutting tree
         - falling tree
         - hammering
