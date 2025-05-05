@@ -12,37 +12,9 @@ pub const VkRectangle = struct {
     graphicsPipeline: vk.VkPipeline = undefined,
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
-    vertices: []RectangleVertex = undefined,
+    vertices: []paintVulkanZig.ColoredVertex = undefined,
     verticeCount: usize = 0,
     pub const MAX_VERTICES = 8 * 1200;
-};
-
-const RectangleVertex = struct {
-    pos: [2]f32,
-    color: [3]f32,
-
-    fn getBindingDescription() vk.VkVertexInputBindingDescription {
-        const bindingDescription: vk.VkVertexInputBindingDescription = .{
-            .binding = 0,
-            .stride = @sizeOf(RectangleVertex),
-            .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
-        };
-
-        return bindingDescription;
-    }
-
-    fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
-        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset = @offsetOf(RectangleVertex, "pos");
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk.VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = @offsetOf(RectangleVertex, "color");
-        return attributeDescriptions;
-    }
 };
 
 pub fn initRectangle(state: *main.ChatSimState) !void {
@@ -82,8 +54,8 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimSt
 
 pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, 0, @sizeOf(RectangleVertex) * vkState.rectangle.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-    const gpu_vertices: [*]RectangleVertex = @ptrCast(@alignCast(data));
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.rectangle.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    const gpu_vertices: [*]paintVulkanZig.ColoredVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.rectangle.vertices[0..]);
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory);
 }
@@ -99,9 +71,9 @@ pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *m
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    vkState.rectangle.vertices = try allocator.alloc(RectangleVertex, VkRectangle.MAX_VERTICES);
+    vkState.rectangle.vertices = try allocator.alloc(paintVulkanZig.ColoredVertex, VkRectangle.MAX_VERTICES);
     try paintVulkanZig.createBuffer(
-        @sizeOf(RectangleVertex) * VkRectangle.MAX_VERTICES,
+        @sizeOf(paintVulkanZig.ColoredVertex) * VkRectangle.MAX_VERTICES,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.rectangle.vertexBuffer,
@@ -136,8 +108,8 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     };
 
     const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo };
-    const bindingDescription = RectangleVertex.getBindingDescription();
-    const attributeDescriptions = RectangleVertex.getAttributeDescriptions();
+    const bindingDescription = paintVulkanZig.ColoredVertex.getBindingDescription();
+    const attributeDescriptions = paintVulkanZig.ColoredVertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
@@ -242,5 +214,43 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pNext = null,
     };
     if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.rectangle.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
+
+    var triangleInputAssembly = vk.VkPipelineInputAssemblyStateCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = vk.VK_FALSE,
+    };
+    var fillRasterizer = vk.VkPipelineRasterizationStateCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = vk.VK_FALSE,
+        .rasterizerDiscardEnable = vk.VK_FALSE,
+        .polygonMode = vk.VK_POLYGON_MODE_FILL,
+        .lineWidth = 1.0,
+        .cullMode = vk.VK_CULL_MODE_BACK_BIT,
+        .frontFace = vk.VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable = vk.VK_FALSE,
+        .depthBiasConstantFactor = 0.0,
+        .depthBiasClamp = 0.0,
+        .depthBiasSlopeFactor = 0.0,
+    };
+    var trianglePipelineInfo = vk.VkGraphicsPipelineCreateInfo{
+        .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = shaderStages.len,
+        .pStages = &shaderStages,
+        .pVertexInputState = &vertexInputInfo,
+        .pInputAssemblyState = &triangleInputAssembly,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &fillRasterizer,
+        .pMultisampleState = &multisampling,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState,
+        .layout = vkState.pipeline_layout,
+        .renderPass = vkState.render_pass,
+        .subpass = 2,
+        .basePipelineHandle = null,
+        .pNext = null,
+    };
+    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &trianglePipelineInfo, null, &vkState.triangleGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateTriangleGraphicsPipeline;
+
     std.debug.print("rectangle Graphics Pipeline Created\n", .{});
 }

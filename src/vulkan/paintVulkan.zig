@@ -10,6 +10,7 @@ const main = @import("../main.zig");
 const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
 const citizenVulkanZig = @import("citizenVulkan.zig");
+const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -37,6 +38,7 @@ pub const Vk_State = struct {
     pipeline_layout: vk.VkPipelineLayout = undefined,
     graphics_pipeline: vk.VkPipeline = undefined,
     graphicsPipelineLayer2: vk.VkPipeline = undefined,
+    triangleGraphicsPipeline: vk.VkPipeline = undefined,
     framebuffers: ?[]vk.VkFramebuffer = null,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
@@ -71,6 +73,7 @@ pub const Vk_State = struct {
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
     font: fontVulkanZig.VkFont = .{},
     citizen: citizenVulkanZig.VkCitizen = .{},
+    buildOptionsUx: buildOptionsUxVulkanZig.VkBuildOptionsUx = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
     pub const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     pub const BUFFER_ADDITIOAL_SIZE: u16 = 50;
@@ -127,6 +130,34 @@ const SpriteVertex = struct {
         attributeDescriptions[4].location = 4;
         attributeDescriptions[4].format = vk.VK_FORMAT_R32_SFLOAT;
         attributeDescriptions[4].offset = @offsetOf(SpriteVertex, "cutY");
+        return attributeDescriptions;
+    }
+};
+
+pub const ColoredVertex = struct {
+    pos: [2]f32,
+    color: [3]f32,
+
+    pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
+        const bindingDescription: vk.VkVertexInputBindingDescription = .{
+            .binding = 0,
+            .stride = @sizeOf(ColoredVertex),
+            .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
+        };
+
+        return bindingDescription;
+    }
+
+    pub fn getAttributeDescriptions() [2]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = @offsetOf(ColoredVertex, "pos");
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = vk.VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = @offsetOf(ColoredVertex, "color");
         return attributeDescriptions;
     }
 };
@@ -296,6 +327,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createTextureSampler(vkState);
     try fontVulkanZig.initFont(state);
     try citizenVulkanZig.initCitizen(state);
+    try buildOptionsUxVulkanZig.init(state);
     try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
@@ -771,6 +803,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     rectangleVulkanZig.destroyRectangle(vkState, allocator);
     fontVulkanZig.destroyFont(vkState, allocator);
     citizenVulkanZig.destroyCitizen(vkState, allocator);
+    buildOptionsUxVulkanZig.destroy(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -807,6 +840,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkDestroyCommandPool(vkState.logicalDevice, vkState.command_pool, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphics_pipeline, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
+    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.triangleGraphicsPipeline, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
     vk.vkDestroyDevice(vkState.logicalDevice, null);
@@ -1061,6 +1095,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
+    try buildOptionsUxVulkanZig.recordCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }
@@ -1354,7 +1389,7 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .basePipelineHandle = null,
         .pNext = null,
     };
-    try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.graphics_pipeline), "Failed to create graphics pipeline.");
+    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.graphics_pipeline) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline;
 
     var pipelineInfo2 = vk.VkGraphicsPipelineCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -1374,7 +1409,7 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pNext = null,
         .pDepthStencilState = &vkState.depthStencil,
     };
-    try vkcheck(vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2), "Failed to create graphics pipeline2.");
+    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline2;
 
     std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }

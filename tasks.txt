@@ -1,24 +1,24 @@
 tasks:
-    - sound 
-        - problem: how to handle so many sound sources?
-            - try filter sounds based on if visible only
-            - because sounds are limited in how often they can be played at once. It happens that sound far away might be played and not close one
-                - only mix loudest X of catergory., Allow more to be added for mixing
-        
-        - cutting tree
-        - falling tree
-        - hammering
-        - eating
-        - planting/harvesting
-        - background music
+- UX
+    - display available build options
+        - rectangle filled white and border with images and hotkey
+            - make clickable with mouse
+            - mouse hover visualize
+            - align bottom middle
+        - highlight selected
+        - tooltip on hover
 
+    - display citizens grows per minute value
+    - cpu and fps smaller, more like dev info
+    - citizen counter goals
+        - some bar which fills up
+        - goal is some citizens value based on country populations
+            - get list of countries on population count
+            - when certain count reached, display "surpassed population count of <country>"
+    - visualize buildings needs to be adjacent to road
 
 - features:
-    - sound?
-        - citizens on different animations timer
-            - should not move all in sync  
-            - maybe would cause sounds to play in sync to much?
-    - UX?
+    - UX
     - performance
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
