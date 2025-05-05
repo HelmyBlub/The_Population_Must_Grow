@@ -149,6 +149,25 @@ pub fn getTopLeftVisibleChunkXY(state: *main.ChatSimState) VisibleChunksData {
     };
 }
 
+pub fn isPositionInsideMapRectangle(position: main.Position, rectangle: MapRectangle) bool {
+    return rectangle.pos.x <= position.x and rectangle.pos.x + rectangle.width >= position.x and
+        rectangle.pos.y <= position.y and rectangle.pos.y + rectangle.height >= position.y;
+}
+
+pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
+    const spacing = 10;
+    const camera = state.camera;
+    const mapVisibleTopLeft: main.Position = .{
+        .x = camera.position.x - windowSdlZig.windowData.widthFloat / 2 / camera.zoom - spacing,
+        .y = camera.position.y - windowSdlZig.windowData.heightFloat / 2 / camera.zoom - spacing,
+    };
+    return MapRectangle{
+        .pos = .{ .x = mapVisibleTopLeft.x, .y = mapVisibleTopLeft.y },
+        .width = windowSdlZig.windowData.widthFloat / camera.zoom + spacing * 2,
+        .height = windowSdlZig.windowData.heightFloat / camera.zoom + spacing * 2,
+    };
+}
+
 pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !*MapChunk {
     const key = getKeyForChunkXY(chunkXY);
     if (!state.map.chunks.contains(key)) {

@@ -1,10 +1,9 @@
 tasks:
     - sound 
         - problem: how to handle so many sound sources?
-        - when to play citizen sound?
+            - try filter sounds based on if visible only
             - because sounds are limited in how often they can be played at once. It happens that sound far away might be played and not close one
                 - only mix loudest X of catergory., Allow more to be added for mixing
-            - reduce volume based on sound counter?
         
         - cutting tree
         - falling tree
