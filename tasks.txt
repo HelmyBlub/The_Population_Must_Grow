@@ -1,5 +1,7 @@
 tasks:
 - UX
+    - key bindings and actions
+        - keybindings: "key code" c_int to "action" enum
     - display available build options
         - rectangle filled white and border with images and hotkey
             - make clickable with mouse

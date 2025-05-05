@@ -6,6 +6,7 @@ const sdl = @cImport({
 });
 
 const main = @import("main.zig");
+const inputZig = @import("input.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
 const soundMixerZig = @import("soundMixer.zig");
@@ -75,7 +76,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 _ = try mapZig.placeBuilding(newBuilding, state, true);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
-            var buildModeChanged = false;
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
                 state.camera.position.x -= 100 / state.camera.zoom;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
@@ -90,43 +90,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_MINUS) {
                 state.gameSpeed /= 2;
                 if (state.gameSpeed < 0.0625) state.gameSpeed = 0.0625;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_1) {
-                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_SINGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_2) {
-                state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_3) {
-                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_4) {
-                state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_5) {
-                state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_6) {
-                state.currentBuildType = mapZig.BUILD_TYPE_BIG_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_7) {
-                state.currentBuildType = mapZig.BUILD_TYPE_PATHES;
-                state.buildMode = mapZig.BUILD_MODE_DRAW;
-                buildModeChanged = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_9) {
-                state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            }
-            if (buildModeChanged) {
-                state.copyAreaRectangle = null;
-                state.mapMouseDown = null;
-                state.rectangles[0] = null;
+            } else {
+                try inputZig.executeActionByKeybind(event.key.scancode, state);
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});

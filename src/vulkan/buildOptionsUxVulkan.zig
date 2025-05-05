@@ -8,6 +8,7 @@ const paintVulkanZig = @import("paintVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
 const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
+const inputZig = @import("../input.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 
 pub const VkBuildOptionsUx = struct {
@@ -35,6 +36,8 @@ pub const VkBuildOptionsUx = struct {
         vertices: []fontVulkanZig.FontVertex = undefined,
         verticeCount: usize = 0,
     } = undefined,
+    selectedButtonIndex: usize = 0,
+    buildButtons: []BuildButton = undefined,
     const UX_RECTANGLES = 10;
     pub const MAX_VERTICES_TRIANGLES = 6 * UX_RECTANGLES;
     pub const MAX_VERTICES_LINES = 8 * UX_RECTANGLES;
@@ -42,9 +45,103 @@ pub const VkBuildOptionsUx = struct {
     pub const MAX_VERTICES_FONT = UX_RECTANGLES;
 };
 
+pub const BuildButton = struct {
+    pos: main.Position,
+    width: f32,
+    height: f32,
+    imageIndex: u8,
+    actionType: inputZig.ActionType,
+};
+
+fn initBuildButtons(state: *main.ChatSimState) !void {
+    const buttonCountMax = 8;
+    state.vkState.buildOptionsUx.buildButtons = try state.allocator.alloc(BuildButton, buttonCountMax);
+    const sizePixels = 80.0;
+    const spacingPixels = 5.0;
+    const vulkanWidth = sizePixels / windowSdlZig.windowData.widthFloat;
+    const vulkanHeight = sizePixels / windowSdlZig.windowData.heightFloat;
+    const vulkanSpacing = spacingPixels / windowSdlZig.windowData.widthFloat;
+    const posY = 0.99 - vulkanHeight;
+    const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(buttonCountMax)) / 2.0;
+    var buttonCounter: usize = 0;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildHouse,
+        .imageIndex = imageZig.IMAGE_HOUSE,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildTreeArea,
+        .imageIndex = imageZig.IMAGE_TREE,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildHouseArea,
+        .imageIndex = imageZig.IMAGE_HOUSE,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildPotatoFarmArea,
+        .imageIndex = imageZig.IMAGE_POTATO,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.copyPaste,
+        .imageIndex = imageZig.IMAGE_WHITE_RECTANGLE,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildBigHouseArea,
+        .imageIndex = imageZig.IMAGE_BIG_HOUSE,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildPath,
+        .imageIndex = imageZig.IMAGE_PATH,
+    };
+    buttonCounter += 1;
+
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.remove,
+        .imageIndex = imageZig.IMAGE_BLACK_PIXEL,
+    };
+    buttonCounter += 1;
+}
+
 pub fn init(state: *main.ChatSimState) !void {
     try createVertexBuffers(&state.vkState, state.allocator);
     try createGraphicsPipeline(&state.vkState, state.allocator);
+    try initBuildButtons(state);
     try setupVertices(state);
 }
 
@@ -61,6 +158,7 @@ pub fn destroy(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) 
     allocator.free(vkState.buildOptionsUx.lines.vertices);
     allocator.free(vkState.buildOptionsUx.sprites.vertices);
     allocator.free(vkState.buildOptionsUx.font.vertices);
+    allocator.free(vkState.buildOptionsUx.buildButtons);
 }
 
 fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
@@ -105,41 +203,65 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
     std.debug.print("buildOptionsUx createVertexBuffer finished\n", .{});
 }
 
+pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.ChatSimState) !void {
+    for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, buildButtonIndex| {
+        if (buildButton.actionType == actionType) {
+            state.vkState.buildOptionsUx.selectedButtonIndex = buildButtonIndex;
+            try setupVertices(state);
+            break;
+        }
+    }
+}
+
 pub fn setupVertices(state: *main.ChatSimState) !void {
-    const vulkanRectanlge = mapZig.MapRectangle{
-        .pos = .{ .x = 0, .y = 0.85 },
-        .width = 0.05,
-        .height = 0.1,
-    };
-    const fillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
+    const unselectedFillColor: [3]f32 = .{ 0.75, 0.75, 0.75 };
+    const selectedFillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
     const borderColor: [3]f32 = .{ 0, 0, 0 };
     const triangles = &state.vkState.buildOptionsUx.triangles;
-    triangles.verticeCount = 6;
-    triangles.vertices[0] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y }, .color = fillColor };
-    triangles.vertices[1] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y }, .color = fillColor };
-    triangles.vertices[2] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = fillColor };
-    triangles.vertices[3] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y }, .color = fillColor };
-    triangles.vertices[4] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = fillColor };
-    triangles.vertices[5] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = fillColor };
-
     const lines = &state.vkState.buildOptionsUx.lines;
-    lines.verticeCount = 8;
-    lines.vertices[0] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y }, .color = borderColor };
-    lines.vertices[1] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y }, .color = borderColor };
-    lines.vertices[2] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y }, .color = borderColor };
-    lines.vertices[3] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = borderColor };
-    lines.vertices[4] = .{ .pos = .{ vulkanRectanlge.pos.x + vulkanRectanlge.width, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = borderColor };
-    lines.vertices[5] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = borderColor };
-    lines.vertices[6] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y + vulkanRectanlge.height }, .color = borderColor };
-    lines.vertices[7] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y }, .color = borderColor };
-
     const sprites = &state.vkState.buildOptionsUx.sprites;
-    sprites.verticeCount = 1;
-    sprites.vertices[0] = .{ .pos = .{ vulkanRectanlge.pos.x, vulkanRectanlge.pos.y }, .imageIndex = imageZig.IMAGE_HOUSE, .width = vulkanRectanlge.width, .height = vulkanRectanlge.height };
-
     const font = &state.vkState.buildOptionsUx.font;
-    font.verticeCount = 1;
-    font.vertices[0] = fontVulkanZig.getCharFontVertex('1', vulkanRectanlge.pos, 16);
+    triangles.verticeCount = 0;
+    lines.verticeCount = 0;
+    sprites.verticeCount = 0;
+    font.verticeCount = 0;
+
+    for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, buildButtonIndex| {
+        var optKeyBindChar: ?u8 = null;
+        for (state.keybindings) |keybind| {
+            if (keybind.action == buildButton.actionType) {
+                optKeyBindChar = keybind.displayChar;
+                break;
+            }
+        }
+        const fillColor = if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) selectedFillColor else unselectedFillColor;
+        triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = fillColor };
+        triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y }, .color = fillColor };
+        triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = fillColor };
+        triangles.vertices[triangles.verticeCount + 3] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = fillColor };
+        triangles.vertices[triangles.verticeCount + 4] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = fillColor };
+        triangles.vertices[triangles.verticeCount + 5] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y + buildButton.height }, .color = fillColor };
+        triangles.verticeCount += 6;
+
+        lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 2] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 3] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 4] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 5] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y + buildButton.height }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 6] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y + buildButton.height }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 7] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = borderColor };
+        lines.verticeCount += 8;
+
+        sprites.vertices[sprites.verticeCount] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .imageIndex = buildButton.imageIndex, .width = buildButton.width, .height = buildButton.height };
+        sprites.verticeCount += 1;
+
+        if (optKeyBindChar) |keyBindChar| {
+            font.vertices[sprites.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, buildButton.pos, 16);
+            font.verticeCount += 1;
+        }
+    }
+
     try setupVertexDataForGPU(&state.vkState);
 }
 

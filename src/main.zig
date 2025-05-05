@@ -5,6 +5,7 @@ const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
 const soundMixerZig = @import("soundMixer.zig");
+const inputZig = @import("input.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -34,6 +35,7 @@ pub const ChatSimState: type = struct {
     citizenCounter: u32 = 0,
     pathfindingData: pathfindingZig.PathfindingData,
     soundMixer: soundMixerZig.SoundMixer,
+    keybindings: []inputZig.KeyBinding = undefined,
 };
 
 pub const VulkanRectangle = struct {
@@ -121,6 +123,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         .soundMixer = undefined,
     };
     try mapZig.createSpawnChunk(allocator, state);
+    try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
     state.soundMixer = try soundMixerZig.createSoundMixer(state, allocator);
 }
@@ -364,6 +367,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         pathfindingZig.destoryChunkData(&chunk.pathingData);
     }
     pathfindingZig.destoryPathfindingData(&state.pathfindingData);
+    inputZig.destory(state);
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();
 }
