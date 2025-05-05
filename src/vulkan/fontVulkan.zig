@@ -22,14 +22,14 @@ pub const VkFont = struct {
     textureImageView: vk.VkImageView = undefined,
 };
 
-const FontVertex = struct {
+pub const FontVertex = struct {
     pos: [2]f32,
     texX: f32,
     texWidth: f32,
     size: f32,
     color: [3]f32,
 
-    fn getBindingDescription() vk.VkVertexInputBindingDescription {
+    pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
             .binding = 0,
             .stride = @sizeOf(FontVertex),
@@ -39,7 +39,7 @@ const FontVertex = struct {
         return bindingDescription;
     }
 
-    fn getAttributeDescriptions() [5]vk.VkVertexInputAttributeDescription {
+    pub fn getAttributeDescriptions() [5]vk.VkVertexInputAttributeDescription {
         const attributeDescriptions = [_]vk.VkVertexInputAttributeDescription{ .{
             .binding = 0,
             .location = 0,
@@ -93,6 +93,19 @@ pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSi
         state.vkState.font.verticeCountCurrent += 1;
     }
     return xOffset;
+}
+
+pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSize: f32) FontVertex {
+    var texX: f32 = 0;
+    var texWidth: f32 = 0;
+    charToTexCoords(char, &texX, &texWidth);
+    return .{
+        .pos = .{ vulkanSurfacePosition.x, vulkanSurfacePosition.y },
+        .color = .{ 1, 0, 0 },
+        .texX = texX,
+        .texWidth = texWidth,
+        .size = fontSize,
+    };
 }
 
 pub fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {

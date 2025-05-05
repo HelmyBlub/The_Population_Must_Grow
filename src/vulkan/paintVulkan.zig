@@ -39,6 +39,7 @@ pub const Vk_State = struct {
     graphics_pipeline: vk.VkPipeline = undefined,
     graphicsPipelineLayer2: vk.VkPipeline = undefined,
     triangleGraphicsPipeline: vk.VkPipeline = undefined,
+    spriteGraphicsPipeline: vk.VkPipeline = undefined,
     framebuffers: ?[]vk.VkFramebuffer = null,
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
@@ -69,7 +70,7 @@ pub const Vk_State = struct {
     entityPaintCountLayer1: u32 = 0,
     entityPaintCountLayer1Citizen: u32 = 0,
     entityPaintCountLayer2: u32 = 0,
-    vertices: []SpriteVertex = undefined,
+    vertices: []SpriteWithGlobalTransformVertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
     font: fontVulkanZig.VkFont = .{},
     citizen: citizenVulkanZig.VkCitizen = .{},
@@ -90,7 +91,7 @@ const SwapChainSupportDetails = struct {
     presentModes: []vk.VkPresentModeKHR,
 };
 
-const SpriteVertex = struct {
+const SpriteWithGlobalTransformVertex = struct {
     pos: [2]f32,
     imageIndex: u8,
     size: u8,
@@ -101,7 +102,7 @@ const SpriteVertex = struct {
     fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
             .binding = 0,
-            .stride = @sizeOf(SpriteVertex),
+            .stride = @sizeOf(SpriteWithGlobalTransformVertex),
             .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
@@ -113,6 +114,48 @@ const SpriteVertex = struct {
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = @offsetOf(SpriteWithGlobalTransformVertex, "pos");
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = vk.VK_FORMAT_R8_UINT;
+        attributeDescriptions[1].offset = @offsetOf(SpriteWithGlobalTransformVertex, "imageIndex");
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = vk.VK_FORMAT_R8_UINT;
+        attributeDescriptions[2].offset = @offsetOf(SpriteWithGlobalTransformVertex, "size");
+        attributeDescriptions[3].binding = 0;
+        attributeDescriptions[3].location = 3;
+        attributeDescriptions[3].format = vk.VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[3].offset = @offsetOf(SpriteWithGlobalTransformVertex, "rotate");
+        attributeDescriptions[4].binding = 0;
+        attributeDescriptions[4].location = 4;
+        attributeDescriptions[4].format = vk.VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[4].offset = @offsetOf(SpriteWithGlobalTransformVertex, "cutY");
+        return attributeDescriptions;
+    }
+};
+
+pub const SpriteVertex = struct {
+    pos: [2]f32,
+    imageIndex: u8,
+    width: f32,
+    height: f32,
+
+    pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
+        const bindingDescription: vk.VkVertexInputBindingDescription = .{
+            .binding = 0,
+            .stride = @sizeOf(SpriteVertex),
+            .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
+        };
+
+        return bindingDescription;
+    }
+
+    pub fn getAttributeDescriptions() [4]vk.VkVertexInputAttributeDescription {
+        var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpriteVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -120,16 +163,12 @@ const SpriteVertex = struct {
         attributeDescriptions[1].offset = @offsetOf(SpriteVertex, "imageIndex");
         attributeDescriptions[2].binding = 0;
         attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = vk.VK_FORMAT_R8_UINT;
-        attributeDescriptions[2].offset = @offsetOf(SpriteVertex, "size");
+        attributeDescriptions[2].format = vk.VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[2].offset = @offsetOf(SpriteVertex, "width");
         attributeDescriptions[3].binding = 0;
         attributeDescriptions[3].location = 3;
         attributeDescriptions[3].format = vk.VK_FORMAT_R32_SFLOAT;
-        attributeDescriptions[3].offset = @offsetOf(SpriteVertex, "rotate");
-        attributeDescriptions[4].binding = 0;
-        attributeDescriptions[4].location = 4;
-        attributeDescriptions[4].format = vk.VK_FORMAT_R32_SFLOAT;
-        attributeDescriptions[4].offset = @offsetOf(SpriteVertex, "cutY");
+        attributeDescriptions[3].offset = @offsetOf(SpriteVertex, "height");
         return attributeDescriptions;
     }
 };
@@ -787,9 +826,9 @@ pub fn createBuffer(size: vk.VkDeviceSize, usage: vk.VkBufferUsageFlags, propert
 fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.Allocator) !void {
     if (vkState.vertexBufferSize != 0) allocator.free(vkState.vertices);
     vkState.vertexBufferSize = entityCount + Vk_State.BUFFER_ADDITIOAL_SIZE;
-    vkState.vertices = try allocator.alloc(SpriteVertex, vkState.vertexBufferSize);
+    vkState.vertices = try allocator.alloc(SpriteWithGlobalTransformVertex, vkState.vertexBufferSize);
     try createBuffer(
-        @sizeOf(SpriteVertex) * vkState.vertexBufferSize,
+        @sizeOf(SpriteWithGlobalTransformVertex) * vkState.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.vertexBuffer,
@@ -841,6 +880,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphics_pipeline, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.graphicsPipelineLayer2, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.triangleGraphicsPipeline, null);
+    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.spriteGraphicsPipeline, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.pipeline_layout, null);
     vk.vkDestroyRenderPass(vkState.logicalDevice, vkState.render_pass, null);
     vk.vkDestroyDevice(vkState.logicalDevice, null);
@@ -909,8 +949,8 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 
 pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(SpriteVertex) * vkState.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-    const gpu_vertices: [*]SpriteVertex = @ptrCast(@alignCast(data));
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.vertexBufferMemory, 0, @sizeOf(SpriteWithGlobalTransformVertex) * vkState.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    const gpu_vertices: [*]SpriteWithGlobalTransformVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.vertices[0..]);
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.vertexBufferMemory);
 }
@@ -1235,11 +1275,11 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 }
 
 fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try readShaderFile("shaders/compiled/vert.spv", allocator);
+    const vertShaderCode = try readShaderFile("shaders/compiled/spriteWithGlobalTransformVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try readShaderFile("shaders/compiled/frag.spv", allocator);
+    const fragShaderCode = try readShaderFile("shaders/compiled/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
-    const geomShaderCode = try readShaderFile("shaders/compiled/geom.spv", allocator);
+    const geomShaderCode = try readShaderFile("shaders/compiled/spriteWithGlobalTransformGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
@@ -1270,8 +1310,8 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
     };
 
     const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
-    const bindingDescription = SpriteVertex.getBindingDescription();
-    const attributeDescriptions = SpriteVertex.getAttributeDescriptions();
+    const bindingDescription = SpriteWithGlobalTransformVertex.getBindingDescription();
+    const attributeDescriptions = SpriteWithGlobalTransformVertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,

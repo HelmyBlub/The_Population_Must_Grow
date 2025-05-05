@@ -1,6 +1,10 @@
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.vert -o shaders/compiled/vert.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.frag -o shaders/compiled/frag.spv
-C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/shader.geom -o shaders/compiled/geom.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/imageShader.frag -o shaders/compiled/imageFrag.spv
+
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/spriteShader.vert -o shaders/compiled/spriteVert.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/spriteShader.geom -o shaders/compiled/spriteGeom.spv
+
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/spriteWithGlobalTransformShader.vert -o shaders/compiled/spriteWithGlobalTransformVert.spv
+C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/spriteWithGlobalTransformShader.geom -o shaders/compiled/spriteWithGlobalTransformGeom.spv
 C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/citizenComplexShader.vert -o shaders/compiled/citizenVert.spv
 C:/Zeugs/VulkanSDK/1.4.304.1/Bin/glslc.exe shaders/citizenComplexShader.geom -o shaders/compiled/citizenGeom.spv
 
