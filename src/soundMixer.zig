@@ -17,10 +17,10 @@ pub const SoundMixer = struct {
     countTreeFalling: u8 = 0,
     countWoodCut: u8 = 0,
     countHammer: u8 = 0,
-    pub const LIMIT_TREE_FALLING: u8 = 4;
-    pub const LIMIT_WOOD_CUT: u8 = 4;
-    pub const LIMIT_HAMMER: u8 = 4;
-    pub const MAX_SOUNDS_AT_ONCE: u32 = 20;
+    pub const LIMIT_TREE_FALLING: u8 = 8;
+    pub const LIMIT_WOOD_CUT: u8 = 8;
+    pub const LIMIT_HAMMER: u8 = 8;
+    pub const MAX_SOUNDS_AT_ONCE: u32 = 24;
 };
 
 const SoundToPlay = struct {
@@ -87,12 +87,13 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     @memset(buffer, 0);
 
     const cameraZoomDistanceBonus: f32 = 500 / state.camera.zoom;
+    const soundCountFactor: f32 = 1.0 - (@as(f32, @floatFromInt(state.soundMixer.soundsToPlay.items.len)) / @as(f32, @floatFromInt(SoundMixer.MAX_SOUNDS_AT_ONCE)) * 0.8);
     for (state.soundMixer.soundsToPlay.items) |*sound| {
         var i: usize = 0;
         while (i < sampleCount and sound.dataIndex < state.soundMixer.soundData.sounds[sound.soundIndex].len) {
             const data: [*]Sample = @ptrCast(@alignCast(state.soundMixer.soundData.sounds[sound.soundIndex].data));
             const distance: f32 = main.calculateDistance(sound.mapPosition, state.camera.position) + cameraZoomDistanceBonus;
-            const volume: f32 = @max(1 - (distance / 1000.0), 0);
+            const volume: f32 = @max(1 - (distance / 1000.0), 0) * soundCountFactor;
             buffer[i] +|= @intFromFloat(@as(f32, @floatFromInt(data[@divFloor(sound.dataIndex, 2)])) * volume);
             i += 1;
             sound.dataIndex += 2;
