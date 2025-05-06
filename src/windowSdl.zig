@@ -97,6 +97,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_MINUS) {
                 state.gameSpeed /= 2;
                 if (state.gameSpeed < 0.0625) state.gameSpeed = 0.0625;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
+                state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }

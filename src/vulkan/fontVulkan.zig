@@ -20,6 +20,7 @@ pub const VkFont = struct {
     textureImage: vk.VkImage = undefined,
     textureImageMemory: vk.VkDeviceMemory = undefined,
     textureImageView: vk.VkImageView = undefined,
+    displayPerformance: bool = false,
 };
 
 pub const FontVertex = struct {
@@ -76,22 +77,28 @@ pub fn clear(font: *VkFont) void {
 
 fn dataUpdate(state: *main.ChatSimState) !void {
     clear(&state.vkState.font);
-    const citizenTextWidth = paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, 50, state);
-    _ = try paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
+    const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
 
-    const citizenPerMinuteTextWidth = paintText("Citizen Grows Per Minute: ", .{ .x = -0.2, .y = -0.80 }, 25, state);
-    _ = try paintNumber(@intFromFloat(state.citizensPerMinuteCounter), .{ .x = -0.2 + citizenPerMinuteTextWidth, .y = -0.80 }, 25, state);
+    const citizenFontSize = 50.0;
+    const citizenTextWidth = paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, citizenFontSize, state);
+    _ = try paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, citizenFontSize, state);
 
-    const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
-    _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
+    const citizenPerMinuteTextWidth = paintText("Citizen Grows Per Minute: ", .{ .x = -0.2, .y = -0.99 + onePixelYInVulkan * citizenFontSize }, 25, state);
+    _ = try paintNumber(@intFromFloat(state.citizensPerMinuteCounter), .{ .x = -0.2 + citizenPerMinuteTextWidth, .y = -0.99 + onePixelYInVulkan * citizenFontSize }, 25, state);
 
     const timeTextWidth = paintText("Time: ", .{ .x = -0.49, .y = -0.99 }, 25, state);
     _ = try paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = -0.49 + timeTextWidth, .y = -0.99 }, 25, state);
 
-    if (state.cpuPerCent) |cpuPerCent| {
-        var cpuTextWidth = paintText("CPU: ", .{ .x = 0.7, .y = -0.99 }, 25, state);
-        cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
-        _ = paintText("%", .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
+    if (state.vkState.font.displayPerformance) {
+        const performanceFontSize = 20.0;
+        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, performanceFontSize, state);
+        _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, performanceFontSize, state);
+
+        if (state.cpuPerCent) |cpuPerCent| {
+            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
+            cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = -0.99 + cpuTextWidth, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
+            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
+        }
     }
 }
 

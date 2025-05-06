@@ -1,6 +1,5 @@
 tasks:
 - UX
-    - display citizens grows per minute value
     - cpu and fps smaller, more like dev info
         - set some key to display or hide these values
     - citizen counter goals
