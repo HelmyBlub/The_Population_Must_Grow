@@ -33,6 +33,8 @@ pub const ChatSimState: type = struct {
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
+    citizenCounterLastTick: u32 = 0,
+    citizensPerMinuteCounter: f32 = 0,
     pathfindingData: pathfindingZig.PathfindingData,
     soundMixer: soundMixerZig.SoundMixer,
     keybindings: []inputZig.KeyBinding = undefined,
@@ -348,6 +350,14 @@ fn tick(state: *ChatSimState) !void {
                 }
             }
         }
+    }
+    const updateTickInterval = 10;
+    if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
+        const citizenChange: f32 = @as(f32, @floatFromInt((state.citizenCounter - state.citizenCounterLastTick) * 60 * 60)) / updateTickInterval;
+        if (citizenChange >= 0) {
+            state.citizensPerMinuteCounter = state.citizensPerMinuteCounter * (1 - 0.002 * updateTickInterval) + citizenChange * 0.002 * updateTickInterval;
+        }
+        state.citizenCounterLastTick = state.citizenCounter;
     }
 }
 

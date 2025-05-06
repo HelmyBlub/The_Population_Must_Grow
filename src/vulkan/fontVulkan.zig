@@ -74,6 +74,27 @@ pub fn clear(font: *VkFont) void {
     font.verticeCountCurrent = 0;
 }
 
+fn dataUpdate(state: *main.ChatSimState) !void {
+    clear(&state.vkState.font);
+    const citizenTextWidth = paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, 50, state);
+    _ = try paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
+
+    const citizenPerMinuteTextWidth = paintText("Citizen Grows Per Minute: ", .{ .x = -0.2, .y = -0.80 }, 25, state);
+    _ = try paintNumber(@intFromFloat(state.citizensPerMinuteCounter), .{ .x = -0.2 + citizenPerMinuteTextWidth, .y = -0.80 }, 25, state);
+
+    const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
+    _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
+
+    const timeTextWidth = paintText("Time: ", .{ .x = -0.49, .y = -0.99 }, 25, state);
+    _ = try paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = -0.49 + timeTextWidth, .y = -0.99 }, 25, state);
+
+    if (state.cpuPerCent) |cpuPerCent| {
+        var cpuTextWidth = paintText("CPU: ", .{ .x = 0.7, .y = -0.99 }, 25, state);
+        cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
+        _ = paintText("%", .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
+    }
+}
+
 /// returns vulkan surface width of text
 pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f32 {
     var texX: f32 = 0;
@@ -174,6 +195,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
 }
 
 pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+    try dataUpdate(state);
     const vkState = &state.vkState;
     try setupVertexDataForGPU(vkState);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);

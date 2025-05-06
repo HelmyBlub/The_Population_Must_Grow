@@ -979,23 +979,6 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
 
     if (!try createSwapChainRelatedStuffAndCheckWindowSize(vkState, state.allocator)) return;
     try updateUniformBuffer(state);
-
-    fontVulkanZig.clear(&vkState.font);
-
-    const citizenTextWidth = fontVulkanZig.paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, 50, state);
-    _ = try fontVulkanZig.paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, 50, state);
-
-    const fpsTextWidth = fontVulkanZig.paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, 25, state);
-    _ = try fontVulkanZig.paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, 25, state);
-
-    const timeTextWidth = fontVulkanZig.paintText("Time: ", .{ .x = -0.49, .y = -0.99 }, 25, state);
-    _ = try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = -0.49 + timeTextWidth, .y = -0.99 }, 25, state);
-
-    if (state.cpuPerCent) |cpuPerCent| {
-        var cpuTextWidth = fontVulkanZig.paintText("CPU: ", .{ .x = 0.7, .y = -0.99 }, 25, state);
-        cpuTextWidth += try fontVulkanZig.paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
-        _ = fontVulkanZig.paintText("%", .{ .x = 0.7 + cpuTextWidth, .y = -0.99 }, 25, state);
-    }
     main.setupRectangleData(state);
     try rectangleVulkanZig.setupVertices(&state.rectangles, state);
 

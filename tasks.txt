@@ -1,8 +1,5 @@
 tasks:
 - UX
-    - display available build options
-        - icons
-
     - display citizens grows per minute value
     - cpu and fps smaller, more like dev info
         - set some key to display or hide these values
