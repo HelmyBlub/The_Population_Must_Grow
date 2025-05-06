@@ -65,19 +65,10 @@ const CitizenVertex = struct {
     }
 };
 
-pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: u32) !void {
+pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: u32, chunkVisible: mapZig.VisibleChunksData) !void {
     var vkState = &state.vkState;
     vkState.citizen.entityPaintCount = citizenCount;
-    var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
-    const minSize = 8;
-    if (state.camera.zoom > 1 and (chunkVisible.columns < minSize or chunkVisible.rows < minSize)) {
-        // citizens can be far away from their chunks, so they need to be considered for painting too
-        const increaseBy: usize = minSize - chunkVisible.columns;
-        chunkVisible.left -= @intCast(increaseBy);
-        chunkVisible.top -= @intCast(increaseBy);
-        chunkVisible.columns += 2 * increaseBy;
-        chunkVisible.rows += 2 * increaseBy;
-    }
+
     // recreate buffer with new size
     if (vkState.citizen.vertexBufferSize == 0) return;
     if (vkState.citizen.vertexBufferCleanUp[vkState.currentFrame] != null) {

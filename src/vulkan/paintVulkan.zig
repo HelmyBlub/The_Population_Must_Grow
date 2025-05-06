@@ -209,15 +209,13 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     var entityPaintCountLayer1Citizen: usize = 0;
     var entityPaintCountLayer2: usize = 0;
     var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
-    const minSize = 8;
-    if (state.camera.zoom > 1 and (chunkVisible.columns < minSize or chunkVisible.rows < minSize)) {
-        // citizens can be far away from their chunks, so they need to be considered for painting too
-        const increaseBy: usize = minSize - chunkVisible.columns;
-        chunkVisible.left -= @intCast(increaseBy);
-        chunkVisible.top -= @intCast(increaseBy);
-        chunkVisible.columns += 2 * increaseBy;
-        chunkVisible.rows += 2 * increaseBy;
-    }
+    // citizens can be far away from their chunks, so they need to be considered for painting too
+    const increaseBy: usize = 3;
+    chunkVisible.left -= @intCast(increaseBy);
+    chunkVisible.top -= @intCast(increaseBy);
+    chunkVisible.columns += 2 * increaseBy;
+    chunkVisible.rows += 2 * increaseBy;
+
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -240,7 +238,7 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
     const doComplexCitizen = state.camera.zoom > state.vkState.citizen.switchToComplexZoomAmount;
     if (doComplexCitizen) {
         state.vkState.entityPaintCountLayer1Citizen = 0;
-        try citizenVulkanZig.setupVerticesForComplexCitizens(state, @intCast(entityPaintCountLayer1Citizen));
+        try citizenVulkanZig.setupVerticesForComplexCitizens(state, @intCast(entityPaintCountLayer1Citizen), chunkVisible);
     } else {
         state.vkState.entityPaintCountLayer1Citizen = @intCast(entityPaintCountLayer1Citizen);
     }

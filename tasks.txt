@@ -1,11 +1,13 @@
 tasks:
+- bug: a lot of citizens not painted on one specific zoom value
+    - how to reproduce? build a lot? delete middle area?
 - UX
     - display available build options
-        - handle window resize
         - icons
 
     - display citizens grows per minute value
     - cpu and fps smaller, more like dev info
+        - set some key to display or hide these values
     - citizen counter goals
         - some bar which fills up
         - goal is some citizens value based on country populations

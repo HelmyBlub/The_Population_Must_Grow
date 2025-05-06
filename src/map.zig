@@ -104,7 +104,7 @@ pub const MapTileRectangle = struct {
     rowCount: u32,
 };
 
-const VisibleChunksData = struct {
+pub const VisibleChunksData = struct {
     top: i32,
     left: i32,
     rows: usize,
