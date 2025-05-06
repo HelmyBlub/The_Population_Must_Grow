@@ -1,12 +1,10 @@
 tasks:
 - UX
-    - cpu and fps smaller, more like dev info
-        - set some key to display or hide these values
     - citizen counter goals
         - some bar which fills up
         - goal is some citizens value based on country populations
             - get list of countries on population count
-            - when certain count reached, display "surpassed population count of <country>"
+            - when certain count reached, display "surpassed population of <country>"
     - visualize buildings needs to be adjacent to road
 
 - features:
@@ -22,8 +20,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test 1: FPS: 391 (02.05.2025)
-- zig build test 0.1: FPS: 751 (30.04.2025)
+- zig build test 1: FPS: 375 (06.05.2025)
+- zig build test 0.1: FPS: 749 (06.05.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
