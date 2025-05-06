@@ -1,6 +1,4 @@
 tasks:
-- bug: a lot of citizens not painted on one specific zoom value
-    - how to reproduce? build a lot? delete middle area?
 - UX
     - display available build options
         - icons

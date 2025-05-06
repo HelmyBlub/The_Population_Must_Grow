@@ -109,7 +109,7 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildTreeArea,
-        .imageIndex = imageZig.IMAGE_TREE,
+        .imageIndex = imageZig.IMAGE_ICON_TREE_AREA,
         .tooltip = tooltip,
     };
     buttonCounter += 1;
@@ -124,15 +124,16 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildHouseArea,
-        .imageIndex = imageZig.IMAGE_HOUSE,
+        .imageIndex = imageZig.IMAGE_ICON_HOUSE_AREA,
         .tooltip = tooltip,
     };
     buttonCounter += 1;
 
-    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip = try state.allocator.alloc([]const u8, 4);
     tooltip[0] = "Potato Fields Area:";
     tooltip[1] = "Drag Area with Mouse for Potato Fields";
     tooltip[2] = "Each Potato Field Produces an Potato every 10 seconds";
+    tooltip[3] = "Each Citizen wants to eat a Potato every 30 seconds";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
@@ -153,7 +154,7 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.copyPaste,
-        .imageIndex = imageZig.IMAGE_WHITE_RECTANGLE,
+        .imageIndex = imageZig.IMAGE_ICON_COPY_PASTE,
         .tooltip = tooltip,
     };
     buttonCounter += 1;
@@ -189,16 +190,17 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
     };
     buttonCounter += 1;
 
-    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip = try state.allocator.alloc([]const u8, 4);
     tooltip[0] = "Delete Area:";
     tooltip[1] = "Drag Area with Mouse to delete everything inside";
     tooltip[2] = "Deletes instantly";
+    tooltip[3] = "Will not delete when only 1 citizen left";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.remove,
-        .imageIndex = imageZig.IMAGE_BLACK_PIXEL,
+        .imageIndex = imageZig.IMAGE_ICON_DELETE,
         .tooltip = tooltip,
     };
     buttonCounter += 1;
