@@ -1,6 +1,6 @@
 const CountryData = struct {
     name: []const u8,
-    population: u32,
+    population: u64,
 };
 
 pub const WORLD_POPULATION = [_]CountryData{

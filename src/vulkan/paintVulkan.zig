@@ -11,6 +11,7 @@ const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
 const citizenVulkanZig = @import("citizenVulkan.zig");
 const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
+const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxVulkan.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -75,6 +76,7 @@ pub const Vk_State = struct {
     font: fontVulkanZig.VkFont = .{},
     citizen: citizenVulkanZig.VkCitizen = .{},
     buildOptionsUx: buildOptionsUxVulkanZig.VkBuildOptionsUx = .{},
+    citizenPopulationCounterUx: citizenPopulationCounterUxVulkanZig.VkCitizenPopulationCounterUx = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
     pub const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     pub const BUFFER_ADDITIOAL_SIZE: u16 = 50;
@@ -365,6 +367,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try fontVulkanZig.initFont(state);
     try citizenVulkanZig.initCitizen(state);
     try buildOptionsUxVulkanZig.init(state);
+    try citizenPopulationCounterUxVulkanZig.init(state);
     try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
     try createDescriptorPool(vkState);
@@ -842,6 +845,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     fontVulkanZig.destroyFont(vkState, allocator);
     citizenVulkanZig.destroyCitizen(vkState, allocator);
     buildOptionsUxVulkanZig.destroy(vkState, allocator);
+    citizenPopulationCounterUxVulkanZig.destroy(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
             vk.vkDestroyBuffer(vkState.logicalDevice, vkState.vertexBufferCleanUp[i].?, null);
@@ -1116,6 +1120,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
 
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
+    try citizenPopulationCounterUxVulkanZig.recordCommandBuffer(commandBuffer, state);
     try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     try buildOptionsUxVulkanZig.recordCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
