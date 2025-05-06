@@ -1,9 +1,6 @@
 tasks:
 - UX
     - display available build options
-        - rectangle filled white and border with images and hotkey
-            - make clickable with mouse
-            - mouse hover visualize
         - tooltip on hover
         - icons
         - handle window resize

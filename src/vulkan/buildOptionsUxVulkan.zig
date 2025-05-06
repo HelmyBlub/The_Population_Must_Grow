@@ -40,10 +40,11 @@ pub const VkBuildOptionsUx = struct {
     mouseHoverButtonIndex: ?usize = null,
     buildButtons: []BuildButton = undefined,
     const UX_RECTANGLES = 10;
+    const MAX_FONT_TOOLTIP = 200;
     pub const MAX_VERTICES_TRIANGLES = 6 * UX_RECTANGLES;
     pub const MAX_VERTICES_LINES = 8 * UX_RECTANGLES;
     pub const MAX_VERTICES_SPRITES = UX_RECTANGLES;
-    pub const MAX_VERTICES_FONT = UX_RECTANGLES;
+    pub const MAX_VERTICES_FONT = UX_RECTANGLES + MAX_FONT_TOOLTIP;
 };
 
 pub const BuildButton = struct {
@@ -52,6 +53,7 @@ pub const BuildButton = struct {
     height: f32,
     imageIndex: u8,
     actionType: inputZig.ActionType,
+    tooltip: [][]const u8,
 };
 
 fn initBuildButtons(state: *main.ChatSimState) !void {
@@ -66,75 +68,122 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
     const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(buttonCountMax)) / 2.0;
     var buttonCounter: usize = 0;
 
+    var tooltip = try state.allocator.alloc([]const u8, 5);
+    tooltip[0] = "House:";
+    tooltip[2] = "Click Mouse to place a House";
+    tooltip[1] = "Must be placed beside a Path";
+    tooltip[3] = "Requires 1 Tree";
+    tooltip[4] = "Produces 1 Citizen";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildHouse,
         .imageIndex = imageZig.IMAGE_HOUSE,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip[0] = "Tree Area:";
+    tooltip[1] = "Drag Area with Mouse for Tree planting";
+    tooltip[2] = "Each Tree fully grows in 10 seconds";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildTreeArea,
         .imageIndex = imageZig.IMAGE_TREE,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 4);
+    tooltip[0] = "House Area:";
+    tooltip[1] = "Drag Area with Mouse for House contruction";
+    tooltip[2] = "Each House requires 1 Tree";
+    tooltip[3] = "Each House produces 1 Citizen";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildHouseArea,
         .imageIndex = imageZig.IMAGE_HOUSE,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip[0] = "Potato Fields Area:";
+    tooltip[1] = "Drag Area with Mouse for Potato Fields";
+    tooltip[2] = "Each Potato Field Produces an Potato every 10 seconds";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildPotatoFarmArea,
         .imageIndex = imageZig.IMAGE_POTATO,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 4);
+    tooltip[0] = "Copy Paste:";
+    tooltip[1] = "First Drag Area with Mouse to Mark Area to Copy";
+    tooltip[2] = "Second select Area to Paste to";
+    tooltip[3] = "Right Mouse Button: Reset Area";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.copyPaste,
         .imageIndex = imageZig.IMAGE_WHITE_RECTANGLE,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 6);
+    tooltip[0] = "Big House Area:";
+    tooltip[1] = "Drag Area with Mouse for Big House contruction";
+    tooltip[2] = "Each Big House requires 16 Trees";
+    tooltip[3] = "Each Big House produces 8 Citizen";
+    tooltip[4] = "Size: 2x2";
+    tooltip[5] = "Can be placed over Houses to replace them";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildBigHouseArea,
         .imageIndex = imageZig.IMAGE_BIG_HOUSE,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip[0] = "Path:";
+    tooltip[1] = "Hold Mouse to paint a Path";
+    tooltip[2] = "Path required for Houses";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildPath,
         .imageIndex = imageZig.IMAGE_PATH,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 
+    tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip[0] = "Delete Area:";
+    tooltip[1] = "Drag Area with Mouse to delete everything inside";
+    tooltip[2] = "Deletes instantly";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
         .width = vulkanWidth,
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.remove,
         .imageIndex = imageZig.IMAGE_BLACK_PIXEL,
+        .tooltip = tooltip,
     };
     buttonCounter += 1;
 }
@@ -190,6 +239,9 @@ pub fn destroy(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) 
     allocator.free(vkState.buildOptionsUx.lines.vertices);
     allocator.free(vkState.buildOptionsUx.sprites.vertices);
     allocator.free(vkState.buildOptionsUx.font.vertices);
+    for (vkState.buildOptionsUx.buildButtons) |*buildButton| {
+        allocator.free(buildButton.tooltip);
+    }
     allocator.free(vkState.buildOptionsUx.buildButtons);
 }
 
@@ -305,6 +357,54 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
         if (optKeyBindChar) |keyBindChar| {
             font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, buildButton.pos, 16);
             font.verticeCount += 1;
+        }
+        if (state.vkState.buildOptionsUx.mouseHoverButtonIndex == buildButtonIndex) {
+            const paddingPixels = 2;
+            const paddingXVulkan = paddingPixels / windowSdlZig.windowData.widthFloat * 2;
+            const paddingYVulkan = paddingPixels / windowSdlZig.windowData.heightFloat * 2;
+            const fontSizePixels = 20.0;
+            const fontSizeVulkan = fontSizePixels / windowSdlZig.windowData.heightFloat * 2;
+            var width: f32 = 0;
+            var maxWidth: f32 = 0;
+            const height: f32 = fontSizeVulkan * @as(f32, @floatFromInt(buildButton.tooltip.len)) + paddingYVulkan * 2;
+            for (buildButton.tooltip, 0..) |line, tooltipLineIndex| {
+                for (line) |char| {
+                    font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(char, .{
+                        .x = buildButton.pos.x + width + paddingXVulkan,
+                        .y = buildButton.pos.y - height + @as(f32, @floatFromInt(tooltipLineIndex)) * fontSizeVulkan + paddingYVulkan,
+                    }, fontSizePixels);
+                    width += font.vertices[font.verticeCount].texWidth * 0.8;
+                    font.verticeCount += 1;
+                }
+                if (maxWidth < width) maxWidth = width;
+                width = 0;
+            }
+            maxWidth += paddingXVulkan * 2;
+
+            const tooltipRectangle = mapZig.MapRectangle{
+                .pos = .{ .x = buildButton.pos.x, .y = buildButton.pos.y - height },
+                .width = maxWidth,
+                .height = height,
+            };
+            fillColor = selectedFillColor;
+            borderColor = unselectedBorderColor;
+            triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
+            triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = fillColor };
+            triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+            triangles.vertices[triangles.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
+            triangles.vertices[triangles.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+            triangles.vertices[triangles.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+            triangles.verticeCount += 6;
+
+            lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 6] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+            lines.vertices[lines.verticeCount + 7] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
+            lines.verticeCount += 8;
         }
     }
 
