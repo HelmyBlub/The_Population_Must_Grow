@@ -216,7 +216,8 @@ pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.Chat
 pub fn setupVertices(state: *main.ChatSimState) !void {
     const unselectedFillColor: [3]f32 = .{ 0.75, 0.75, 0.75 };
     const selectedFillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
-    const borderColor: [3]f32 = .{ 0, 0, 0 };
+    const unselectedBorderColor: [3]f32 = .{ 0, 0, 0 };
+    const selectedBorderColor: [3]f32 = .{ 1, 1, 1 };
     const triangles = &state.vkState.buildOptionsUx.triangles;
     const lines = &state.vkState.buildOptionsUx.lines;
     const sprites = &state.vkState.buildOptionsUx.sprites;
@@ -235,6 +236,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
             }
         }
         const fillColor = if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) selectedFillColor else unselectedFillColor;
+        const borderColor = if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) selectedBorderColor else unselectedBorderColor;
         triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = fillColor };
         triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y }, .color = fillColor };
         triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = fillColor };
@@ -257,7 +259,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
         sprites.verticeCount += 1;
 
         if (optKeyBindChar) |keyBindChar| {
-            font.vertices[sprites.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, buildButton.pos, 16);
+            font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, buildButton.pos, 16);
             font.verticeCount += 1;
         }
     }
@@ -297,12 +299,6 @@ pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatS
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.triangles.verticeCount), 1, 0, 0);
 
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
-    vertexBuffers = .{vkState.buildOptionsUx.lines.vertexBuffer};
-    offsets = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.lines.verticeCount), 1, 0, 0);
-
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.spriteGraphicsPipeline);
     vertexBuffers = .{vkState.buildOptionsUx.sprites.vertexBuffer};
     offsets = .{0};
@@ -314,6 +310,12 @@ pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatS
     offsets = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.font.verticeCount), 1, 0, 0);
+
+    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
+    vertexBuffers = .{vkState.buildOptionsUx.lines.vertexBuffer};
+    offsets = .{0};
+    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.lines.verticeCount), 1, 0, 0);
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
