@@ -41,6 +41,58 @@ pub fn destory(state: *main.ChatSimState) void {
     state.allocator.free(state.keybindings);
 }
 
+pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
+    var buildModeChanged = false;
+    try buildOptionsUxVulkanZig.setSelectedButtonIndex(actionType, state);
+    switch (actionType) {
+        ActionType.buildHouse => {
+            state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
+            state.buildMode = mapZig.BUILD_MODE_SINGLE;
+            buildModeChanged = true;
+        },
+        ActionType.buildTreeArea => {
+            state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+        ActionType.buildHouseArea => {
+            state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+        ActionType.buildPotatoFarmArea => {
+            state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+        ActionType.copyPaste => {
+            state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+        ActionType.buildBigHouseArea => {
+            state.currentBuildType = mapZig.BUILD_TYPE_BIG_HOUSE;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+        ActionType.buildPath => {
+            state.currentBuildType = mapZig.BUILD_TYPE_PATHES;
+            state.buildMode = mapZig.BUILD_MODE_DRAW;
+            buildModeChanged = true;
+        },
+        ActionType.remove => {
+            state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
+            state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
+            buildModeChanged = true;
+        },
+    }
+    if (buildModeChanged) {
+        state.copyAreaRectangle = null;
+        state.mapMouseDown = null;
+        state.rectangles[0] = null;
+    }
+}
+
 pub fn executeActionByKeybind(sdlScanCode: c_uint, state: *main.ChatSimState) !void {
     var optActionType: ?ActionType = null;
     for (state.keybindings) |keybind| {
@@ -49,55 +101,5 @@ pub fn executeActionByKeybind(sdlScanCode: c_uint, state: *main.ChatSimState) !v
             break;
         }
     }
-    if (optActionType) |actionType| {
-        var buildModeChanged = false;
-        try buildOptionsUxVulkanZig.setSelectedButtonIndex(actionType, state);
-        switch (actionType) {
-            ActionType.buildHouse => {
-                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_SINGLE;
-                buildModeChanged = true;
-            },
-            ActionType.buildTreeArea => {
-                state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-            ActionType.buildHouseArea => {
-                state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-            ActionType.buildPotatoFarmArea => {
-                state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-            ActionType.copyPaste => {
-                state.currentBuildType = mapZig.BUILD_TYPE_COPY_PASTE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-            ActionType.buildBigHouseArea => {
-                state.currentBuildType = mapZig.BUILD_TYPE_BIG_HOUSE;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-            ActionType.buildPath => {
-                state.currentBuildType = mapZig.BUILD_TYPE_PATHES;
-                state.buildMode = mapZig.BUILD_MODE_DRAW;
-                buildModeChanged = true;
-            },
-            ActionType.remove => {
-                state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
-                state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
-                buildModeChanged = true;
-            },
-        }
-        if (buildModeChanged) {
-            state.copyAreaRectangle = null;
-            state.mapMouseDown = null;
-            state.rectangles[0] = null;
-        }
-    }
+    if (optActionType) |actionType| try executeAction(actionType, state);
 }

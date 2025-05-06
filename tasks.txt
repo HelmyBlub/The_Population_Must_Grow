@@ -1,15 +1,12 @@
 tasks:
 - UX
-    - bug: 9 is missing
-    - selection on path not visible. Also change border color
-        - paint border last?
     - display available build options
         - rectangle filled white and border with images and hotkey
             - make clickable with mouse
             - mouse hover visualize
-            - align bottom middle
-        - highlight selected
         - tooltip on hover
+        - icons
+        - handle window resize
 
     - display citizens grows per minute value
     - cpu and fps smaller, more like dev info

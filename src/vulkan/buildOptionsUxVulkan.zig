@@ -37,6 +37,7 @@ pub const VkBuildOptionsUx = struct {
         verticeCount: usize = 0,
     } = undefined,
     selectedButtonIndex: usize = 0,
+    mouseHoverButtonIndex: ?usize = null,
     buildButtons: []BuildButton = undefined,
     const UX_RECTANGLES = 10;
     pub const MAX_VERTICES_TRIANGLES = 6 * UX_RECTANGLES;
@@ -138,6 +139,37 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
     buttonCounter += 1;
 }
 
+pub fn mouseMove(state: *main.ChatSimState) !void {
+    const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.x, state.currentMouse.y);
+    for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, index| {
+        if (buildButton.pos.x <= vulkanMousePos.x and buildButton.pos.x + buildButton.width >= vulkanMousePos.x and
+            buildButton.pos.y <= vulkanMousePos.y and buildButton.pos.y + buildButton.height >= vulkanMousePos.y)
+        {
+            state.vkState.buildOptionsUx.mouseHoverButtonIndex = index;
+            try setupVertices(state);
+            return;
+        }
+    }
+    state.vkState.buildOptionsUx.mouseHoverButtonIndex = null;
+    try setupVertices(state);
+}
+
+/// returns true if a button was clicked
+pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.Position) !bool {
+    const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(mouseWindowPosition.x, mouseWindowPosition.y);
+    for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, index| {
+        if (buildButton.pos.x <= vulkanMousePos.x and buildButton.pos.x + buildButton.width >= vulkanMousePos.x and
+            buildButton.pos.y <= vulkanMousePos.y and buildButton.pos.y + buildButton.height >= vulkanMousePos.y)
+        {
+            state.vkState.buildOptionsUx.selectedButtonIndex = index;
+            try setupVertices(state);
+            try inputZig.executeAction(buildButton.actionType, state);
+            return true;
+        }
+    }
+    return false;
+}
+
 pub fn init(state: *main.ChatSimState) !void {
     try createVertexBuffers(&state.vkState, state.allocator);
     try createGraphicsPipeline(&state.vkState, state.allocator);
@@ -216,8 +248,10 @@ pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.Chat
 pub fn setupVertices(state: *main.ChatSimState) !void {
     const unselectedFillColor: [3]f32 = .{ 0.75, 0.75, 0.75 };
     const selectedFillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
+    const mouseHoverFillColor: [3]f32 = .{ 0, 0, 1 };
     const unselectedBorderColor: [3]f32 = .{ 0, 0, 0 };
     const selectedBorderColor: [3]f32 = .{ 1, 1, 1 };
+    const hoverBorderColor: [3]f32 = .{ 0, 1, 0 };
     const triangles = &state.vkState.buildOptionsUx.triangles;
     const lines = &state.vkState.buildOptionsUx.lines;
     const sprites = &state.vkState.buildOptionsUx.sprites;
@@ -235,8 +269,18 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
                 break;
             }
         }
-        const fillColor = if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) selectedFillColor else unselectedFillColor;
-        const borderColor = if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) selectedBorderColor else unselectedBorderColor;
+        var fillColor: [3]f32 = undefined;
+        var borderColor: [3]f32 = undefined;
+        if (state.vkState.buildOptionsUx.selectedButtonIndex == buildButtonIndex) {
+            fillColor = selectedFillColor;
+            borderColor = selectedBorderColor;
+        } else if (state.vkState.buildOptionsUx.mouseHoverButtonIndex == buildButtonIndex) {
+            fillColor = mouseHoverFillColor;
+            borderColor = hoverBorderColor;
+        } else {
+            fillColor = unselectedFillColor;
+            borderColor = unselectedBorderColor;
+        }
         triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ buildButton.pos.x, buildButton.pos.y }, .color = fillColor };
         triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y }, .color = fillColor };
         triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ buildButton.pos.x + buildButton.width, buildButton.pos.y + buildButton.height }, .color = fillColor };

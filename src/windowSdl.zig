@@ -10,6 +10,7 @@ const inputZig = @import("input.zig");
 const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
 const soundMixerZig = @import("soundMixer.zig");
+const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -48,10 +49,16 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
 pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
+        if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN and
+            try buildOptionsUxVulkanZig.mouseClick(state, .{ .x = event.motion.x, .y = event.motion.y }))
+        {
+            return;
+        }
         if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) try handleBuildModeRectangle(&event, state);
         if (state.buildMode == mapZig.BUILD_MODE_DRAW) try handleBuildModeDraw(&event, state);
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.currentMouse = .{ .x = event.motion.x, .y = event.motion.y };
+            try buildOptionsUxVulkanZig.mouseMove(state);
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
                 state.camera.zoom *= 1.2;
