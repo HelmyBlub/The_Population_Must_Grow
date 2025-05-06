@@ -56,6 +56,22 @@ pub const BuildButton = struct {
     tooltip: [][]const u8,
 };
 
+pub fn onWindowResize(vkState: *paintVulkanZig.Vk_State) void {
+    const sizePixels = 80.0;
+    const spacingPixels = 5.0;
+    const vulkanWidth = sizePixels / windowSdlZig.windowData.widthFloat;
+    const vulkanHeight = sizePixels / windowSdlZig.windowData.heightFloat;
+    const vulkanSpacing = spacingPixels / windowSdlZig.windowData.widthFloat;
+    const posY = 0.99 - vulkanHeight;
+    const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(vkState.buildOptionsUx.buildButtons.len)) / 2.0;
+
+    for (vkState.buildOptionsUx.buildButtons, 0..) |*buildButton, index| {
+        buildButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index)), .y = posY };
+        buildButton.width = vulkanWidth;
+        buildButton.height = vulkanHeight;
+    }
+}
+
 fn initBuildButtons(state: *main.ChatSimState) !void {
     const buttonCountMax = 8;
     state.vkState.buildOptionsUx.buildButtons = try state.allocator.alloc(BuildButton, buttonCountMax);
@@ -373,7 +389,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
                         .x = buildButton.pos.x + width + paddingXVulkan,
                         .y = buildButton.pos.y - height + @as(f32, @floatFromInt(tooltipLineIndex)) * fontSizeVulkan + paddingYVulkan,
                     }, fontSizePixels);
-                    width += font.vertices[font.verticeCount].texWidth * 0.8;
+                    width += font.vertices[font.verticeCount].texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSizePixels * 0.8;
                     font.verticeCount += 1;
                 }
                 if (maxWidth < width) maxWidth = width;

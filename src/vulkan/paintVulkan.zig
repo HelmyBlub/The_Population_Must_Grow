@@ -421,6 +421,7 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(vkState: *Vk_State, allocator: 
         try createFramebuffers(vkState, allocator);
         windowSdlZig.windowData.widthFloat = @floatFromInt(capabilities.currentExtent.width);
         windowSdlZig.windowData.heightFloat = @floatFromInt(capabilities.currentExtent.height);
+        buildOptionsUxVulkanZig.onWindowResize(vkState);
         return true;
     }
     return true;
