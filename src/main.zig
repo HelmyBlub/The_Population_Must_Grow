@@ -35,7 +35,7 @@ pub const ChatSimState: type = struct {
     citizensPerMinuteCounter: f32 = 0,
     pathfindingData: pathfindingZig.PathfindingData,
     soundMixer: soundMixerZig.SoundMixer,
-    keybindings: []inputZig.KeyBinding = undefined,
+    keyboardInfo: inputZig.KeyboardInfo = .{},
     mouseInfo: MouseInfo = .{},
 };
 
@@ -368,6 +368,7 @@ fn tick(state: *ChatSimState) !void {
         }
         state.citizenCounterLastTick = state.citizenCounter;
     }
+    inputZig.tick(state);
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {

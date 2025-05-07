@@ -106,13 +106,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
-                state.camera.position.x -= 100 / state.camera.zoom;
+                state.keyboardInfo.cameraMoveX = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
-                state.camera.position.x += 100 / state.camera.zoom;
+                state.keyboardInfo.cameraMoveX = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_UP or event.key.scancode == sdl.SDL_SCANCODE_W) {
-                state.camera.position.y -= 100 / state.camera.zoom;
+                state.keyboardInfo.cameraMoveY = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
-                state.camera.position.y += 100 / state.camera.zoom;
+                state.keyboardInfo.cameraMoveY = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
                 state.gameSpeed *= 2;
                 if (state.gameSpeed > 64) state.gameSpeed = 64;
@@ -123,6 +123,16 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
+            }
+        } else if (event.type == sdl.SDL_EVENT_KEY_DOWN) {
+            if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
+                state.keyboardInfo.cameraMoveX = -10;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT or event.key.scancode == sdl.SDL_SCANCODE_D) {
+                state.keyboardInfo.cameraMoveX = 10;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_UP or event.key.scancode == sdl.SDL_SCANCODE_W) {
+                state.keyboardInfo.cameraMoveY = -10;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
+                state.keyboardInfo.cameraMoveY = 10;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});

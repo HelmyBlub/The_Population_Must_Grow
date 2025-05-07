@@ -333,7 +333,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
 
     for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, buildButtonIndex| {
         var optKeyBindChar: ?u8 = null;
-        for (state.keybindings) |keybind| {
+        for (state.keyboardInfo.keybindings) |keybind| {
             if (keybind.action == buildButton.actionType) {
                 optKeyBindChar = keybind.displayChar;
                 break;

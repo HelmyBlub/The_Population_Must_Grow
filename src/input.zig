@@ -19,6 +19,12 @@ pub const ActionType = enum {
     remove,
 };
 
+pub const KeyboardInfo = struct {
+    cameraMoveX: f32 = 0,
+    cameraMoveY: f32 = 0,
+    keybindings: []KeyBinding = undefined,
+};
+
 pub const KeyBinding = struct {
     sdlScanCode: c_int,
     action: ActionType,
@@ -26,19 +32,29 @@ pub const KeyBinding = struct {
 };
 
 pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
-    state.keybindings = try state.allocator.alloc(KeyBinding, 8);
-    state.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
-    state.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
-    state.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildTreeArea };
-    state.keybindings[3] = .{ .sdlScanCode = sdl.SDL_SCANCODE_4, .displayChar = '4', .action = ActionType.buildHouseArea };
-    state.keybindings[4] = .{ .sdlScanCode = sdl.SDL_SCANCODE_5, .displayChar = '5', .action = ActionType.buildPotatoFarmArea };
-    state.keybindings[5] = .{ .sdlScanCode = sdl.SDL_SCANCODE_6, .displayChar = '6', .action = ActionType.copyPaste };
-    state.keybindings[6] = .{ .sdlScanCode = sdl.SDL_SCANCODE_7, .displayChar = '7', .action = ActionType.buildBigHouseArea };
-    state.keybindings[7] = .{ .sdlScanCode = sdl.SDL_SCANCODE_9, .displayChar = '9', .action = ActionType.remove };
+    state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 8);
+    state.keyboardInfo.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
+    state.keyboardInfo.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
+    state.keyboardInfo.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildTreeArea };
+    state.keyboardInfo.keybindings[3] = .{ .sdlScanCode = sdl.SDL_SCANCODE_4, .displayChar = '4', .action = ActionType.buildHouseArea };
+    state.keyboardInfo.keybindings[4] = .{ .sdlScanCode = sdl.SDL_SCANCODE_5, .displayChar = '5', .action = ActionType.buildPotatoFarmArea };
+    state.keyboardInfo.keybindings[5] = .{ .sdlScanCode = sdl.SDL_SCANCODE_6, .displayChar = '6', .action = ActionType.copyPaste };
+    state.keyboardInfo.keybindings[6] = .{ .sdlScanCode = sdl.SDL_SCANCODE_7, .displayChar = '7', .action = ActionType.buildBigHouseArea };
+    state.keyboardInfo.keybindings[7] = .{ .sdlScanCode = sdl.SDL_SCANCODE_9, .displayChar = '9', .action = ActionType.remove };
 }
 
 pub fn destory(state: *main.ChatSimState) void {
-    state.allocator.free(state.keybindings);
+    state.allocator.free(state.keyboardInfo.keybindings);
+}
+
+pub fn tick(state: *main.ChatSimState) void {
+    const keyboardInfo = state.keyboardInfo;
+    if (keyboardInfo.cameraMoveX != 0) {
+        state.camera.position.x += keyboardInfo.cameraMoveX / state.camera.zoom;
+    }
+    if (keyboardInfo.cameraMoveY != 0) {
+        state.camera.position.y += keyboardInfo.cameraMoveY / state.camera.zoom;
+    }
 }
 
 pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
@@ -95,7 +111,7 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
 
 pub fn executeActionByKeybind(sdlScanCode: c_uint, state: *main.ChatSimState) !void {
     var optActionType: ?ActionType = null;
-    for (state.keybindings) |keybind| {
+    for (state.keyboardInfo.keybindings) |keybind| {
         if (keybind.sdlScanCode == sdlScanCode) {
             optActionType = keybind.action;
             break;
