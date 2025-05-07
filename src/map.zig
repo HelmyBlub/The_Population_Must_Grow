@@ -524,6 +524,23 @@ pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
     return true;
 }
 
+pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
+    const newBuilding: Building = .{
+        .position = position,
+        .type = BUILD_TYPE_HOUSE,
+    };
+    return try placeBuilding(newBuilding, state, checkPath, displayHelpText);
+}
+
+pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
+    const newBuilding: Building = .{
+        .position = position,
+        .type = BUILD_TYPE_BIG_HOUSE,
+        .woodRequired = 16,
+    };
+    return try placeBuilding(newBuilding, state, checkPath, displayHelpText);
+}
+
 pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
@@ -542,6 +559,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
             if (displayHelpText) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = std.time.milliTimestamp();
             return false;
         }
+        std.debug.print("{} {}", .{ building, chunk.chunkXY });
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
@@ -716,27 +734,17 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
             };
             for (chunk.buildings.items) |building| {
                 if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
-                    const newBuilding: Building = .{
-                        .position = targetPosition,
-                        .inConstruction = true,
-                        .type = building.type,
-                    };
-                    _ = try placeBuilding(newBuilding, state, false, false);
+                    _ = try placeHouse(targetPosition, state, false, false);
                     continue :nextTile;
                 }
             }
             for (chunk.bigBuildings.items) |building| {
                 if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
-                    const newBuilding: Building = .{
-                        .position = .{
-                            .x = building.position.x + targetTopLeftTileMiddle.x - fromTopLeftTileMiddle.x,
-                            .y = building.position.y + targetTopLeftTileMiddle.y - fromTopLeftTileMiddle.y,
-                        },
-                        .inConstruction = true,
-                        .type = building.type,
-                        .woodRequired = 16,
+                    const position: main.Position = .{
+                        .x = building.position.x + targetTopLeftTileMiddle.x - fromTopLeftTileMiddle.x,
+                        .y = building.position.y + targetTopLeftTileMiddle.y - fromTopLeftTileMiddle.y,
                     };
-                    _ = try placeBuilding(newBuilding, state, false, false);
+                    _ = try placeBigHouse(position, state, false, false);
                     continue :nextTile;
                 }
             }

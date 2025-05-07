@@ -98,11 +98,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (state.buildMode == mapZig.BUILD_MODE_SINGLE and event.button.button == 1) {
                 const position = mapZig.mapPositionToTileMiddlePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
-                const newBuilding: mapZig.Building = .{
-                    .position = position,
-                    .type = state.currentBuildType,
-                };
-                _ = try mapZig.placeBuilding(newBuilding, state, true, true);
+                _ = try mapZig.placeHouse(position, state, true, true);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
@@ -229,18 +225,10 @@ fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *
             }
 
             if (state.currentBuildType == mapZig.BUILD_TYPE_HOUSE) {
-                const newBuilding: mapZig.Building = .{
-                    .position = position,
-                    .type = mapZig.BUILDING_TYPE_HOUSE,
-                };
-                _ = try mapZig.placeBuilding(newBuilding, state, true, false);
+                _ = try mapZig.placeHouse(position, state, true, false);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
-                const newBuilding: mapZig.Building = .{
-                    .position = .{ .x = position.x + mapZig.GameMap.TILE_SIZE / 2, .y = position.y + mapZig.GameMap.TILE_SIZE / 2 },
-                    .type = mapZig.BUILDING_TYPE_BIG_HOUSE,
-                    .woodRequired = 16,
-                };
-                _ = try mapZig.placeBuilding(newBuilding, state, true, false);
+                const bigHousePosition: main.Position = .{ .x = position.x + mapZig.GameMap.TILE_SIZE / 2, .y = position.y + mapZig.GameMap.TILE_SIZE / 2 };
+                _ = try mapZig.placeBigHouse(bigHousePosition, state, true, false);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {
                 const newPotatoField: mapZig.PotatoField = .{
                     .position = position,

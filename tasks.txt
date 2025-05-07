@@ -1,9 +1,13 @@
 tasks:
+- create test for realistic case to measure performance on
+    - continue: unknown problems: mutex? before arrayList append failed? why?
+    - no speed limit to know fps value
+    - test from zero citizens to X0_000 ?
+        - measure time from 0 to 10_000 and time from 10_000 to 25_000
 
 
 - features:
     - performance
-        - create test for realistic case to measure performance on
         - check code for performance improvement for single cpu and no simd
         - check code for performance improvment for single cpu and simd
         - check code for performance improvment for multiple cpu cores

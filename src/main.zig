@@ -6,6 +6,7 @@ const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
 const soundMixerZig = @import("soundMixer.zig");
 const inputZig = @import("input.zig");
+const testZig = @import("test.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -23,7 +24,7 @@ pub const ChatSimState: type = struct {
     gameTimeMs: u32,
     gameEnd: bool,
     vkState: paintVulkanZig.Vk_State,
-    fpsLimiter: bool,
+    testData: ?testZig.TestData = null,
     camera: Camera,
     allocator: std.mem.Allocator,
     rectangles: [2]?VulkanRectangle = .{ null, null },
@@ -75,26 +76,8 @@ test "test for memory leaks" {
 }
 
 test "test measure performance" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    var state: ChatSimState = undefined;
-    try createGameState(allocator, &state);
-    defer destroyGameState(&state);
     SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
-    for (0..10_000) |_| {
-        try mapZig.placeCitizen(Citizen.createCitizen(allocator), &state);
-    }
-    Citizen.randomlyPlace(try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, &state));
-    state.fpsLimiter = false;
-    state.gameSpeed = 1;
-
-    const startTime = std.time.microTimestamp();
-    try mainLoop(&state);
-    const frames: i64 = @intFromFloat(@as(f32, @floatFromInt(@divFloor(state.gameTimeMs, state.tickIntervalMs))) / state.gameSpeed);
-    const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divFloor(frames * 1_000_000, timePassed);
-    std.debug.print("FPS: {d}", .{fps});
+    try testZig.executePerfromanceTest();
 }
 
 pub fn main() !void {
@@ -120,7 +103,6 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         .gameTimeMs = 0,
         .gameEnd = false,
         .vkState = .{},
-        .fpsLimiter = true,
         .citizenCounter = 1,
         .camera = .{
             .position = .{ .x = 0, .y = 0 },
@@ -252,7 +234,7 @@ fn startGame(allocator: std.mem.Allocator) !void {
     try mainLoop(&state);
 }
 
-fn mainLoop(state: *ChatSimState) !void {
+pub fn mainLoop(state: *ChatSimState) !void {
     var ticksRequired: f32 = 0;
     const totalStartTime = std.time.microTimestamp();
     var nextCpuPerCentUpdateTimeMs: i64 = 0;
@@ -274,7 +256,7 @@ fn mainLoop(state: *ChatSimState) !void {
         try soundMixerZig.tickSoundMixer(state);
         try paintVulkanZig.drawFrame(state);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
-        if (state.fpsLimiter) {
+        if (state.testData == null or state.testData.?.fpsLimiter) {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
             if (std.time.milliTimestamp() > nextCpuPerCentUpdateTimeMs) {
                 state.cpuPerCent = 1.0 - @as(f32, @floatFromInt(sleepTime)) / @as(f32, @floatFromInt(state.paintIntervalMs)) / 1000.0;
@@ -295,6 +277,7 @@ fn mainLoop(state: *ChatSimState) !void {
 
 fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
+    try testZig.tick(state);
 
     for (0..state.map.activeChunkKeys.items.len) |i| {
         const chunkKey = state.map.activeChunkKeys.items[i];
