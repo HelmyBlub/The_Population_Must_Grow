@@ -270,6 +270,7 @@ fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
+        inputZig.tick(state);
         try soundMixerZig.tickSoundMixer(state);
         try paintVulkanZig.drawFrame(state);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
@@ -368,7 +369,6 @@ fn tick(state: *ChatSimState) !void {
         }
         state.citizenCounterLastTick = state.citizenCounter;
     }
-    inputZig.tick(state);
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {

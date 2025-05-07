@@ -10,6 +10,7 @@ const sdl = @cImport({
 });
 
 pub const SoundMixer = struct {
+    mutex: std.Thread.Mutex = .{},
     volume: f32 = 1,
     addedSoundDataUntilTimeMs: i64 = 0,
     soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
@@ -60,7 +61,7 @@ pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator)
 pub fn destroySoundMixer(state: *main.ChatSimState) void {
     state.soundMixer.soundsToPlay.deinit();
     state.soundMixer.soundsFutureQueue.deinit();
-    destorySounds(state.soundMixer, state.allocator);
+    destorySounds(&state.soundMixer, state.allocator);
 }
 
 pub fn tickSoundMixer(state: *main.ChatSimState) !void {
@@ -81,6 +82,9 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     _ = len;
     const Sample = i16;
     const state: *main.ChatSimState = @ptrCast(@alignCast(userdata.?));
+    state.soundMixer.mutex.lock();
+    defer state.soundMixer.mutex.unlock();
+    if (state.gameEnd) return;
 
     const sampleCount = @divExact(additional_amount, @sizeOf(Sample));
     var buffer = state.allocator.alloc(Sample, @intCast(sampleCount)) catch return;
@@ -251,7 +255,9 @@ fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
     }
 }
 
-fn destorySounds(soundMixer: SoundMixer, allocator: std.mem.Allocator) void {
+fn destorySounds(soundMixer: *SoundMixer, allocator: std.mem.Allocator) void {
+    soundMixer.mutex.lock();
+    defer soundMixer.mutex.unlock();
     sdl.SDL_DestroyAudioStream(soundMixer.soundData.stream);
     for (soundMixer.soundData.sounds) |sound| {
         if (sound.mp3) |dealocate| {

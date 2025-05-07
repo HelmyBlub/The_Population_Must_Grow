@@ -1,14 +1,8 @@
 tasks:
-- UX
-    - improve camera move with keys
-    - should be there information that camera can be moved by keys?
-    - should be there information that zoom with mouse wheel is available?
-
 - bug: sound callback can crash when game closed and sound not finished yet
 
 
 - features:
-    - UX
     - performance
         - performance and multicore when all features implemented
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
