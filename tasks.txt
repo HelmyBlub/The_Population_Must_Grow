@@ -1,6 +1,5 @@
 tasks:
 - UX
-    - camera movement to right mouse button
     - zoom to mouse position
     - improve camera move with keys
     - should be there information that camera can be moved by keys?
