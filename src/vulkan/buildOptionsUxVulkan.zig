@@ -207,7 +207,7 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
 }
 
 pub fn mouseMove(state: *main.ChatSimState) !void {
-    const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.currentMouse.x, state.currentMouse.y);
+    const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y);
     for (state.vkState.buildOptionsUx.buildButtons, 0..) |buildButton, index| {
         if (buildButton.pos.x <= vulkanMousePos.x and buildButton.pos.x + buildButton.width >= vulkanMousePos.x and
             buildButton.pos.y <= vulkanMousePos.y and buildButton.pos.y + buildButton.height >= vulkanMousePos.y)

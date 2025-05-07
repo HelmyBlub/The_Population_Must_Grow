@@ -1,7 +1,7 @@
 tasks:
-- bug: cpu per cent not correct on speed up
 - UX
-    - camera movement to mouse
+    - camera movement to right mouse button
+    - zoom to mouse position
     - improve camera move with keys
     - should be there information that camera can be moved by keys?
     - should be there information that zoom with mouse wheel is available?

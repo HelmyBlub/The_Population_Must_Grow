@@ -88,7 +88,7 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
     }
     if (buildModeChanged) {
         state.copyAreaRectangle = null;
-        state.mapMouseDown = null;
+        state.mouseInfo.mapDown = null;
         state.rectangles[0] = null;
     }
 }

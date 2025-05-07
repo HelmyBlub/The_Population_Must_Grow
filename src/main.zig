@@ -17,7 +17,6 @@ pub const ChatSimState: type = struct {
     map: mapZig.GameMap,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
-    mapMouseDown: ?Position = null,
     gameSpeed: f32,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
@@ -29,7 +28,6 @@ pub const ChatSimState: type = struct {
     allocator: std.mem.Allocator,
     rectangles: [2]?VulkanRectangle = .{ null, null },
     copyAreaRectangle: ?mapZig.MapTileRectangle = null,
-    currentMouse: Position = .{ .x = 0, .y = 0 },
     fpsCounter: f32 = 60,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
@@ -38,6 +36,14 @@ pub const ChatSimState: type = struct {
     pathfindingData: pathfindingZig.PathfindingData,
     soundMixer: soundMixerZig.SoundMixer,
     keybindings: []inputZig.KeyBinding = undefined,
+    mouseInfo: MouseInfo = .{},
+};
+
+pub const MouseInfo = struct {
+    mapDown: ?Position = null,
+    currentPos: Position = .{ .x = 0, .y = 0 },
+    leftButtonPressedTimeMs: ?i64 = null,
+    rightButtonPressedTimeMs: ?i64 = null,
 };
 
 pub const VulkanRectangle = struct {
@@ -152,7 +158,7 @@ pub fn setupRectangleData(state: *ChatSimState) void {
     if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
         if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
             const copyAreaRectangle = state.copyAreaRectangle.?;
-            const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.currentMouse.x, state.currentMouse.y, state.camera);
+            const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y, state.camera);
             const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
             const mapTopLeftTile: Position = .{
                 .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
@@ -172,9 +178,9 @@ pub fn setupRectangleData(state: *ChatSimState) void {
             const rectangleTileColumns: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
             const rectangleTileRows: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
 
-            if (state.mapMouseDown != null) {
-                const mapMouseDown = state.mapMouseDown.?;
-                const mouseUp = state.currentMouse;
+            if (state.mouseInfo.mapDown != null) {
+                const mapMouseDown = state.mouseInfo.mapDown.?;
+                const mouseUp = state.mouseInfo.currentPos;
                 const mapMouseUp = windowSdlZig.mouseWindowPositionToGameMapPoisition(mouseUp.x, mouseUp.y, state.camera);
                 const mapTopLeft: Position = .{
                     .x = @min(mapMouseUp.x, mapMouseDown.x),

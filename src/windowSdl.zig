@@ -49,16 +49,27 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
 pub fn handleEvents(state: *main.ChatSimState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
-        if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN and
-            try buildOptionsUxVulkanZig.mouseClick(state, .{ .x = event.motion.x, .y = event.motion.y }))
-        {
-            return;
+        if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            if (try buildOptionsUxVulkanZig.mouseClick(state, .{ .x = event.motion.x, .y = event.motion.y })) {
+                return;
+            } else {
+                if (event.button.button == 1) {
+                    state.mouseInfo.leftButtonPressedTimeMs = std.time.milliTimestamp();
+                } else {
+                    state.mouseInfo.rightButtonPressedTimeMs = std.time.milliTimestamp();
+                }
+            }
         }
+
         if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) try handleBuildModeRectangle(&event, state);
         if (state.buildMode == mapZig.BUILD_MODE_DRAW) try handleBuildModeDraw(&event, state);
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
-            state.currentMouse = .{ .x = event.motion.x, .y = event.motion.y };
+            state.mouseInfo.currentPos = .{ .x = event.motion.x, .y = event.motion.y };
             try buildOptionsUxVulkanZig.mouseMove(state);
+            if (state.mouseInfo.rightButtonPressedTimeMs) |_| {
+                state.camera.position.x -= event.motion.xrel / state.camera.zoom;
+                state.camera.position.y -= event.motion.yrel / state.camera.zoom;
+            }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
                 state.camera.zoom *= 1.2;
@@ -72,9 +83,14 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
-            state.mapMouseDown = null;
+            if (event.button.button == 1) {
+                state.mouseInfo.mapDown = null;
+                state.mouseInfo.leftButtonPressedTimeMs = null;
+            } else {
+                state.mouseInfo.rightButtonPressedTimeMs = null;
+            }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            if (state.buildMode == mapZig.BUILD_MODE_SINGLE) {
+            if (state.buildMode == mapZig.BUILD_MODE_SINGLE and event.button.button == 1) {
                 const position = mapZig.mapPositionToTileMiddlePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
                 const newBuilding: mapZig.Building = .{
                     .position = position,
@@ -111,9 +127,11 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
 
 fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
     if (state.buildMode != mapZig.BUILD_MODE_DRAW) return;
-    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mapMouseDown != null) {
-        state.mapMouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
-        _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(state.mapMouseDown.?), state);
+    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mouseInfo.mapDown != null) {
+        if (state.mouseInfo.leftButtonPressedTimeMs != null) {
+            state.mouseInfo.mapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(state.mouseInfo.mapDown.?), state);
+        }
     }
 }
 
@@ -122,20 +140,22 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
 
     if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
         if (event.button.button != 1) {
-            state.mapMouseDown = null;
-            state.copyAreaRectangle = null;
-            state.rectangles[0] = null;
+            if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 150) {
+                state.mouseInfo.mapDown = null;
+                state.copyAreaRectangle = null;
+                state.rectangles[0] = null;
+            }
             return;
         }
-        if (state.mapMouseDown != null) {
+        if (state.mouseInfo.mapDown != null) {
             const mapMouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             const topLeft: main.Position = .{
-                .x = @min(mapMouseUp.x, state.mapMouseDown.?.x),
-                .y = @min(mapMouseUp.y, state.mapMouseDown.?.y),
+                .x = @min(mapMouseUp.x, state.mouseInfo.mapDown.?.x),
+                .y = @min(mapMouseUp.y, state.mouseInfo.mapDown.?.y),
             };
             const bottomRight: main.Position = .{
-                .x = @max(mapMouseUp.x, state.mapMouseDown.?.x),
-                .y = @max(mapMouseUp.y, state.mapMouseDown.?.y),
+                .x = @max(mapMouseUp.x, state.mouseInfo.mapDown.?.x),
+                .y = @max(mapMouseUp.y, state.mouseInfo.mapDown.?.y),
             };
             const tileXy = mapZig.mapPositionToTileXy(topLeft);
             const tileXyBottomRight = mapZig.mapPositionToTileXyBottomRight(bottomRight);
@@ -152,7 +172,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
 
             try handleRectangleAreaAction(tileRectangle, state);
         }
-        state.mapMouseDown = null;
+        state.mouseInfo.mapDown = null;
         state.rectangles[0] = null;
     } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
         if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
@@ -166,7 +186,9 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
                 state,
             );
         } else {
-            state.mapMouseDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            if (event.button.button == 1) {
+                state.mouseInfo.mapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            }
         }
     }
 }
