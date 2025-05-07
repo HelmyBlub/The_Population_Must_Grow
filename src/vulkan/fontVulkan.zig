@@ -79,16 +79,6 @@ fn dataUpdate(state: *main.ChatSimState) !void {
     clear(&state.vkState.font);
     const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
 
-    const citizenFontSize = 50.0;
-    const citizenTextWidth = paintText("Citizens: ", .{ .x = -0.2, .y = -0.99 }, citizenFontSize, state);
-    _ = try paintNumber(@intCast(state.citizenCounter), .{ .x = -0.2 + citizenTextWidth, .y = -0.99 }, citizenFontSize, state);
-
-    const citizenPerMinuteTextWidth = paintText("Citizen Grows Per Minute: ", .{ .x = -0.2, .y = -0.99 + onePixelYInVulkan * citizenFontSize }, 25, state);
-    _ = try paintNumber(@intFromFloat(state.citizensPerMinuteCounter), .{ .x = -0.2 + citizenPerMinuteTextWidth, .y = -0.99 + onePixelYInVulkan * citizenFontSize }, 25, state);
-
-    const timeTextWidth = paintText("Time: ", .{ .x = -0.49, .y = -0.99 }, 25, state);
-    _ = try paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = -0.49 + timeTextWidth, .y = -0.99 }, 25, state);
-
     if (state.vkState.font.displayPerformance) {
         const performanceFontSize = 20.0;
         const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, performanceFontSize, state);
@@ -212,7 +202,7 @@ pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.C
     vk.vkCmdDraw(commandBuffer, vkState.font.verticeCountCurrent, 1, 0, 0);
 }
 
-fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
+pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
     const fontImageWidth = 1600.0;
     const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1282, 1302 };
     var index: usize = 0;

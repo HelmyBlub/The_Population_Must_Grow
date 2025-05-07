@@ -32,9 +32,11 @@ pub const VkCitizenPopulationCounterUx = struct {
         verticeCount: usize = 0,
     } = undefined,
     nextCountryPopulationIndex: usize = countryPopulationDataZig.WORLD_POPULATION.len - 1,
-    pub const MAX_VERTICES_TRIANGLES = 6 * 2;
-    pub const MAX_VERTICES_LINES = 8 + 8;
-    pub const MAX_VERTICES_FONT = 200;
+    surpassedMessageDisplayTime: i64 = 0,
+    const MAX_VERTICES_TRIANGLES = 6 * 2;
+    const MAX_VERTICES_LINES = 8 + 8;
+    const MAX_VERTICES_FONT = 200;
+    const MESSAGE_SURPASSED_DURATION = 5000;
 };
 
 pub fn init(state: *main.ChatSimState) !void {
@@ -89,9 +91,11 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
 pub fn setupVertices(state: *main.ChatSimState) !void {
     const fillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
     const borderColor: [3]f32 = .{ 0, 0, 0 };
-    const triangles = &state.vkState.citizenPopulationCounterUx.triangles;
-    const lines = &state.vkState.citizenPopulationCounterUx.lines;
-    const font = &state.vkState.citizenPopulationCounterUx.font;
+    const popCounterUx = &state.vkState.citizenPopulationCounterUx;
+    const triangles = &popCounterUx.triangles;
+    const lines = &popCounterUx.lines;
+    const font = &popCounterUx.font;
+    const onePixelXInVulkan = 2 / windowSdlZig.windowData.widthFloat;
     const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
 
     triangles.verticeCount = 0;
@@ -101,15 +105,21 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
     const rectangleVulkanWidth = 1.0;
     const fontSize = 50.0;
     const populationRectangle: mapZig.MapRectangle = .{
-        .pos = .{ .x = -rectangleVulkanWidth / 2.0, .y = -1.0 + onePixelYInVulkan * 5.0 },
+        .pos = .{ .x = -rectangleVulkanWidth / 2.0, .y = -1.0 + onePixelYInVulkan * 20.0 },
         .width = rectangleVulkanWidth,
         .height = fontSize * onePixelYInVulkan,
     };
-    const nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex];
+    var nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex];
     var fillPerCent: f32 = @as(f32, @floatFromInt(state.citizenCounter)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.population));
     if (fillPerCent > 1) {
-        state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex -|= 1;
+        popCounterUx.nextCountryPopulationIndex -|= 1;
+        popCounterUx.surpassedMessageDisplayTime = std.time.milliTimestamp();
         fillPerCent = 1;
+        nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex];
+    }
+    var optLastCountryPopulationGoal: ?countryPopulationDataZig.CountryData = null;
+    if (popCounterUx.nextCountryPopulationIndex + 1 < countryPopulationDataZig.WORLD_POPULATION.len) {
+        optLastCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex + 1];
     }
 
     triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ populationRectangle.pos.x, populationRectangle.pos.y }, .color = fillColor };
@@ -130,10 +140,112 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
     lines.vertices[lines.verticeCount + 7] = .{ .pos = .{ populationRectangle.pos.x, populationRectangle.pos.y }, .color = borderColor };
     lines.verticeCount += 8;
 
-    // font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, populationRectangle.pos, 16);
-    // font.verticeCount += 1;
+    const citizenTextWidth = paintText("Citizens: ", .{
+        .x = populationRectangle.pos.x,
+        .y = populationRectangle.pos.y,
+    }, fontSize, state);
+    _ = try paintNumber(@intCast(state.citizenCounter), .{
+        .x = populationRectangle.pos.x + citizenTextWidth,
+        .y = populationRectangle.pos.y,
+    }, fontSize, state);
+
+    const citizenPerMinuteTextWidth = paintText("Citizen Grows Per Minute: ", .{
+        .x = populationRectangle.pos.x,
+        .y = populationRectangle.pos.y + onePixelYInVulkan * fontSize,
+    }, 25, state);
+    _ = try paintNumber(@intFromFloat(state.citizensPerMinuteCounter), .{
+        .x = populationRectangle.pos.x + citizenPerMinuteTextWidth,
+        .y = populationRectangle.pos.y + onePixelYInVulkan * fontSize,
+    }, 25, state);
+
+    const timeXOffset = onePixelXInVulkan * fontSize * 4;
+    const timeTextWidth = paintText("Time: ", .{ .x = populationRectangle.pos.x - timeXOffset, .y = populationRectangle.pos.y }, 25, state);
+    _ = try paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, 25, state);
+
+    _ = paintText(nextCountryPopulationGoal.name, .{
+        .x = populationRectangle.pos.x + populationRectangle.width,
+        .y = populationRectangle.pos.y,
+    }, fontSize / 2.0, state);
+    _ = try paintNumber(@intCast(nextCountryPopulationGoal.population), .{
+        .x = populationRectangle.pos.x + populationRectangle.width,
+        .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
+    }, fontSize / 2.0, state);
+
+    if (optLastCountryPopulationGoal) |lastCountryPopulationGoal| {
+        const timeDiffSurpassed = popCounterUx.surpassedMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();
+        if (timeDiffSurpassed > 0) {
+            const surpassedOffsetY: f32 = (1.0 - @as(f32, @floatFromInt(timeDiffSurpassed)) / VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION) * onePixelYInVulkan * 100.0;
+            _ = paintText("surpassed population of country: ", .{
+                .x = populationRectangle.pos.x,
+                .y = -surpassedOffsetY,
+            }, fontSize, state);
+
+            _ = paintText(lastCountryPopulationGoal.name, .{
+                .x = populationRectangle.pos.x,
+                .y = -surpassedOffsetY + fontSize * onePixelYInVulkan,
+            }, fontSize, state);
+        }
+
+        const lastCountryFontSize = fontSize / 2.5;
+        const lastXPerCent: f32 = @as(f32, @floatFromInt(lastCountryPopulationGoal.population)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.population));
+        const lastCountryX = populationRectangle.pos.x + populationRectangle.width * lastXPerCent;
+        lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ lastCountryX, populationRectangle.pos.y - lastCountryFontSize * onePixelYInVulkan }, .color = borderColor };
+        lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ lastCountryX, populationRectangle.pos.y + populationRectangle.height }, .color = borderColor };
+        lines.verticeCount += 2;
+        _ = paintText(lastCountryPopulationGoal.name, .{
+            .x = lastCountryX,
+            .y = populationRectangle.pos.y - lastCountryFontSize * onePixelYInVulkan,
+        }, lastCountryFontSize, state);
+    }
 
     try setupVertexDataForGPU(&state.vkState);
+}
+
+/// returns vulkan surface width of text
+fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f32 {
+    var texX: f32 = 0;
+    var texWidth: f32 = 0;
+    var xOffset: f32 = 0;
+    for (chars) |char| {
+        if (state.vkState.citizenPopulationCounterUx.font.verticeCount >= VkCitizenPopulationCounterUx.MAX_VERTICES_FONT) break;
+        fontVulkanZig.charToTexCoords(char, &texX, &texWidth);
+        state.vkState.citizenPopulationCounterUx.font.vertices[state.vkState.citizenPopulationCounterUx.font.verticeCount] = .{
+            .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
+            .color = .{ 1, 0, 0 },
+            .texX = texX,
+            .texWidth = texWidth,
+            .size = fontSize,
+        };
+        xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
+        state.vkState.citizenPopulationCounterUx.font.verticeCount += 1;
+    }
+    return xOffset;
+}
+
+fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
+    const max_len = 20;
+    var buf: [max_len]u8 = undefined;
+    const numberAsString = try std.fmt.bufPrint(&buf, "{}", .{number});
+    var texX: f32 = 0;
+    var texWidth: f32 = 0;
+    var xOffset: f32 = 0;
+    const spacingPosition = (numberAsString.len + 2) % 3;
+    const spacing = 20 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
+    for (numberAsString, 0..) |char, i| {
+        if (state.vkState.citizenPopulationCounterUx.font.verticeCount >= VkCitizenPopulationCounterUx.MAX_VERTICES_FONT) break;
+        fontVulkanZig.charToTexCoords(char, &texX, &texWidth);
+        state.vkState.citizenPopulationCounterUx.font.vertices[state.vkState.citizenPopulationCounterUx.font.verticeCount] = .{
+            .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
+            .color = .{ 1, 0, 0 },
+            .texX = texX,
+            .texWidth = texWidth,
+            .size = fontSize,
+        };
+        xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
+        if (i % 3 == spacingPosition) xOffset += spacing;
+        state.vkState.citizenPopulationCounterUx.font.verticeCount += 1;
+    }
+    return xOffset;
 }
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {

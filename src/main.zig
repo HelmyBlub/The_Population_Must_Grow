@@ -353,7 +353,7 @@ fn tick(state: *ChatSimState) !void {
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
-        const citizenChange: f32 = @as(f32, @floatFromInt((state.citizenCounter - state.citizenCounterLastTick) * 60 * 60)) / updateTickInterval;
+        const citizenChange: f32 = (@as(f32, @floatFromInt(state.citizenCounter)) - @as(f32, @floatFromInt(state.citizenCounterLastTick))) * 60.0 * 60.0 / updateTickInterval;
         if (citizenChange >= 0) {
             state.citizensPerMinuteCounter = state.citizensPerMinuteCounter * (1 - 0.002 * updateTickInterval) + citizenChange * 0.002 * updateTickInterval;
         }

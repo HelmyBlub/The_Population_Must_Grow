@@ -1,4 +1,4 @@
-const CountryData = struct {
+pub const CountryData = struct {
     name: []const u8,
     population: u64,
 };

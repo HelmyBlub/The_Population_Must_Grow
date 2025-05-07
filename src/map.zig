@@ -849,6 +849,7 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
     var citizen = main.Citizen.createCitizen(allocator);
     citizen.homePosition = .{ .x = halveTileSize, .y = halveTileSize };
     try spawnChunk.citizens.append(citizen);
+    state.citizenCounterLastTick = 1;
 
     const key = getKeyForChunkXY(spawnChunk.chunkXY);
     try state.map.chunks.put(key, spawnChunk);

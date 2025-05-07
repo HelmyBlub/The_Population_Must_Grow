@@ -1,11 +1,11 @@
 tasks:
 - UX
     - citizen counter goals
-        - some bar which fills up
-        - goal is some citizens value based on country populations
-            - get list of countries on population count
-            - when certain count reached, display "surpassed population of <country>"
+        - when certain count reached, display "surpassed population of <country>" for a few seconds
+
     - visualize buildings needs to be adjacent to road
+- bug: sound callback can crash when game closed and sound not finished yet
+
 
 - features:
     - UX
