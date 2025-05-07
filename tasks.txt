@@ -1,10 +1,12 @@
 tasks:
-- bug: sound callback can crash when game closed and sound not finished yet
 
 
 - features:
     - performance
-        - performance and multicore when all features implemented
+        - create test for realistic case to measure performance on
+        - check code for performance improvement for single cpu and no simd
+        - check code for performance improvment for single cpu and simd
+        - check code for performance improvment for multiple cpu cores
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
     - save game progress?
     - put on steam
@@ -14,8 +16,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test 1: FPS: 364 (07.05.2025)
-- zig build test 0.1: FPS: 749 (06.05.2025)
+- zig build test 1: FPS: 360 (07.05.2025)
+- zig build test 0.1: FPS: 745 (07.05.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
