@@ -1,8 +1,12 @@
 tasks:
-- UX
-    - display text when player tries to build single house and path is missing
-- bug: sound callback can crash when game closed and sound not finished yet
 - bug: cpu per cent not correct on speed up
+- UX
+    - camera movement to mouse
+    - improve camera move with keys
+    - should be there information that camera can be moved by keys?
+    - should be there information that zoom with mouse wheel is available?
+
+- bug: sound callback can crash when game closed and sound not finished yet
 
 
 - features:

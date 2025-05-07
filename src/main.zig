@@ -249,6 +249,7 @@ fn startGame(allocator: std.mem.Allocator) !void {
 fn mainLoop(state: *ChatSimState) !void {
     var ticksRequired: f32 = 0;
     const totalStartTime = std.time.microTimestamp();
+    var nextCpuPerCentUpdateTimeMs: i64 = 0;
     mainLoop: while (!state.gameEnd) {
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
@@ -268,8 +269,9 @@ fn mainLoop(state: *ChatSimState) !void {
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
         if (state.fpsLimiter) {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
-            if (state.gameTimeMs % (@as(u32, state.tickIntervalMs) * 60) == 0) {
+            if (std.time.milliTimestamp() > nextCpuPerCentUpdateTimeMs) {
                 state.cpuPerCent = 1.0 - @as(f32, @floatFromInt(sleepTime)) / @as(f32, @floatFromInt(state.paintIntervalMs)) / 1000.0;
+                nextCpuPerCentUpdateTimeMs = std.time.milliTimestamp() + 1000;
             }
             std.time.sleep(sleepTime * 1_000);
         }
