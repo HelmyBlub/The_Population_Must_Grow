@@ -128,6 +128,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
     state.soundMixer = try soundMixerZig.createSoundMixer(state, allocator);
+    try inputZig.executeAction(inputZig.ActionType.buildPath, state);
 }
 
 pub fn setupRectangleData(state: *ChatSimState) void {

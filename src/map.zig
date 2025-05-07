@@ -524,7 +524,7 @@ pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
     return true;
 }
 
-pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool) !bool {
+pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
         const buildRectangle = getBigBuildingRectangle(building.position);
@@ -538,7 +538,10 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     } else {
         const buildRectangle = get1x1RectangleFromPosition(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
-        if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
+        if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) {
+            if (displayHelpText) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = std.time.milliTimestamp();
+            return false;
+        }
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
@@ -718,7 +721,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         .inConstruction = true,
                         .type = building.type,
                     };
-                    _ = try placeBuilding(newBuilding, state, false);
+                    _ = try placeBuilding(newBuilding, state, false, false);
                     continue :nextTile;
                 }
             }
@@ -733,7 +736,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         .type = building.type,
                         .woodRequired = 16,
                     };
-                    _ = try placeBuilding(newBuilding, state, false);
+                    _ = try placeBuilding(newBuilding, state, false, false);
                     continue :nextTile;
                 }
             }

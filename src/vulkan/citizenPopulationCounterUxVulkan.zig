@@ -33,6 +33,7 @@ pub const VkCitizenPopulationCounterUx = struct {
     } = undefined,
     nextCountryPopulationIndex: usize = countryPopulationDataZig.WORLD_POPULATION.len - 1,
     surpassedMessageDisplayTime: i64 = 0,
+    houseBuildPathMessageDisplayTime: ?i64 = null,
     const MAX_VERTICES_TRIANGLES = 6 * 2;
     const MAX_VERTICES_LINES = 8 + 8;
     const MAX_VERTICES_FONT = 200;
@@ -162,16 +163,16 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
     const timeTextWidth = paintText("Time: ", .{ .x = populationRectangle.pos.x - timeXOffset, .y = populationRectangle.pos.y }, 25, state);
     _ = try paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, 25, state);
 
-    _ = paintText(nextCountryPopulationGoal.name, .{
-        .x = populationRectangle.pos.x + populationRectangle.width,
-        .y = populationRectangle.pos.y,
-    }, fontSize / 2.0, state);
-    _ = try paintNumber(@intCast(nextCountryPopulationGoal.population), .{
-        .x = populationRectangle.pos.x + populationRectangle.width,
-        .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
-    }, fontSize / 2.0, state);
-
     if (optLastCountryPopulationGoal) |lastCountryPopulationGoal| {
+        _ = paintText(nextCountryPopulationGoal.name, .{
+            .x = populationRectangle.pos.x + populationRectangle.width,
+            .y = populationRectangle.pos.y,
+        }, fontSize / 2.0, state);
+        _ = try paintNumber(@intCast(nextCountryPopulationGoal.population), .{
+            .x = populationRectangle.pos.x + populationRectangle.width,
+            .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
+        }, fontSize / 2.0, state);
+
         const timeDiffSurpassed = popCounterUx.surpassedMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();
         if (timeDiffSurpassed > 0) {
             const surpassedOffsetY: f32 = (1.0 - @as(f32, @floatFromInt(timeDiffSurpassed)) / VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION) * onePixelYInVulkan * 100.0;
@@ -196,6 +197,14 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
             .x = lastCountryX,
             .y = populationRectangle.pos.y - lastCountryFontSize * onePixelYInVulkan,
         }, lastCountryFontSize, state);
+    }
+    if (state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime) |houseBuildPathMessageDisplayTime| {
+        const timeDiffHouseMessage = houseBuildPathMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();
+        const offsetY: f32 = (1.0 - @as(f32, @floatFromInt(timeDiffHouseMessage)) / VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION) * onePixelYInVulkan * 100.0;
+        _ = paintText("must be placed beside a Path", .{
+            .x = -onePixelXInVulkan * fontSize * 10,
+            .y = -offsetY,
+        }, fontSize, state);
     }
 
     try setupVertexDataForGPU(&state.vkState);

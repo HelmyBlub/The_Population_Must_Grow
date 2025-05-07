@@ -1,10 +1,8 @@
 tasks:
 - UX
-    - citizen counter goals
-        - when certain count reached, display "surpassed population of <country>" for a few seconds
-
-    - visualize buildings needs to be adjacent to road
+    - display text when player tries to build single house and path is missing
 - bug: sound callback can crash when game closed and sound not finished yet
+- bug: cpu per cent not correct on speed up
 
 
 - features:
@@ -20,7 +18,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test 1: FPS: 375 (06.05.2025)
+- zig build test 1: FPS: 364 (07.05.2025)
 - zig build test 0.1: FPS: 749 (06.05.2025)
 
 Goal:

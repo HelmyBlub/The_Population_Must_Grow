@@ -27,13 +27,13 @@ pub const KeyBinding = struct {
 
 pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
     state.keybindings = try state.allocator.alloc(KeyBinding, 8);
-    state.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildHouse };
-    state.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildTreeArea };
-    state.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildHouseArea };
-    state.keybindings[3] = .{ .sdlScanCode = sdl.SDL_SCANCODE_4, .displayChar = '4', .action = ActionType.buildPotatoFarmArea };
-    state.keybindings[4] = .{ .sdlScanCode = sdl.SDL_SCANCODE_5, .displayChar = '5', .action = ActionType.copyPaste };
-    state.keybindings[5] = .{ .sdlScanCode = sdl.SDL_SCANCODE_6, .displayChar = '6', .action = ActionType.buildBigHouseArea };
-    state.keybindings[6] = .{ .sdlScanCode = sdl.SDL_SCANCODE_7, .displayChar = '7', .action = ActionType.buildPath };
+    state.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
+    state.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
+    state.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildTreeArea };
+    state.keybindings[3] = .{ .sdlScanCode = sdl.SDL_SCANCODE_4, .displayChar = '4', .action = ActionType.buildHouseArea };
+    state.keybindings[4] = .{ .sdlScanCode = sdl.SDL_SCANCODE_5, .displayChar = '5', .action = ActionType.buildPotatoFarmArea };
+    state.keybindings[5] = .{ .sdlScanCode = sdl.SDL_SCANCODE_6, .displayChar = '6', .action = ActionType.copyPaste };
+    state.keybindings[6] = .{ .sdlScanCode = sdl.SDL_SCANCODE_7, .displayChar = '7', .action = ActionType.buildBigHouseArea };
     state.keybindings[7] = .{ .sdlScanCode = sdl.SDL_SCANCODE_9, .displayChar = '9', .action = ActionType.remove };
 }
 

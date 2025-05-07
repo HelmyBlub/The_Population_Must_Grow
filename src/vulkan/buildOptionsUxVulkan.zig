@@ -84,7 +84,21 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
     const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(buttonCountMax)) / 2.0;
     var buttonCounter: usize = 0;
 
-    var tooltip = try state.allocator.alloc([]const u8, 5);
+    var tooltip = try state.allocator.alloc([]const u8, 3);
+    tooltip[0] = "Path:";
+    tooltip[1] = "Hold Mouse to paint a Path";
+    tooltip[2] = "Path required for Houses";
+    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
+        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
+        .width = vulkanWidth,
+        .height = vulkanHeight,
+        .actionType = inputZig.ActionType.buildPath,
+        .imageIndex = imageZig.IMAGE_PATH,
+        .tooltip = tooltip,
+    };
+    buttonCounter += 1;
+
+    tooltip = try state.allocator.alloc([]const u8, 5);
     tooltip[0] = "House:";
     tooltip[2] = "Click Mouse to place a House";
     tooltip[1] = "Must be placed beside a Path";
@@ -132,7 +146,7 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 4);
     tooltip[0] = "Potato Fields Area:";
     tooltip[1] = "Drag Area with Mouse for Potato Fields";
-    tooltip[2] = "Each Potato Field Produces an Potato every 10 seconds";
+    tooltip[2] = "Each Potato Field Produces a Potato every 10 seconds";
     tooltip[3] = "Each Citizen wants to eat a Potato every 30 seconds";
     state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
         .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
@@ -172,20 +186,6 @@ fn initBuildButtons(state: *main.ChatSimState) !void {
         .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildBigHouseArea,
         .imageIndex = imageZig.IMAGE_BIG_HOUSE,
-        .tooltip = tooltip,
-    };
-    buttonCounter += 1;
-
-    tooltip = try state.allocator.alloc([]const u8, 3);
-    tooltip[0] = "Path:";
-    tooltip[1] = "Hold Mouse to paint a Path";
-    tooltip[2] = "Path required for Houses";
-    state.vkState.buildOptionsUx.buildButtons[buttonCounter] = BuildButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
-        .actionType = inputZig.ActionType.buildPath,
-        .imageIndex = imageZig.IMAGE_PATH,
         .tooltip = tooltip,
     };
     buttonCounter += 1;
