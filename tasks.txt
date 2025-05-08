@@ -1,8 +1,6 @@
 tasks:
 - thread safety for values i manipulate in audio callback
 - create test for realistic case to measure performance on
-    - seeded randomness for better test validation
-        - check if working
     - continue: unknown problems: mutex? before arrayList append failed? why?
     - no speed limit to know fps value
     - test from zero citizens to X0_000 ?

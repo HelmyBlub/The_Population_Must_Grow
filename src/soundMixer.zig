@@ -86,6 +86,29 @@ pub fn tickSoundMixer(state: *main.ChatSimState) !void {
             index += 1;
         }
     }
+
+    var i: usize = 0;
+    while (i < state.soundMixer.soundsToPlay.items.len) {
+        if (state.soundMixer.soundsToPlay.items[i].dataIndex >= state.soundMixer.soundData.sounds[state.soundMixer.soundsToPlay.items[i].soundIndex].len) {
+            const removed = state.soundMixer.soundsToPlay.swapRemove(i);
+            switch (removed.soundIndex) {
+                SOUND_HAMMER_WOOD => {
+                    state.soundMixer.countHammer -= 1;
+                },
+                SOUND_TREE_FALLING => {
+                    state.soundMixer.countTreeFalling -= 1;
+                },
+                SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
+                    state.soundMixer.countWoodCut -= 1;
+                },
+                else => {
+                    unreachable;
+                },
+            }
+        } else {
+            i += 1;
+        }
+    }
 }
 
 fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additional_amount: c_int, len: c_int) callconv(.C) void {
@@ -129,28 +152,6 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     }
 
     _ = sdl.SDL_PutAudioStreamData(stream, buffer.ptr, additional_amount);
-    var i: usize = 0;
-    while (i < state.soundMixer.soundsToPlay.items.len) {
-        if (state.soundMixer.soundsToPlay.items[i].dataIndex >= state.soundMixer.soundData.sounds[state.soundMixer.soundsToPlay.items[i].soundIndex].len) {
-            const removed = state.soundMixer.soundsToPlay.swapRemove(i);
-            switch (removed.soundIndex) {
-                SOUND_HAMMER_WOOD => {
-                    state.soundMixer.countHammer -= 1;
-                },
-                SOUND_TREE_FALLING => {
-                    state.soundMixer.countTreeFalling -= 1;
-                },
-                SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
-                    state.soundMixer.countWoodCut -= 1;
-                },
-                else => {
-                    unreachable;
-                },
-            }
-        } else {
-            i += 1;
-        }
-    }
 }
 
 pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u32, mapPosition: main.Position) !void {
