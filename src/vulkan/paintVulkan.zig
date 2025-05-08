@@ -281,8 +281,10 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
                 var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
-                if (tree.planted) {
-                    size = @intFromFloat(mapZig.GameMap.TILE_SIZE * tree.grow);
+                if (tree.fullyGrown) {
+                    imageIndex = imageZig.IMAGE_TREE;
+                } else if (tree.growStartTimeMs) |time| {
+                    size = @intCast(@divFloor(mapZig.GameMap.TILE_SIZE * (state.gameTimeMs - time), 10_000));
                     imageIndex = imageZig.IMAGE_TREE;
                 }
                 var rotate: f32 = 0;

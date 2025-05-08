@@ -373,7 +373,7 @@ fn getChunksOfRectangle(rectangle: mapZig.MapTileRectangle) [4]?mapZig.MapTileRe
     return chunkXYRectangles;
 }
 
-pub fn splitGraphRectangle(rectangle: mapZig.MapTileRectangle, graphIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+fn splitGraphRectangle(rectangle: mapZig.MapTileRectangle, graphIndex: usize, chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
     var graphRectangleForUpdateIndex: usize = 0;
     var graphRectangleForUpdateIndexes = [_]?usize{ null, null, null, null };
     const toSplitGraphRectangle = state.pathfindingData.graphRectangles.items[graphIndex];
@@ -793,11 +793,11 @@ pub fn destoryPathfindingData(data: *PathfindingData) void {
     data.tempUsizeList2.deinit();
 }
 
-pub fn heuristic(a: *ChunkGraphRectangle, b: *ChunkGraphRectangle) i32 {
+fn heuristic(a: *ChunkGraphRectangle, b: *ChunkGraphRectangle) i32 {
     return @as(i32, @intCast(@abs(a.tileRectangle.topLeftTileXY.tileX - b.tileRectangle.topLeftTileXY.tileX) + @abs(a.tileRectangle.topLeftTileXY.tileY - b.tileRectangle.topLeftTileXY.tileY)));
 }
 
-pub fn reconstructPath(
+fn reconstructPath(
     cameFrom: *std.HashMap(*ChunkGraphRectangle, *ChunkGraphRectangle, ChunkGraphRectangleContext, 80),
     goalRectangle: *ChunkGraphRectangle,
     goalTile: mapZig.TileXY,

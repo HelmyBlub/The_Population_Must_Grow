@@ -40,6 +40,22 @@ pub const MapChunk = struct {
     buildOrders: std.ArrayList(BuildOrder),
     pathes: std.ArrayList(main.Position),
     pathingData: main.pathfindingZig.PathfindingChunkData,
+    queue: std.ArrayList(ChunkQueueItem),
+};
+
+const ChunkQueueType = enum {
+    tree,
+    potatoField,
+};
+
+const ChunkQueueItemData = union(ChunkQueueType) {
+    tree: usize,
+    potatoField: usize,
+};
+
+pub const ChunkQueueItem = struct {
+    itemData: ChunkQueueItemData,
+    executeTime: u32,
 };
 
 pub const BuildOrder = struct {
@@ -58,10 +74,9 @@ pub const MapObject = union(enum) {
 pub const MapTree = struct {
     position: main.Position,
     citizenOnTheWay: bool = false,
-    ///  values from 0 to 1
-    grow: f32 = 0,
+    fullyGrown: bool = false,
+    growStartTimeMs: ?u32 = null,
     beginCuttingTime: ?u32 = null,
-    planted: bool = true,
     regrow: bool = false,
 };
 
@@ -241,7 +256,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
     }
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
-            _ = chunk.trees.swapRemove(i);
+            removeTree(i, chunk);
             return;
         }
     }
@@ -302,7 +317,7 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSi
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             if (tree.citizenOnTheWay) return false;
-            _ = chunk.trees.swapRemove(i);
+            removeTree(i, chunk);
             return true;
         }
     }
@@ -692,14 +707,34 @@ pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimSta
     return null;
 }
 
-pub fn getTreeOnPosition(position: main.Position, state: *main.ChatSimState) !?*MapTree {
+pub fn getTreeOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { tree: *MapTree, chunk: *MapChunk, treeIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
-    for (chunk.trees.items) |*tree| {
+    for (chunk.trees.items, 0..) |*tree, index| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
-            return tree;
+            return .{ .tree = tree, .chunk = chunk, .treeIndex = index };
         }
     }
     return null;
+}
+
+pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
+    const movedIndex = chunk.trees.items.len - 1;
+    _ = chunk.trees.swapRemove(treeIndex);
+    var queueIndex: usize = 0;
+    while (chunk.queue.items.len > queueIndex) {
+        const queueItem = &chunk.queue.items[queueIndex];
+        if (@as(ChunkQueueType, queueItem.itemData) == ChunkQueueType.tree) {
+            if (queueItem.itemData.tree == treeIndex) {
+                _ = chunk.queue.orderedRemove(treeIndex);
+                continue;
+            } else if (queueItem.itemData.tree == movedIndex) {
+                queueItem.itemData.tree = treeIndex;
+            }
+            queueIndex += 1;
+        } else {
+            queueIndex += 1;
+        }
+    }
 }
 
 pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState) !?*Building {
@@ -752,7 +787,6 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                     const newTree: MapTree = .{
                         .position = targetPosition,
                         .regrow = true,
-                        .planted = false,
                     };
                     _ = try placeTree(newTree, state);
                     continue :nextTile;
@@ -816,6 +850,7 @@ fn createChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator, state: *main.Chat
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
         .pathes = std.ArrayList(main.Position).init(allocator),
         .pathingData = try main.pathfindingZig.createChunkData(chunkXY, allocator, state),
+        .queue = std.ArrayList(ChunkQueueItem).init(allocator),
     };
 
     for (0..GameMap.CHUNK_LENGTH) |x| {
@@ -831,7 +866,7 @@ fn createChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator, state: *main.Chat
                         .x = @floatFromInt((chunkXY.chunkX * GameMap.CHUNK_LENGTH + @as(i32, @intCast(x))) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
                         .y = @floatFromInt((chunkXY.chunkY * GameMap.CHUNK_LENGTH + @as(i32, @intCast(y))) * GameMap.TILE_SIZE + GameMap.TILE_SIZE / 2),
                     },
-                    .grow = 1.0,
+                    .fullyGrown = true,
                 };
                 try mapChunk.trees.append(tree);
             }
@@ -851,11 +886,12 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
         .pathes = std.ArrayList(main.Position).init(allocator),
         .pathingData = try main.pathfindingZig.createChunkData(.{ .chunkX = 0, .chunkY = 0 }, allocator, state),
+        .queue = std.ArrayList(ChunkQueueItem).init(allocator),
     };
     const halveTileSize = GameMap.TILE_SIZE / 2;
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1 });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .grow = 1 });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .grow = 1 });
+    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
+    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .fullyGrown = true });
     var citizen = main.Citizen.createCitizen(allocator);
     citizen.homePosition = .{ .x = halveTileSize, .y = halveTileSize };
     try spawnChunk.citizens.append(citizen);

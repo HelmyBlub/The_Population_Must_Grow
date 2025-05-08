@@ -296,10 +296,18 @@ fn tick(state: *ChatSimState) !void {
         try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
         const chunk = state.map.chunks.getPtr(chunkKey).?;
         try Citizen.citizensTick(chunk, state);
-        for (chunk.trees.items) |*tree| {
-            if (tree.grow < 1 and tree.planted) {
-                tree.grow += 1.0 / 60.0 / 10.0;
-                if (tree.grow > 1) tree.grow = 1;
+        while (chunk.queue.items.len > 0) {
+            const item = chunk.queue.items[0];
+            if (item.executeTime <= state.gameTimeMs) {
+                switch (item.itemData) {
+                    .tree => |data| {
+                        chunk.trees.items[data].fullyGrown = true;
+                    },
+                    .potatoField => |_| {},
+                }
+                _ = chunk.queue.orderedRemove(0);
+            } else {
+                break;
             }
         }
         for (chunk.potatoFields.items) |*potatoField| {
@@ -379,6 +387,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.citizens.deinit();
         chunk.buildOrders.deinit();
         chunk.pathes.deinit();
+        chunk.queue.deinit();
         pathfindingZig.destoryChunkData(&chunk.pathingData);
     }
     pathfindingZig.destoryPathfindingData(&state.pathfindingData);

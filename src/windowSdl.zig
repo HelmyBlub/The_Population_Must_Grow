@@ -240,7 +240,6 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_TREE_FARM) {
                 const newTree: mapZig.MapTree = .{
                     .position = position,
-                    .planted = false,
                     .regrow = true,
                 };
                 _ = try mapZig.placeTree(newTree, state);

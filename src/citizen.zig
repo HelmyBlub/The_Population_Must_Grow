@@ -160,12 +160,15 @@ pub const Citizen: type = struct {
                                 } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                                     citizen.executingUntil = null;
                                     citizen.hasWood = true;
-                                    tree.grow = 0;
+                                    tree.fullyGrown = false;
                                     tree.citizenOnTheWay = false;
                                     tree.beginCuttingTime = null;
                                     citizen.treePosition = null;
                                     if (!tree.regrow) {
-                                        _ = chunk.trees.swapRemove(i);
+                                        mapZig.removeTree(i, chunk);
+                                    } else {
+                                        tree.growStartTimeMs = state.gameTimeMs;
+                                        try chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = i }, .executeTime = state.gameTimeMs + 10_000 });
                                     }
                                     return;
                                 }
@@ -253,18 +256,19 @@ pub const Citizen: type = struct {
             }
         } else if (citizen.treePosition != null) {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
-                if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |tree| {
-                    if (main.calculateDistance(citizen.position, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeAndChunk| {
+                    if (main.calculateDistance(citizen.position, treeAndChunk.tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
                             citizen.executingUntil = state.gameTimeMs + 1000;
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
-                            tree.planted = true;
+                            treeAndChunk.tree.growStartTimeMs = state.gameTimeMs;
+                            try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + 10_000 });
                             citizen.executingUntil = null;
                             citizen.treePosition = null;
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveToPosition(.{ .x = tree.position.x, .y = tree.position.y - 4 }, state);
+                        try citizen.moveToPosition(.{ .x = treeAndChunk.tree.position.x, .y = treeAndChunk.tree.position.y - 4 }, state);
                     }
                 } else {
                     citizen.treePosition = null;
@@ -435,7 +439,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
                 };
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.trees.items) |*tree| {
-                    if (tree.grow < 1 or tree.citizenOnTheWay) continue;
+                    if (!tree.fullyGrown or tree.citizenOnTheWay) continue;
                     const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
                     if (closestTree == null or fastestDistance > tempDistance) {
                         closestTree = tree;
