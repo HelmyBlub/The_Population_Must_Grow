@@ -1,7 +1,6 @@
 tasks:
 - thread safety for values i manipulate in audio callback
 - create test for realistic case to measure performance on
-    - change: frames calculation currently dependant on constant gamespeed
     - seeded randomness for better test validation
         - check if working
     - continue: unknown problems: mutex? before arrayList append failed? why?

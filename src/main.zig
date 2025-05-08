@@ -39,7 +39,7 @@ pub const ChatSimState: type = struct {
     soundMixer: soundMixerZig.SoundMixer,
     keyboardInfo: inputZig.KeyboardInfo = .{},
     mouseInfo: MouseInfo = .{},
-    random: std.Random,
+    random: std.Random.Xoshiro256,
 };
 
 pub const MouseInfo = struct {
@@ -102,8 +102,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     } else {
         seed = std.crypto.random.int(u64);
     }
-    var prng = std.Random.DefaultPrng.init(seed);
-    const rand = prng.random();
+    const prng = std.Random.DefaultPrng.init(seed);
 
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
     state.* = ChatSimState{
@@ -122,7 +121,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .allocator = allocator,
         .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
         .soundMixer = undefined,
-        .random = rand,
+        .random = prng,
     };
     try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);

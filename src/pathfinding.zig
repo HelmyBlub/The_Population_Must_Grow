@@ -966,10 +966,10 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
         var currentRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];
-        const rand = state.random;
+        const rand = &state.random;
         for (0..2) |_| {
             if (currentRectangle.connectionIndexes.items.len == 0) break;
-            const randomConnectionIndex: usize = @intFromFloat(rand.float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
+            const randomConnectionIndex: usize = @intFromFloat(rand.random().float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
             currentRectangle = &state.pathfindingData.graphRectangles.items[currentRectangle.connectionIndexes.items[randomConnectionIndex]];
         }
         const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
@@ -977,8 +977,8 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
         const distanceHomeRandomPosition = main.calculateDistance(randomReachableGraphTopLeftPos, homePos);
         if (distanceHomeRandomPosition < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5 or main.calculateDistance(homePos, citizen.position) > distanceHomeRandomPosition) {
             const finalRandomPosition = main.Position{
-                .x = randomReachableGraphTopLeftPos.x + @as(f32, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
-                .y = randomReachableGraphTopLeftPos.y + @as(f32, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.float(f32),
+                .x = randomReachableGraphTopLeftPos.x + @as(f32, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f32),
+                .y = randomReachableGraphTopLeftPos.y + @as(f32, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f32),
             };
             result = finalRandomPosition;
         }

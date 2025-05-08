@@ -59,9 +59,19 @@ pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator)
 }
 
 pub fn destroySoundMixer(state: *main.ChatSimState) void {
+    state.soundMixer.mutex.lock();
+    defer state.soundMixer.mutex.unlock();
     state.soundMixer.soundsToPlay.deinit();
     state.soundMixer.soundsFutureQueue.deinit();
-    destorySounds(&state.soundMixer, state.allocator);
+    sdl.SDL_DestroyAudioStream(state.soundMixer.soundData.stream);
+    for (state.soundMixer.soundData.sounds) |sound| {
+        if (sound.mp3) |dealocate| {
+            state.allocator.free(dealocate);
+        } else {
+            sdl.SDL_free(sound.data);
+        }
+    }
+    state.allocator.free(state.soundMixer.soundData.sounds);
 }
 
 pub fn tickSoundMixer(state: *main.ChatSimState) !void {
@@ -125,13 +135,13 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
             const removed = state.soundMixer.soundsToPlay.swapRemove(i);
             switch (removed.soundIndex) {
                 SOUND_HAMMER_WOOD => {
-                    state.soundMixer.countHammer -|= 1;
+                    state.soundMixer.countHammer -= 1;
                 },
                 SOUND_TREE_FALLING => {
-                    state.soundMixer.countTreeFalling -|= 1;
+                    state.soundMixer.countTreeFalling -= 1;
                 },
                 SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
-                    state.soundMixer.countWoodCut -|= 1;
+                    state.soundMixer.countWoodCut -= 1;
                 },
                 else => {
                     unreachable;
@@ -153,22 +163,32 @@ pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTi
 
 pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize, mapPosition: main.Position) !void {
     if (soundMixer.soundsToPlay.items.len < SoundMixer.MAX_SOUNDS_AT_ONCE) {
-        try soundMixer.soundsToPlay.append(.{
-            .soundIndex = soundIndex,
-            .dataIndex = offset,
-            .mapPosition = mapPosition,
-        });
         switch (soundIndex) {
             SOUND_HAMMER_WOOD => {
                 if (soundMixer.countHammer >= SoundMixer.LIMIT_HAMMER) return;
+                try soundMixer.soundsToPlay.append(.{
+                    .soundIndex = soundIndex,
+                    .dataIndex = offset,
+                    .mapPosition = mapPosition,
+                });
                 soundMixer.countHammer += 1;
             },
             SOUND_TREE_FALLING => {
                 if (soundMixer.countTreeFalling >= SoundMixer.LIMIT_TREE_FALLING) return;
+                try soundMixer.soundsToPlay.append(.{
+                    .soundIndex = soundIndex,
+                    .dataIndex = offset,
+                    .mapPosition = mapPosition,
+                });
                 soundMixer.countTreeFalling += 1;
             },
             SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
                 if (soundMixer.countWoodCut >= SoundMixer.LIMIT_WOOD_CUT) return;
+                try soundMixer.soundsToPlay.append(.{
+                    .soundIndex = soundIndex,
+                    .dataIndex = offset,
+                    .mapPosition = mapPosition,
+                });
                 soundMixer.countWoodCut += 1;
             },
             else => {
@@ -253,18 +273,4 @@ fn loadSoundFile(path: []const u8, allocator: std.mem.Allocator) !SoundFile {
     } else {
         return error.unknwonSoundFileType;
     }
-}
-
-fn destorySounds(soundMixer: *SoundMixer, allocator: std.mem.Allocator) void {
-    soundMixer.mutex.lock();
-    defer soundMixer.mutex.unlock();
-    sdl.SDL_DestroyAudioStream(soundMixer.soundData.stream);
-    for (soundMixer.soundData.sounds) |sound| {
-        if (sound.mp3) |dealocate| {
-            allocator.free(dealocate);
-        } else {
-            sdl.SDL_free(sound.data);
-        }
-    }
-    allocator.free(soundMixer.soundData.sounds);
 }
