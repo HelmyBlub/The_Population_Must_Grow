@@ -294,14 +294,6 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn randomlyPlace(chunk: *mapZig.MapChunk) void {
-        const rand = std.crypto.random;
-        for (chunk.citizens.items) |*citizen| {
-            citizen.position.x = rand.float(f32) * 400.0 - 200.0;
-            citizen.position.y = rand.float(f32) * 400.0 - 200.0;
-        }
-    }
-
     pub fn findClosestFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) !?*Citizen {
         var closestCitizen: ?*Citizen = null;
         var shortestDistance: f32 = 0;

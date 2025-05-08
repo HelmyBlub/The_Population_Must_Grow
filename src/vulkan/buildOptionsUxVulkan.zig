@@ -301,8 +301,6 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
         &vkState.buildOptionsUx.font.vertexBufferMemory,
         vkState,
     );
-
-    std.debug.print("buildOptionsUx createVertexBuffer finished\n", .{});
 }
 
 pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.ChatSimState) !void {
@@ -613,6 +611,4 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pNext = null,
     };
     if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.spriteGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline;
-
-    std.debug.print("sprite graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }

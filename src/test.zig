@@ -1,19 +1,38 @@
 const std = @import("std");
 const main = @import("main.zig");
 const mapZig = @import("map.zig");
+const windowSdlZig = @import("windowSdl.zig");
 
-const InputType = enum {
+const TestActionType = enum {
     buildPath,
     buildHouse,
-    buildTree,
-    buildPotatoFarm,
+    buildTreeArea,
+    buildHouseArea,
+    buildPotatoFarmArea,
     copyPaste,
+    changeGameSpeed,
+};
+
+const TestActionData = union(TestActionType) {
+    buildPath: main.Position,
+    buildHouse: main.Position,
+    buildTreeArea: mapZig.MapTileRectangle,
+    buildHouseArea: mapZig.MapTileRectangle,
+    buildPotatoFarmArea: mapZig.MapTileRectangle,
+    copyPaste: CopyPasteData,
+    changeGameSpeed: f32,
+};
+
+const CopyPasteData = struct {
+    from: mapZig.TileXY,
+    to: mapZig.TileXY,
+    columns: u32,
+    rows: u32,
 };
 
 const TestInput = struct {
-    type: InputType,
+    data: TestActionData,
     executeTime: u32,
-    mapPosition: main.Position,
 };
 
 pub const TestData = struct {
@@ -27,7 +46,7 @@ pub fn executePerfromanceTest() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     var state: main.ChatSimState = undefined;
-    try main.createGameState(allocator, &state);
+    try main.createGameState(allocator, &state, 0);
     defer main.destroyGameState(&state);
     state.testData = .{};
     const testData = &state.testData.?;
@@ -39,10 +58,9 @@ pub fn executePerfromanceTest() !void {
 
     const startTime = std.time.microTimestamp();
     try main.mainLoop(&state);
-    const frames: i64 = @intFromFloat(@as(f32, @floatFromInt(@divFloor(state.gameTimeMs, state.tickIntervalMs))) / state.gameSpeed);
     const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divFloor(frames * 1_000_000, timePassed);
-    std.debug.print("FPS: {d}", .{fps});
+    const fps = @divFloor(state.framesTotalCounter * 1_000_000, timePassed);
+    std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}", .{ fps, state.citizenCounter, state.gameTimeMs });
 }
 
 pub fn tick(state: *main.ChatSimState) !void {
@@ -50,15 +68,30 @@ pub fn tick(state: *main.ChatSimState) !void {
         while (testData.currenTestInputIndex < testData.testInputs.items.len) {
             const currentInput = testData.testInputs.items[testData.currenTestInputIndex];
             if (currentInput.executeTime <= state.gameTimeMs) {
-                switch (currentInput.type) {
-                    InputType.buildPath => {
-                        _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(currentInput.mapPosition), state);
+                switch (currentInput.data) {
+                    .buildPath => |data| {
+                        _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(data), state);
                     },
-                    InputType.buildHouse => {
-                        _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(currentInput.mapPosition), state, true, true);
+                    .buildHouse => |data| {
+                        _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, true, true);
                     },
-                    else => {
-                        std.debug.print("not yet implemented {}", .{currentInput.type});
+                    .buildTreeArea => |data| {
+                        state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;
+                        try windowSdlZig.handleRectangleAreaAction(data, state);
+                    },
+                    .buildHouseArea => |data| {
+                        state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
+                        try windowSdlZig.handleRectangleAreaAction(data, state);
+                    },
+                    .buildPotatoFarmArea => |data| {
+                        state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
+                        try windowSdlZig.handleRectangleAreaAction(data, state);
+                    },
+                    .copyPaste => |data| {
+                        try mapZig.copyFromTo(data.from, data.to, data.columns, data.rows, state);
+                    },
+                    .changeGameSpeed => |data| {
+                        state.gameSpeed = data;
                     },
                 }
                 testData.currenTestInputIndex += 1;
@@ -70,13 +103,65 @@ pub fn tick(state: *main.ChatSimState) !void {
 }
 
 fn setupTestInputs(testData: *TestData) !void {
-    const tileSize = mapZig.GameMap.TILE_SIZE;
-    try testData.testInputs.append(.{ .type = InputType.buildPath, .executeTime = 0, .mapPosition = .{ .x = 0 * tileSize + tileSize / 2, .y = 1 * tileSize + tileSize / 2 } });
-    try testData.testInputs.append(.{ .type = InputType.buildPath, .executeTime = 0, .mapPosition = .{ .x = 1 * tileSize + tileSize / 2, .y = 1 * tileSize + tileSize / 2 } });
-    try testData.testInputs.append(.{ .type = InputType.buildPath, .executeTime = 0, .mapPosition = .{ .x = 2 * tileSize + tileSize / 2, .y = 1 * tileSize + tileSize / 2 } });
-    try testData.testInputs.append(.{ .type = InputType.buildPath, .executeTime = 0, .mapPosition = .{ .x = 3 * tileSize + tileSize / 2, .y = 1 * tileSize + tileSize / 2 } });
-    try testData.testInputs.append(.{ .type = InputType.buildHouse, .executeTime = 0, .mapPosition = .{ .x = 1 * tileSize + tileSize / 2, .y = 0 * tileSize + tileSize / 2 } });
+    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
+    //city block
+    for (0..10) |counter| {
+        const x: i32 = @intCast(counter);
+        try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(x, 1) }, .executeTime = 0 });
+        try testData.testInputs.append(.{ .data = .{ .buildHouse = tileToPos(x, 0) }, .executeTime = 0 });
+    }
+    for (0..13) |counter| {
+        const y: i32 = @as(i32, @intCast(counter)) - 2;
+        try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(10, y) }, .executeTime = 0 });
+    }
+    try testData.testInputs.append(.{ .data = .{ .buildTreeArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = -2 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 30_000 });
+    try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = -1 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 30_000 });
+    try testData.testInputs.append(.{ .data = .{ .buildHouseArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 2 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 0 });
+    try testData.testInputs.append(.{ .data = .{ .copyPaste = .{ .from = .{ .tileX = 0, .tileY = 0 }, .to = .{ .tileX = 0, .tileY = 3 }, .columns = 10, .rows = 3 } }, .executeTime = 20_000 });
+    try testData.testInputs.append(.{ .data = .{ .copyPaste = .{ .from = .{ .tileX = 0, .tileY = 0 }, .to = .{ .tileX = 0, .tileY = 6 }, .columns = 10, .rows = 3 } }, .executeTime = 20_000 });
+    try testData.testInputs.append(.{ .data = .{ .buildTreeArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 10 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
+    try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 9 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
 
-    try testData.testInputs.append(.{ .type = InputType.buildPath, .executeTime = 0, .mapPosition = .{ .x = -1 * tileSize + tileSize / 2, .y = -1 * tileSize + tileSize / 2 } });
-    try testData.testInputs.append(.{ .type = InputType.buildHouse, .executeTime = 0, .mapPosition = .{ .x = -2 * tileSize + tileSize / 2, .y = -1 * tileSize + tileSize / 2 } });
+    //copy paste entire city block
+    for (1..11) |distance| {
+        for (0..(distance * 2)) |pos| {
+            const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);
+            const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));
+            var toOffset2: i32 = -@as(i32, @intCast(distance));
+            //left
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = -2 },
+                .to = .{ .tileX = toOffset2 * 11, .tileY = toOffset1 * 13 - 2 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            // top
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = -2 },
+                .to = .{ .tileX = (toOffset1 + 1) * 11, .tileY = toOffset2 * 13 - 2 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            //right
+            toOffset2 = -toOffset2;
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = -2 },
+                .to = .{ .tileX = toOffset2 * 11, .tileY = (toOffset1 + 1) * 13 - 2 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            //bottom
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = -2 },
+                .to = .{ .tileX = toOffset1 * 11, .tileY = toOffset2 * 13 - 2 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+        }
+    }
+    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
+}
+
+fn tileToPos(tileX: i32, tileY: i32) main.Position {
+    return mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = tileX, .tileY = tileY });
 }

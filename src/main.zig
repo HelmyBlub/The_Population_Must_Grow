@@ -30,6 +30,7 @@ pub const ChatSimState: type = struct {
     rectangles: [2]?VulkanRectangle = .{ null, null },
     copyAreaRectangle: ?mapZig.MapTileRectangle = null,
     fpsCounter: f32 = 60,
+    framesTotalCounter: u32 = 0,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
     citizenCounterLastTick: u32 = 0,
@@ -38,6 +39,7 @@ pub const ChatSimState: type = struct {
     soundMixer: soundMixerZig.SoundMixer,
     keyboardInfo: inputZig.KeyboardInfo = .{},
     mouseInfo: MouseInfo = .{},
+    random: std.Random,
 };
 
 pub const MouseInfo = struct {
@@ -76,7 +78,7 @@ test "test for memory leaks" {
 }
 
 test "test measure performance" {
-    SIMULATION_MICRO_SECOND_DURATION = 5_000_000;
+    SIMULATION_MICRO_SECOND_DURATION = 30_000_000;
     try testZig.executePerfromanceTest();
 }
 
@@ -93,7 +95,16 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     return @sqrt(diffX * diffX + diffY * diffY);
 }
 
-pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void {
+pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, randomSeed: ?u64) !void {
+    var seed: u64 = undefined;
+    if (randomSeed) |randSeed| {
+        seed = randSeed;
+    } else {
+        seed = std.crypto.random.int(u64);
+    }
+    var prng = std.Random.DefaultPrng.init(seed);
+    const rand = prng.random();
+
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
     state.* = ChatSimState{
         .map = map,
@@ -111,6 +122,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState) !void
         .allocator = allocator,
         .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
         .soundMixer = undefined,
+        .random = rand,
     };
     try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
@@ -229,7 +241,7 @@ fn destoryPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
 fn startGame(allocator: std.mem.Allocator) !void {
     std.debug.print("game run start\n", .{});
     var state: ChatSimState = undefined;
-    try createGameState(allocator, &state);
+    try createGameState(allocator, &state, null);
     defer destroyGameState(&state);
     try mainLoop(&state);
 }
@@ -272,7 +284,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
             if (totalPassedTime > duration) state.gameEnd = true;
         }
     }
-    std.debug.print("finished\n", .{});
+    std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
 fn tick(state: *ChatSimState) !void {

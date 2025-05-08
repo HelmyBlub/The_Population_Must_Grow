@@ -343,7 +343,6 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
         &vkState.font.vertexBufferMemory,
         vkState,
     );
-    std.debug.print("font createVertexBuffer finished\n", .{});
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
@@ -487,5 +486,4 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pNext = null,
     };
     if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.font.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
-    std.debug.print("font Graphics Pipeline Created\n", .{});
 }

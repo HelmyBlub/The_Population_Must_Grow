@@ -545,7 +545,6 @@ fn createTextureSampler(vkState: *Vk_State) !void {
         .maxLod = vk.VK_LOD_CLAMP_NONE,
     };
     if (vk.vkCreateSampler(vkState.logicalDevice, &samplerInfo, null, &vkState.textureSampler) != vk.VK_SUCCESS) return error.createSampler;
-    std.debug.print("createTextureSampler finished\n", .{});
 }
 
 fn createTextureImageView(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -553,7 +552,6 @@ fn createTextureImageView(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     for (0..imageZig.IMAGE_DATA.len) |i| {
         vkState.textureImageView[i] = try createImageView(vkState.textureImage[i], vk.VK_FORMAT_R8G8B8A8_SRGB, vkState.mipLevels[i], vk.VK_IMAGE_ASPECT_COLOR_BIT, vkState);
     }
-    std.debug.print("createTextureImageView finished\n", .{});
 }
 
 pub fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, aspectFlags: vk.VkImageAspectFlags, vkState: *Vk_State) !vk.VkImageView {
@@ -735,7 +733,6 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
         .maxSets = Vk_State.MAX_FRAMES_IN_FLIGHT,
     };
     if (vk.vkCreateDescriptorPool(vkState.logicalDevice, &poolInfo, null, &vkState.descriptorPool) != vk.VK_SUCCESS) return error.descriptionPool;
-    std.debug.print("createDescriptorPool finished\n", .{});
 }
 
 fn createUniformBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -756,7 +753,6 @@ fn createUniformBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
         );
         if (vk.vkMapMemory(vkState.logicalDevice, vkState.uniformBuffersMemory[i], 0, bufferSize, 0, &vkState.uniformBuffersMapped[i]) != vk.VK_SUCCESS) return error.uniformMapMemory;
     }
-    std.debug.print("createUniformBuffers finished\n", .{});
 }
 
 fn createDescriptorSetLayout(vkState: *Vk_State) !void {
@@ -977,6 +973,7 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
 }
 
 pub fn drawFrame(state: *main.ChatSimState) !void {
+    state.framesTotalCounter += 1;
     var vkState = &state.vkState;
     try setupVerticesForCitizens(state);
     try setupVertexDataForGPU(&state.vkState);
@@ -1137,7 +1134,6 @@ fn createCommandBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
         .commandBufferCount = @intCast(vkState.command_buffer.len),
     };
     try vkcheck(vk.vkAllocateCommandBuffers(vkState.logicalDevice, &allocInfo, &vkState.command_buffer[0]), "Failed to create Command Pool.");
-    std.debug.print("Command Buffer : {any}\n", .{vkState.command_buffer});
 }
 
 fn createCommandPool(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -1148,7 +1144,6 @@ fn createCommandPool(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .queueFamilyIndex = queueFamilyIndices.graphicsFamily.?,
     };
     try vkcheck(vk.vkCreateCommandPool(vkState.logicalDevice, &poolInfo, null, &vkState.command_pool), "Failed to create Command Pool.");
-    std.debug.print("Command Pool : {any}\n", .{vkState.command_pool});
 }
 
 fn createFramebuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -1166,7 +1161,6 @@ fn createFramebuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
             .layers = 1,
         };
         try vkcheck(vk.vkCreateFramebuffer(vkState.logicalDevice, &framebufferInfo, null, &vkState.framebuffers.?[i]), "Failed to create Framebuffer.");
-        std.debug.print("Framebuffer Created\n", .{});
     }
 }
 
@@ -1258,7 +1252,6 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .pDependencies = &dependency,
     };
     try vkcheck(vk.vkCreateRenderPass(vkState.logicalDevice, &renderPassInfo, null, &vkState.render_pass), "Failed to create Render Pass.");
-    std.debug.print("Render Pass Created : {any}\n", .{vkState.render_pass});
 }
 
 fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -1384,7 +1377,6 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pPushConstantRanges = null,
     };
     try vkcheck(vk.vkCreatePipelineLayout(vkState.logicalDevice, &pipelineLayoutInfo, null, &vkState.pipeline_layout), "Failed to create pipeline layout.");
-    std.debug.print("Pipeline Layout Created : {any}\n", .{vkState.pipeline_layout});
 
     vkState.depthStencil = .{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -1437,8 +1429,6 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pDepthStencilState = &vkState.depthStencil,
     };
     if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline2;
-
-    std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }
 
 pub fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
@@ -1449,7 +1439,6 @@ pub fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModu
     };
     var shaderModule: vk.VkShaderModule = undefined;
     try vkcheck(vk.vkCreateShaderModule(vkState.logicalDevice, &createInfo, null, &shaderModule), "Failed to create Shader Module.");
-    std.debug.print("Shader Module Created : {any}\n", .{shaderModule});
     return shaderModule;
 }
 
@@ -1457,7 +1446,6 @@ fn createImageViews(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     vkState.swapchain_imageviews = try allocator.alloc(vk.VkImageView, vkState.swapchain_info.images.len);
     for (vkState.swapchain_info.images, 0..) |image, i| {
         vkState.swapchain_imageviews[i] = try createImageView(image, vkState.swapchain_info.format.format, 1, vk.VK_IMAGE_ASPECT_COLOR_BIT, vkState);
-        std.debug.print("Swapchain ImageView Created : {any}\n", .{vkState.swapchain_imageviews[i]});
     }
 }
 
@@ -1499,7 +1487,6 @@ fn createSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     }
 
     try vkcheck(vk.vkCreateSwapchainKHR(vkState.logicalDevice, &createInfo, null, &vkState.swapchain), "Failed to create swapchain KHR");
-    std.debug.print("Swapchain KHR Created : {any}\n", .{vkState.logicalDevice});
 
     _ = vk.vkGetSwapchainImagesKHR(vkState.logicalDevice, vkState.swapchain, &imageCount, null);
     vkState.swapchain_info.images = try allocator.alloc(vk.VkImage, imageCount);
@@ -1564,36 +1551,6 @@ fn chooseSwapExtent(capabilities: vk.VkSurfaceCapabilitiesKHR) vk.VkExtent2D {
     }
 }
 
-fn checkValidationLayerSupport(allocator: std.mem.Allocator) bool {
-    var layer_count: u32 = 0;
-    _ = vk.vkEnumerateInstanceLayerProperties(&layer_count, null);
-
-    const available_layers = allocator.alloc(vk.VkLayerProperties, layer_count) catch unreachable;
-    defer allocator.free(available_layers);
-    _ = vk.vkEnumerateInstanceLayerProperties(&layer_count, available_layers.ptr);
-
-    std.debug.print("Validation check, searching: \n", .{});
-    for (validation_layers) |layer_name| {
-        const layer_name_span = std.mem.span(layer_name);
-        const layer_name_len = layer_name_span.len;
-        std.debug.print("  {s}\nValidation properties list :\n", .{layer_name_span});
-        var found: bool = false;
-        for (available_layers) |layer_properties| {
-            std.debug.print("  {s}\n", .{layer_properties.layerName});
-            const prop_name_len = std.mem.indexOf(u8, layer_properties.layerName[0..], &[_]u8{0}) orelse 256;
-            if (layer_name_len == prop_name_len) {
-                std.debug.print("Found:\n  {s}\n", .{&layer_properties.layerName});
-                if (std.mem.eql(u8, layer_name_span, layer_properties.layerName[0..prop_name_len])) {
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) return false;
-    }
-    return true;
-}
-
 fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State) !void {
     var queue_create_info = vk.VkDeviceQueueCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -1630,7 +1587,6 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
     try vkcheck(vk.vkCreateDevice(physical_device, &device_create_info, null, &vkState.logicalDevice), "Failed to create logical device");
     std.debug.print("Logical Device Created : {any}\n", .{vkState.logicalDevice});
     vk.vkGetDeviceQueue(vkState.logicalDevice, vkState.graphics_queue_family_idx, 0, &vkState.queue);
-    std.debug.print("Queue Obtained : {any}\n", .{vkState.queue});
 }
 
 fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: std.mem.Allocator) !vk.VkPhysicalDevice {

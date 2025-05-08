@@ -85,8 +85,6 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
         &vkState.citizenPopulationCounterUx.font.vertexBufferMemory,
         vkState,
     );
-
-    std.debug.print("citizenPopulationCounterUx createVertexBuffer finished\n", .{});
 }
 
 pub fn setupVertices(state: *main.ChatSimState) !void {

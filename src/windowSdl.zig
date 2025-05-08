@@ -207,7 +207,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
     }
 }
 
-fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
+pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
     var chunk: *mapZig.MapChunk = undefined;
     var currentChunkXY: ?mapZig.ChunkXY = null;
     for (0..mapTileRectangle.columnCount) |x| {

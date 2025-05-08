@@ -96,7 +96,6 @@ pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: 
     for (0..IMAGE_DATA.len) |i| {
         try createVulkanTextureImage(vkState, allocator, IMAGE_DATA[i].path, &vkState.mipLevels[i], &vkState.textureImage[i], &vkState.textureImageMemory[i]);
     }
-    std.debug.print("createVulkanTextureImage finished\n", .{});
 }
 
 pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator, filePath: []const u8, mipLevels: *u32, textureImage: *vk.VkImage, textureImageMemory: *vk.VkDeviceMemory) !void {

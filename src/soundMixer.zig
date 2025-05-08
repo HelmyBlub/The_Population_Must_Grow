@@ -125,13 +125,13 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
             const removed = state.soundMixer.soundsToPlay.swapRemove(i);
             switch (removed.soundIndex) {
                 SOUND_HAMMER_WOOD => {
-                    state.soundMixer.countHammer -= 1;
+                    state.soundMixer.countHammer -|= 1;
                 },
                 SOUND_TREE_FALLING => {
-                    state.soundMixer.countTreeFalling -= 1;
+                    state.soundMixer.countTreeFalling -|= 1;
                 },
                 SOUND_WOOD_CHOP_1, SOUND_WOOD_CHOP_2, SOUND_WOOD_CHOP_3, SOUND_WOOD_CHOP_4, SOUND_WOOD_CHOP_5 => {
-                    state.soundMixer.countWoodCut -= 1;
+                    state.soundMixer.countWoodCut -|= 1;
                 },
                 else => {
                     unreachable;
@@ -153,6 +153,11 @@ pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTi
 
 pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize, mapPosition: main.Position) !void {
     if (soundMixer.soundsToPlay.items.len < SoundMixer.MAX_SOUNDS_AT_ONCE) {
+        try soundMixer.soundsToPlay.append(.{
+            .soundIndex = soundIndex,
+            .dataIndex = offset,
+            .mapPosition = mapPosition,
+        });
         switch (soundIndex) {
             SOUND_HAMMER_WOOD => {
                 if (soundMixer.countHammer >= SoundMixer.LIMIT_HAMMER) return;
@@ -170,11 +175,6 @@ pub fn playSound(soundMixer: *SoundMixer, soundIndex: usize, offset: usize, mapP
                 unreachable;
             },
         }
-        try soundMixer.soundsToPlay.append(.{
-            .soundIndex = soundIndex,
-            .dataIndex = offset,
-            .mapPosition = mapPosition,
-        });
     }
 }
 

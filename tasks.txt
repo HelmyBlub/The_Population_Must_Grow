@@ -1,5 +1,9 @@
 tasks:
+- thread safety for values i manipulate in audio callback
 - create test for realistic case to measure performance on
+    - change: frames calculation currently dependant on constant gamespeed
+    - seeded randomness for better test validation
+        - check if working
     - continue: unknown problems: mutex? before arrayList append failed? why?
     - no speed limit to know fps value
     - test from zero citizens to X0_000 ?
@@ -20,8 +24,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- zig build test 1: FPS: 360 (07.05.2025)
-- zig build test 0.1: FPS: 745 (07.05.2025)
+- FPS: 90, citizens: 13259, gameTime: 287072 (08.05.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

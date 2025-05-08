@@ -336,6 +336,4 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pDepthStencilState = &vkState.depthStencil,
     };
     if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfoCitizenComplex, null, &vkState.citizen.graphicsPipeline) != vk.VK_SUCCESS) return error.citizenGraphicsPipeline;
-
-    std.debug.print("Graphics Pipeline Created : {any}\n", .{vkState.pipeline_layout});
 }

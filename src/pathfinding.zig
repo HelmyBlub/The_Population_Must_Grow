@@ -966,7 +966,7 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
         var currentRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];
-        const rand = std.crypto.random;
+        const rand = state.random;
         for (0..2) |_| {
             if (currentRectangle.connectionIndexes.items.len == 0) break;
             const randomConnectionIndex: usize = @intFromFloat(rand.float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
