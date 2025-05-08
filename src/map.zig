@@ -555,10 +555,12 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     } else {
         const buildRectangle = get1x1RectangleFromPosition(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
+        std.debug.print("test3: {}\n", .{chunk.chunkXY});
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) {
             if (displayHelpText) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = std.time.milliTimestamp();
             return false;
         }
+        std.debug.print("test4: {}\n", .{chunk.chunkXY});
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }

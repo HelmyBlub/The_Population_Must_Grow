@@ -277,6 +277,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
 
 fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
+    try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
 
     for (0..state.map.activeChunkKeys.items.len) |i| {

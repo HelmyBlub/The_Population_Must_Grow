@@ -1,5 +1,4 @@
 tasks:
-- Bug: zoom over max should not translate camera
 - create test for realistic case to measure performance on
     - continue: unknown problems: mutex? before arrayList append failed? why?
     - no speed limit to know fps value
