@@ -74,18 +74,20 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             const translateX = (state.mouseInfo.currentPos.x - windowData.widthFloat / 2.0) / state.camera.zoom * 0.2;
             const translateY = (state.mouseInfo.currentPos.y - windowData.heightFloat / 2.0) / state.camera.zoom * 0.2;
             if (event.wheel.y > 0) {
-                state.camera.position.x += translateX;
-                state.camera.position.y += translateY;
                 state.camera.zoom /= 0.8;
                 if (state.camera.zoom > 10) {
                     state.camera.zoom = 10;
+                } else {
+                    state.camera.position.x += translateX;
+                    state.camera.position.y += translateY;
                 }
             } else {
-                state.camera.position.x -= translateX;
-                state.camera.position.y -= translateY;
                 state.camera.zoom /= 1.2;
                 if (state.camera.zoom < 0.1) {
                     state.camera.zoom = 0.1;
+                } else {
+                    state.camera.position.x -= translateX;
+                    state.camera.position.y -= translateY;
                 }
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {

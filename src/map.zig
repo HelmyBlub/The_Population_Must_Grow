@@ -559,7 +559,6 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
             if (displayHelpText) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = std.time.milliTimestamp();
             return false;
         }
-        std.debug.print("{} {}", .{ building, chunk.chunkXY });
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }

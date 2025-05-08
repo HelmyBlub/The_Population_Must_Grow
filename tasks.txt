@@ -1,10 +1,11 @@
 tasks:
+- Bug: zoom over max should not translate camera
 - create test for realistic case to measure performance on
     - continue: unknown problems: mutex? before arrayList append failed? why?
     - no speed limit to know fps value
     - test from zero citizens to X0_000 ?
         - measure time from 0 to 10_000 and time from 10_000 to 25_000
-
+- bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
 
 - features:
     - performance
