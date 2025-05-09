@@ -21,7 +21,8 @@ pub const Citizen: type = struct {
     homePosition: ?Position = null,
     foodLevel: f32 = 1,
     actionFailedWaitUntilTimeMs: ?u32 = null,
-    foodSearchRepeatWaitUntilTimeMs: ?u32 = null,
+    foodLevelLastUpdateTimeMs: u32 = 0,
+    nextFoodTickTimeMs: u32 = 0,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
     pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
     pub const MOVE_SPEED_STARVING = 0.5;
@@ -91,7 +92,7 @@ pub const Citizen: type = struct {
                             } else {
                                 citizen.hasPotato = false;
                                 citizen.potatoPosition = null;
-                                citizen.foodLevel += 0.5;
+                                eatFood(0.5, citizen, state);
                                 citizen.executingUntil = null;
                                 if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
                                     citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
@@ -373,20 +374,39 @@ fn recalculateCitizenImageIndex(citizen: *Citizen) void {
     }
 }
 
+fn eatFood(foodAmount: f32, citizen: *Citizen, state: *main.ChatSimState) void {
+    citizen.foodLevel += foodAmount;
+    const timePassed: f32 = @floatFromInt(state.gameTimeMs - citizen.foodLevelLastUpdateTimeMs);
+    citizen.foodLevel -= 1.0 / 60.0 / 1000.0 * timePassed;
+    citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
+    const footUntilHungry = citizen.foodLevel - 0.5;
+    citizen.nextFoodTickTimeMs = state.gameTimeMs;
+    if (footUntilHungry > 0) {
+        const timeUntilHungry: u32 = @intFromFloat((footUntilHungry + 0.01) * 60.0 * 1000.0);
+        citizen.nextFoodTickTimeMs += timeUntilHungry;
+    }
+}
+
 fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
-    const hungryBefore = !(citizen.foodLevel > 0.5);
-    citizen.foodLevel -= 1.0 / 60.0 / 60.0;
-    if (citizen.foodSearchRepeatWaitUntilTimeMs != null and citizen.foodSearchRepeatWaitUntilTimeMs.? > state.gameTimeMs) return;
-    if (citizen.foodLevel > 0.5 or citizen.potatoPosition != null or citizen.executingUntil != null or (hungryBefore and citizen.moveTo.items.len > 0)) return;
+    if (citizen.nextFoodTickTimeMs > state.gameTimeMs) return;
+    if (citizen.foodLevelLastUpdateTimeMs == 0) {
+        citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
+        eatFood(0, citizen, state);
+        return;
+    }
+    const timePassed: f32 = @floatFromInt(state.gameTimeMs - citizen.foodLevelLastUpdateTimeMs);
+    citizen.foodLevel -= 1.0 / 60.0 / 1000.0 * timePassed;
+    citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
+
     if (try findClosestFreePotato(citizen.position, state)) |potato| {
         potato.citizenOnTheWay += 1;
+        citizen.nextFoodTickTimeMs = state.gameTimeMs + 15_000;
         citizen.potatoPosition = potato.position;
         citizen.moveTo.clearAndFree();
     } else {
-        citizen.foodSearchRepeatWaitUntilTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+        citizen.nextFoodTickTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
         if (citizen.moveSpeed == Citizen.MOVE_SPEED_NORMAL and citizen.foodLevel <= 0) {
             citizen.moveSpeed = Citizen.MOVE_SPEED_STARVING;
-            std.debug.print("citizen starving\n", .{});
         }
     }
 }

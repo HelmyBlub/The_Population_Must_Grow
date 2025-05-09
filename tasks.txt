@@ -1,7 +1,5 @@
 tasks:
 - check code for performance improvement for single cpu and no simd
-    - build order per chunk
-        - based on amount of citizens -> if 0 citizen, skip checking x ticks before searching again
     - citizen tick could be changed to a queue which know which citizen to tick when
 
 - bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
@@ -20,8 +18,7 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- FPS: 97, citizens: 14309, gameTime: 293664 (09.05.2025)
-- FPS: 120, citizens: 22582, gameTime: 315808, end FPS: 61.536087 (with 250ms skip after not finding a citizen and close citizen not closest)
+- FPS: 120, citizens: 22582, gameTime: 315808, end FPS: 61.536087 (09.05.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
