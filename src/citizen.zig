@@ -301,14 +301,14 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn findClosestFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) !?*Citizen {
+    pub fn findCloseFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) !?*Citizen {
         var closestCitizen: ?*Citizen = null;
         var shortestDistance: f32 = 0;
 
         var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
         var iteration: u8 = 0;
         const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
-        while (closestCitizen == null and iteration < maxIterations) {
+        mainLoop: while (closestCitizen == null and iteration < maxIterations) {
             const loops = iteration * 2 + 1;
             for (0..loops) |x| {
                 for (0..loops) |y| {
@@ -324,6 +324,7 @@ pub const Citizen: type = struct {
                         if (closestCitizen == null or shortestDistance > tempDistance) {
                             closestCitizen = citizen;
                             shortestDistance = tempDistance;
+                            if (shortestDistance < mapZig.GameMap.CHUNK_SIZE) break :mainLoop;
                         }
                     }
                 }

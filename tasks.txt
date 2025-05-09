@@ -2,7 +2,6 @@ tasks:
 - check code for performance improvement for single cpu and no simd
     - build order per chunk
         - based on amount of citizens -> if 0 citizen, skip checking x ticks before searching again
-            - continue: is it worth to calculate a better timeout? try around
     - citizen tick could be changed to a queue which know which citizen to tick when
 
 - bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
@@ -22,7 +21,7 @@ tasks:
   
 Some data:
 - FPS: 97, citizens: 14309, gameTime: 293664 (09.05.2025)
-- FPS: 111, citizens: 20330, gameTime: 307456 (with 100ms skip after not finding a citizen)
+- FPS: 120, citizens: 22582, gameTime: 315808, end FPS: 61.536087 (with 250ms skip after not finding a citizen and close citizen not closest)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

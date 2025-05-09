@@ -315,17 +315,17 @@ fn tick(state: *ChatSimState) !void {
             }
         }
 
-        var iterator = chunk.buildOrders.items.len;
         if (chunk.skipBuildOrdersUntilTimeMs) |time| {
             if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
         }
+        var iterator = chunk.buildOrders.items.len;
         if (chunk.skipBuildOrdersUntilTimeMs == null) {
             while (iterator > 0) {
                 iterator -= 1;
                 const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
                 const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
                 if (optMapObject) |mapObject| {
-                    if (try Citizen.findClosestFreeCitizen(buildOrder.position, state)) |freeCitizen| {
+                    if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizen| {
                         switch (mapObject) {
                             mapZig.MapObject.building => |building| {
                                 freeCitizen.buildingPosition = building.position;
