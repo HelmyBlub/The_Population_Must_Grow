@@ -284,7 +284,7 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
                 if (tree.fullyGrown) {
                     imageIndex = imageZig.IMAGE_TREE;
                 } else if (tree.growStartTimeMs) |time| {
-                    size = @intCast(@divFloor(mapZig.GameMap.TILE_SIZE * (state.gameTimeMs - time), 10_000));
+                    size = @intCast(@divFloor(mapZig.GameMap.TILE_SIZE * (state.gameTimeMs - time), mapZig.GROW_TIME_MS));
                     imageIndex = imageZig.IMAGE_TREE;
                 }
                 var rotate: f32 = 0;
@@ -329,7 +329,12 @@ fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
             for (chunk.potatoFields.items) |*field| {
                 vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
-                const size: u8 = @intFromFloat(mapZig.GameMap.TILE_SIZE * field.grow);
+                var size: u8 = mapZig.GameMap.TILE_SIZE;
+                if (field.growStartTimeMs) |time| {
+                    size = @intCast(@divFloor((state.gameTimeMs - time) * mapZig.GameMap.TILE_SIZE, mapZig.GROW_TIME_MS));
+                } else if (!field.fullyGrown) {
+                    size = 0;
+                }
                 vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                 indexLayer1 += 1;
             }

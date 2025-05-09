@@ -12,6 +12,8 @@ pub const GameMap = struct {
     pub const MAX_BUILDING_TILE_RADIUS: comptime_int = 1;
 };
 
+pub const GROW_TIME_MS = 10_000;
+
 const U64HashMapContext = struct {
     pub fn hash(self: @This(), s: u64) u64 {
         _ = self;
@@ -92,9 +94,8 @@ pub const Building = struct {
 pub const PotatoField = struct {
     position: main.Position,
     citizenOnTheWay: u8 = 0,
-    planted: bool = true,
-    ///  values from 0 to 1
-    grow: f32 = 0,
+    growStartTimeMs: ?u32 = null,
+    fullyGrown: bool = false,
 };
 
 pub const ChunkXY = struct {
@@ -262,7 +263,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
     }
     for (chunk.potatoFields.items, 0..) |field, i| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
-            _ = chunk.potatoFields.swapRemove(i);
+            removePotatoField(i, chunk);
             return;
         }
     }
@@ -697,11 +698,11 @@ pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
     try state.map.activeChunkKeys.append(newKey);
 }
 
-pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?*PotatoField {
+pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
-    for (chunk.potatoFields.items) |*field| {
+    for (chunk.potatoFields.items, 0..) |*field, i| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
-            return field;
+            return .{ .potatoField = field, .chunk = chunk, .potatoIndex = i };
         }
     }
     return null;
@@ -729,6 +730,26 @@ pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
                 continue;
             } else if (queueItem.itemData.tree == movedIndex) {
                 queueItem.itemData.tree = treeIndex;
+            }
+            queueIndex += 1;
+        } else {
+            queueIndex += 1;
+        }
+    }
+}
+
+pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
+    const movedIndex = chunk.potatoFields.items.len - 1;
+    _ = chunk.potatoFields.swapRemove(potatoIndex);
+    var queueIndex: usize = 0;
+    while (chunk.queue.items.len > queueIndex) {
+        const queueItem = &chunk.queue.items[queueIndex];
+        if (@as(ChunkQueueType, queueItem.itemData) == ChunkQueueType.potatoField) {
+            if (queueItem.itemData.potatoField == potatoIndex) {
+                _ = chunk.queue.orderedRemove(potatoIndex);
+                continue;
+            } else if (queueItem.itemData.potatoField == movedIndex) {
+                queueItem.itemData.potatoField = potatoIndex;
             }
             queueIndex += 1;
         } else {
@@ -796,7 +817,6 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                 if (main.calculateDistance(sourcePosition, potatoField.position) < GameMap.TILE_SIZE) {
                     const newPotatoField: PotatoField = .{
                         .position = targetPosition,
-                        .planted = false,
                     };
                     _ = try placePotatoField(newPotatoField, state);
                     continue :nextTile;

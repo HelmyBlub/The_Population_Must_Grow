@@ -302,18 +302,16 @@ fn tick(state: *ChatSimState) !void {
                 switch (item.itemData) {
                     .tree => |data| {
                         chunk.trees.items[data].fullyGrown = true;
+                        chunk.trees.items[data].growStartTimeMs = null;
                     },
-                    .potatoField => |_| {},
+                    .potatoField => |data| {
+                        chunk.potatoFields.items[data].fullyGrown = true;
+                        chunk.potatoFields.items[data].growStartTimeMs = null;
+                    },
                 }
                 _ = chunk.queue.orderedRemove(0);
             } else {
                 break;
-            }
-        }
-        for (chunk.potatoFields.items) |*potatoField| {
-            if (potatoField.grow < 1 and potatoField.planted) {
-                potatoField.grow += 1.0 / 60.0 / 10.0;
-                if (potatoField.grow > 1) potatoField.grow = 1;
             }
         }
 

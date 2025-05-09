@@ -74,16 +74,18 @@ pub const Citizen: type = struct {
         }
         if (citizen.potatoPosition) |potatoPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
-                if (try mapZig.getPotatoFieldOnPosition(potatoPosition, state)) |farmTile| {
-                    if (main.calculateDistance(farmTile.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
+                if (try mapZig.getPotatoFieldOnPosition(potatoPosition, state)) |farmData| {
+                    if (main.calculateDistance(farmData.potatoField.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
-                            if (farmTile.grow >= 1) {
+                            if (farmData.potatoField.fullyGrown) {
                                 citizen.executingUntil = state.gameTimeMs + 1500;
                             }
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                             if (!citizen.hasPotato) {
-                                farmTile.grow = 0;
-                                farmTile.citizenOnTheWay -= 1;
+                                farmData.potatoField.growStartTimeMs = state.gameTimeMs;
+                                try farmData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
+                                farmData.potatoField.fullyGrown = false;
+                                farmData.potatoField.citizenOnTheWay -= 1;
                                 citizen.hasPotato = true;
                                 citizen.executingUntil = state.gameTimeMs + 1500;
                             } else {
@@ -97,7 +99,7 @@ pub const Citizen: type = struct {
                             }
                         }
                     } else {
-                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y - 8 }, state);
+                        try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 8 }, state);
                     }
                 } else {
                     citizen.potatoPosition = null;
@@ -105,20 +107,21 @@ pub const Citizen: type = struct {
             }
         } else if (citizen.farmPosition) |farmPosition| {
             if (citizen.moveTo.items.len == 0 and (citizen.executingUntil == null or citizen.executingUntil.? <= state.gameTimeMs)) {
-                if (try mapZig.getPotatoFieldOnPosition(farmPosition, state)) |farmTile| {
-                    if (main.calculateDistance(farmTile.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
+                if (try mapZig.getPotatoFieldOnPosition(farmPosition, state)) |farmData| {
+                    if (main.calculateDistance(farmData.potatoField.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
                         if (citizen.executingUntil == null) {
                             if (try mapZig.canBuildOrWaitForTreeCutdown(farmPosition, state)) {
                                 citizen.executingUntil = state.gameTimeMs + 1500;
                             }
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
-                            farmTile.planted = true;
+                            farmData.potatoField.growStartTimeMs = state.gameTimeMs;
+                            try farmData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
                             citizen.executingUntil = null;
                             citizen.farmPosition = null;
                             citizen.idle = true;
                         }
                     } else {
-                        try citizen.moveToPosition(.{ .x = farmTile.position.x, .y = farmTile.position.y - 5 }, state);
+                        try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 5 }, state);
                     }
                 } else {
                     citizen.farmPosition = null;
@@ -168,7 +171,7 @@ pub const Citizen: type = struct {
                                         mapZig.removeTree(i, chunk);
                                     } else {
                                         tree.growStartTimeMs = state.gameTimeMs;
-                                        try chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = i }, .executeTime = state.gameTimeMs + 10_000 });
+                                        try chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = i }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
                                     }
                                     return;
                                 }
@@ -262,7 +265,7 @@ pub const Citizen: type = struct {
                             citizen.executingUntil = state.gameTimeMs + 1000;
                         } else if (citizen.executingUntil.? <= state.gameTimeMs) {
                             treeAndChunk.tree.growStartTimeMs = state.gameTimeMs;
-                            try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + 10_000 });
+                            try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
                             citizen.executingUntil = null;
                             citizen.treePosition = null;
                             citizen.idle = true;
@@ -404,9 +407,12 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
                 };
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.potatoFields.items) |*potatoField| {
-                    if (!potatoField.planted or potatoField.citizenOnTheWay >= 2) continue;
-                    if (potatoField.citizenOnTheWay > 0 and potatoField.grow < 1) continue;
-                    const tempDistance: f32 = main.calculateDistance(targetPosition, potatoField.position) + (1.0 - potatoField.grow + @as(f32, @floatFromInt(potatoField.citizenOnTheWay))) * 40.0;
+                    if ((!potatoField.fullyGrown and potatoField.growStartTimeMs == null) or potatoField.citizenOnTheWay >= 2) continue;
+                    if (potatoField.citizenOnTheWay > 0 and potatoField.growStartTimeMs != null) continue;
+                    var tempDistance: f32 = main.calculateDistance(targetPosition, potatoField.position) + @as(f32, @floatFromInt(potatoField.citizenOnTheWay)) * 40.0;
+                    if (potatoField.growStartTimeMs) |time| {
+                        tempDistance += 40 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 250;
+                    }
                     if (resultPotatoField == null or shortestDistance > tempDistance) {
                         shortestDistance = tempDistance;
                         resultPotatoField = potatoField;

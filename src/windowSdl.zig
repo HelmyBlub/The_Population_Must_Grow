@@ -234,7 +234,6 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {
                 const newPotatoField: mapZig.PotatoField = .{
                     .position = position,
-                    .planted = false,
                 };
                 _ = try mapZig.placePotatoField(newPotatoField, state);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_TREE_FARM) {
