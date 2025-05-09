@@ -200,6 +200,12 @@ pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *
 
 pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.ChatSimState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
+    for (chunk.trees.items, 0..) |tree, i| {
+        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
+            removeTree(i, chunk);
+            break;
+        }
+    }
     for (chunk.buildings.items, 0..) |*building, i| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             if (state.citizenCounter > 1 and building.citizensSpawned > 0) {
@@ -254,12 +260,6 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                 }
                 return;
             }
-        }
-    }
-    for (chunk.trees.items, 0..) |tree, i| {
-        if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
-            removeTree(i, chunk);
-            return;
         }
     }
     for (chunk.potatoFields.items, 0..) |field, i| {
@@ -326,7 +326,7 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSi
     return true;
 }
 
-pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatSimState, setExistingTreeRegrow: bool, ignore1TileBuildings: bool) !bool {
+pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatSimState, setExistingTreeRegrow: bool, ignore1TileBuildings: bool, ignoreNonRegrowTrees: bool) !bool {
     const buildCorners = [_]TileXY{
         .{
             .tileX = buildRectangle.topLeftTileXY.tileX - GameMap.MAX_BUILDING_TILE_RADIUS,
@@ -386,6 +386,7 @@ pub fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatS
         for (chunk.trees.items) |*tree| {
             if (is1x1ObjectOverlapping(tree.position, buildRectangle)) {
                 if (!tree.regrow) {
+                    if (ignoreNonRegrowTrees) break;
                     if (setExistingTreeRegrow) {
                         tree.regrow = true;
                     } else {
@@ -508,7 +509,7 @@ pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) 
 }
 
 pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
-    if (!try isRectangleBuildable(get1x1RectangleFromPosition(tree.position), state, true, false)) return false;
+    if (!try isRectangleBuildable(get1x1RectangleFromPosition(tree.position), state, true, false, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, state);
     try chunk.trees.append(tree);
     try chunk.buildOrders.append(.{ .position = tree.position, .materialCount = 1 });
@@ -526,7 +527,7 @@ pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
 }
 
 pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
-    if (!try isRectangleBuildable(get1x1RectangleFromPosition(potatoField.position), state, false, false)) return false;
+    if (!try isRectangleBuildable(get1x1RectangleFromPosition(potatoField.position), state, false, false, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
@@ -535,7 +536,7 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
 }
 
 pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
-    if (!try isRectangleBuildable(get1x1RectangleFromPosition(pathPos), state, false, false)) return false;
+    if (!try isRectangleBuildable(get1x1RectangleFromPosition(pathPos), state, false, false, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(pathPos, state);
     try chunk.pathes.append(pathPos);
     return true;
@@ -562,7 +563,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
         const buildRectangle = getBigBuildingRectangle(building.position);
-        if (!try isRectangleBuildable(buildRectangle, state, false, true)) return false;
+        if (!try isRectangleBuildable(buildRectangle, state, false, true, true)) return false;
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
@@ -571,7 +572,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
         const buildRectangle = get1x1RectangleFromPosition(building.position);
-        if (!try isRectangleBuildable(buildRectangle, state, false, false)) return false;
+        if (!try isRectangleBuildable(buildRectangle, state, false, false, true)) return false;
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) {
             if (displayHelpText) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = std.time.milliTimestamp();
             return false;
