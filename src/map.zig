@@ -728,7 +728,7 @@ pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
         const queueItem = &chunk.queue.items[queueIndex];
         if (@as(ChunkQueueType, queueItem.itemData) == ChunkQueueType.tree) {
             if (queueItem.itemData.tree == treeIndex) {
-                _ = chunk.queue.orderedRemove(treeIndex);
+                _ = chunk.queue.orderedRemove(queueIndex);
                 continue;
             } else if (queueItem.itemData.tree == movedIndex) {
                 queueItem.itemData.tree = treeIndex;
@@ -748,7 +748,7 @@ pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
         const queueItem = &chunk.queue.items[queueIndex];
         if (@as(ChunkQueueType, queueItem.itemData) == ChunkQueueType.potatoField) {
             if (queueItem.itemData.potatoField == potatoIndex) {
-                _ = chunk.queue.orderedRemove(potatoIndex);
+                _ = chunk.queue.orderedRemove(queueIndex);
                 continue;
             } else if (queueItem.itemData.potatoField == movedIndex) {
                 queueItem.itemData.potatoField = potatoIndex;

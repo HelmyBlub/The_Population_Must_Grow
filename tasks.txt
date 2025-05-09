@@ -1,10 +1,11 @@
 tasks:
-- bug: delete tree on other tile only one removed
 - check code for performance improvement for single cpu and no simd
     - citizen tick could be changed to a queue which know which citizen to tick when
 
 - bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
+    - unknown how to reproduce and if would still happen
 - bug: delete potato somehow index out of bouns in removePotatoField chunk.queue.orderedRemove(potatoIndex)
+    - build long line of potatos with enough citizens and then remove all again before planting started/finished
 
 - features:
     - performance            
