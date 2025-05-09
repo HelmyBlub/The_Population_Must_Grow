@@ -316,48 +316,54 @@ fn tick(state: *ChatSimState) !void {
         }
 
         var iterator = chunk.buildOrders.items.len;
-        while (iterator > 0) {
-            iterator -= 1;
-            const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
-            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
-            if (optMapObject) |mapObject| {
-                if (try Citizen.findClosestFreeCitizen(buildOrder.position, state)) |freeCitizen| {
-                    switch (mapObject) {
-                        mapZig.MapObject.building => |building| {
-                            freeCitizen.buildingPosition = building.position;
-                            freeCitizen.idle = false;
-                            freeCitizen.moveTo.clearAndFree();
-                            _ = chunk.buildOrders.pop();
-                        },
-                        mapZig.MapObject.bigBuilding => |building| {
-                            freeCitizen.buildingPosition = building.position;
-                            freeCitizen.idle = false;
-                            freeCitizen.moveTo.clearAndFree();
-                            if (buildOrder.materialCount > 1) {
-                                buildOrder.materialCount -= 1;
-                                iterator += 1;
-                            } else {
+        if (chunk.skipBuildOrdersUntilTimeMs) |time| {
+            if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
+        }
+        if (chunk.skipBuildOrdersUntilTimeMs == null) {
+            while (iterator > 0) {
+                iterator -= 1;
+                const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
+                const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
+                if (optMapObject) |mapObject| {
+                    if (try Citizen.findClosestFreeCitizen(buildOrder.position, state)) |freeCitizen| {
+                        switch (mapObject) {
+                            mapZig.MapObject.building => |building| {
+                                freeCitizen.buildingPosition = building.position;
+                                freeCitizen.idle = false;
+                                freeCitizen.moveTo.clearAndFree();
                                 _ = chunk.buildOrders.pop();
-                            }
-                        },
-                        mapZig.MapObject.potatoField => |potatoField| {
-                            freeCitizen.farmPosition = potatoField.position;
-                            freeCitizen.idle = false;
-                            freeCitizen.moveTo.clearAndFree();
-                            _ = chunk.buildOrders.pop();
-                        },
-                        mapZig.MapObject.tree => |tree| {
-                            freeCitizen.treePosition = tree.position;
-                            freeCitizen.idle = false;
-                            freeCitizen.moveTo.clearAndFree();
-                            _ = chunk.buildOrders.pop();
-                        },
-                        mapZig.MapObject.path => {
-                            _ = chunk.buildOrders.pop();
-                        },
+                            },
+                            mapZig.MapObject.bigBuilding => |building| {
+                                freeCitizen.buildingPosition = building.position;
+                                freeCitizen.idle = false;
+                                freeCitizen.moveTo.clearAndFree();
+                                if (buildOrder.materialCount > 1) {
+                                    buildOrder.materialCount -= 1;
+                                    iterator += 1;
+                                } else {
+                                    _ = chunk.buildOrders.pop();
+                                }
+                            },
+                            mapZig.MapObject.potatoField => |potatoField| {
+                                freeCitizen.farmPosition = potatoField.position;
+                                freeCitizen.idle = false;
+                                freeCitizen.moveTo.clearAndFree();
+                                _ = chunk.buildOrders.pop();
+                            },
+                            mapZig.MapObject.tree => |tree| {
+                                freeCitizen.treePosition = tree.position;
+                                freeCitizen.idle = false;
+                                freeCitizen.moveTo.clearAndFree();
+                                _ = chunk.buildOrders.pop();
+                            },
+                            mapZig.MapObject.path => {
+                                _ = chunk.buildOrders.pop();
+                            },
+                        }
+                    } else {
+                        chunk.skipBuildOrdersUntilTimeMs = state.gameTimeMs + 250;
+                        break;
                     }
-                } else {
-                    break;
                 }
             }
         }

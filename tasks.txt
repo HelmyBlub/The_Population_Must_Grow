@@ -1,9 +1,8 @@
 tasks:
 - check code for performance improvement for single cpu and no simd
-    - change potato ticking:
-        - potato know the time when they are starting to grow
-        - after time is bigger than grow time -> set potato.grow = true
-
+    - build order per chunk
+        - based on amount of citizens -> if 0 citizen, skip checking x ticks before searching again
+            - continue: is it worth to calculate a better timeout? try around
     - citizen tick could be changed to a queue which know which citizen to tick when
 
 - bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
@@ -22,9 +21,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- FPS: 90, citizens: 13259, gameTime: 287072 (08.05.2025)
-- FPS: 94, citizens: 13940, gameTime: 290960 (work in progress: chunk item queue for trees)
-- FPS: 97, citizens: 14309, gameTime: 293664 (potato field improve)
+- FPS: 97, citizens: 14309, gameTime: 293664 (09.05.2025)
+- FPS: 111, citizens: 20330, gameTime: 307456 (with 100ms skip after not finding a citizen)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

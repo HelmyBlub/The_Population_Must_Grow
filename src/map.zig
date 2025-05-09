@@ -40,6 +40,7 @@ pub const MapChunk = struct {
     potatoFields: std.ArrayList(PotatoField),
     citizens: std.ArrayList(main.Citizen),
     buildOrders: std.ArrayList(BuildOrder),
+    skipBuildOrdersUntilTimeMs: ?u32 = null,
     pathes: std.ArrayList(main.Position),
     pathingData: main.pathfindingZig.PathfindingChunkData,
     queue: std.ArrayList(ChunkQueueItem),
