@@ -86,12 +86,6 @@ pub const Citizen: type = struct {
     pub fn citizenMove(citizen: *Citizen) void {
         if (citizen.moveTo.items.len > 0) {
             const moveTo = citizen.moveTo.getLast();
-            if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
-                _ = citizen.moveTo.pop();
-                recalculateCitizenImageIndex(citizen);
-                return;
-            }
-
             const direction: f32 = main.calculateDirection(citizen.position, moveTo);
             var moveSpeed = citizen.moveSpeed;
             if (citizen.hasWood) moveSpeed *= MOVE_SPEED_WODD_FACTOR;
