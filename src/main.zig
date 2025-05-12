@@ -329,13 +329,13 @@ fn tick(state: *ChatSimState) !void {
                         switch (mapObject) {
                             mapZig.MapObject.building => |building| {
                                 freeCitizen.buildingPosition = building.position;
-                                freeCitizen.idle = false;
+                                freeCitizen.nextThinkingAction = .buildingStart;
                                 freeCitizen.moveTo.clearAndFree();
                                 _ = chunk.buildOrders.pop();
                             },
                             mapZig.MapObject.bigBuilding => |building| {
                                 freeCitizen.buildingPosition = building.position;
-                                freeCitizen.idle = false;
+                                freeCitizen.nextThinkingAction = .buildingStart;
                                 freeCitizen.moveTo.clearAndFree();
                                 if (buildOrder.materialCount > 1) {
                                     buildOrder.materialCount -= 1;
@@ -346,13 +346,13 @@ fn tick(state: *ChatSimState) !void {
                             },
                             mapZig.MapObject.potatoField => |potatoField| {
                                 freeCitizen.farmPosition = potatoField.position;
-                                freeCitizen.idle = false;
+                                freeCitizen.nextThinkingAction = .potatoPlant;
                                 freeCitizen.moveTo.clearAndFree();
                                 _ = chunk.buildOrders.pop();
                             },
                             mapZig.MapObject.tree => |tree| {
                                 freeCitizen.treePosition = tree.position;
-                                freeCitizen.idle = false;
+                                freeCitizen.nextThinkingAction = .treePlant;
                                 freeCitizen.moveTo.clearAndFree();
                                 _ = chunk.buildOrders.pop();
                             },

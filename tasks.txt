@@ -4,8 +4,6 @@ tasks:
 
 - bug: lost citizen. Was caryying wood. Not moving at all. Far away from home
     - unknown how to reproduce and if would still happen
-- bug: delete potato somehow index out of bouns in removePotatoField chunk.queue.orderedRemove(potatoIndex)
-    - build long line of potatos with enough citizens and then remove all again before planting started/finished
 
 - features:
     - performance            
@@ -21,6 +19,13 @@ tasks:
   
 Some data:
 - FPS: 120, citizens: 22582, gameTime: 315808, end FPS: 61.536087 (09.05.2025)
+- ~50_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 114, citizens: 22459, gameTime: 310240, end FPS: 60.96285 (splitted function and fixed citizen append with ensure capacity)
+- FPS: 79, citizens: 19017, gameTime: 276416, end FPS: 37.38668 (new citizen tick structure)
+- FPS: 126, citizens: 18956, gameTime: 321136, end FPS: 50.513 (fixed eating)
+- FPS: 118, citizens: 19955, gameTime: 314192, end FPS: 50.522457 (fixed losing build orders)
+- FPS: 99, citizens: 22701, gameTime: 295152, end FPS: 48.691902 (citizen no longer interrupt for food)
+- FPS: 101, citizens: 21683, gameTime: 297984, end FPS: 50.68971 (citizen can go for food after cutting tree to prevent starving)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

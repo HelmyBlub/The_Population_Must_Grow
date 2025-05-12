@@ -94,13 +94,13 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
                 state,
             );
             for (chunk.citizens.items) |*citizen| {
-                const animationTimer = if (citizen.executingUntil != null and citizen.executingUntil.? > state.gameTimeMs) citizen.executingUntil.? - state.gameTimeMs else state.gameTimeMs;
+                const animationTimer = if (citizen.nextThinkingAction != .idle and citizen.nextThinkingTickTimeMs > state.gameTimeMs) citizen.nextThinkingTickTimeMs - state.gameTimeMs else state.gameTimeMs;
                 vkState.citizen.vertices[index] = .{
                     .pos = .{ citizen.position.x, citizen.position.y },
                     .imageIndex = citizen.imageIndex,
                     .animationTimer = animationTimer,
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,
-                    .booleans = packBools(citizen),
+                    .booleans = packBools(citizen, state),
                 };
                 index += 1;
             }
@@ -109,21 +109,19 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
     try setupVertexDataForGPU(vkState);
 }
 
-fn packBools(citizen: *main.Citizen) u8 {
+fn packBools(citizen: *main.Citizen, state: *main.ChatSimState) u8 {
     var result: u8 = 0;
     if (citizen.foodLevel <= 0) result |= 1 << 0;
     if (citizen.hasWood) result |= 1 << 2;
-    if (citizen.executingUntil != null) {
+    if (citizen.nextThinkingTickTimeMs > state.gameTimeMs) {
         if (citizen.buildingPosition != null) {
-            if (citizen.treePosition != null and citizen.potatoPosition == null) result |= 1 << 1; // axe
-            if (citizen.treePosition == null and citizen.potatoPosition == null) result |= 1 << 3; // hammer
+            if (citizen.nextThinkingAction == .buildingCutTree) result |= 1 << 1; // axe
+            if (citizen.nextThinkingAction == .buildingFinished) result |= 1 << 3; // hammer
         } else {
-            if (citizen.treePosition != null or citizen.farmPosition != null) result |= 1 << 4; // plant
+            if (citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoPlantFinished or citizen.nextThinkingAction == .treePlantFinished) result |= 1 << 4; // plant
         }
         if (citizen.hasPotato) {
             result |= 1 << 5;
-        } else {
-            if (citizen.potatoPosition != null) result |= 1 << 4; // harvest potato
         }
     }
     return result;
