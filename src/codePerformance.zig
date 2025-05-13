@@ -7,7 +7,7 @@ pub const CodePerformanceData = struct {
     entries: std.StringArrayHashMap(CodePerformanceEntry),
 };
 
-pub const MEASURE: bool = true;
+pub const MEASURE: bool = false;
 
 pub const CodePerformanceEntry = struct {
     name: []const u8,

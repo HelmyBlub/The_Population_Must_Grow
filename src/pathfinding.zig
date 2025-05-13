@@ -855,11 +855,15 @@ fn reconstructPath(
 
 // returns false if no path found
 pub fn pathfindAStar(
-    startTile: mapZig.TileXY,
     goalTile: mapZig.TileXY,
     citizen: *main.Citizen,
     state: *main.ChatSimState,
 ) !bool {
+    const startTile = mapZig.mapPositionToTileXy(citizen.position);
+    if (startTile.tileX == goalTile.tileX and startTile.tileY == goalTile.tileY) {
+        try citizen.moveTo.append(mapZig.mapTileXyToTilePosition(goalTile));
+        return true;
+    }
     if (try isTilePathBlocking(goalTile, state)) {
         if (PATHFINDING_DEBUG) std.debug.print("goal on blocking tile {}\n", .{goalTile});
         return false;
@@ -960,9 +964,9 @@ pub fn pathfindAStar(
     return false;
 }
 
-pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !main.Position {
+pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !?main.Position {
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
-    var result = citizen.position;
+    var result: ?main.Position = null;
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
         var currentRectangle = &state.pathfindingData.graphRectangles.items[graphIndex];

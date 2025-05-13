@@ -60,7 +60,7 @@ pub fn executePerfromanceTest() !void {
     const startTime = std.time.microTimestamp();
     try main.mainLoop(&state);
     const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divFloor(state.framesTotalCounter * 1_000_000, timePassed);
+    const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(&state);
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
@@ -125,7 +125,7 @@ fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 9 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
 
     //copy paste entire city block
-    for (1..11) |distance| {
+    for (1..12) |distance| {
         for (0..(distance * 2)) |pos| {
             const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);
             const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));
