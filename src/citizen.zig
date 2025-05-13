@@ -4,6 +4,7 @@ const Position = main.Position;
 const mapZig = @import("map.zig");
 const imageZig = @import("image.zig");
 const soundMixerZig = @import("soundMixer.zig");
+const codePerformanceZig = @import("codePerformance.zig");
 
 pub const CitizenThinkAction = enum {
     idle,
@@ -62,15 +63,22 @@ pub const Citizen: type = struct {
         for (0..chunk.citizens.items.len) |i| {
             if (chunk.citizens.unusedCapacitySlice().len < 1) try chunk.citizens.ensureUnusedCapacity(16);
             const citizen: *Citizen = &chunk.citizens.items[i];
+            try codePerformanceZig.startMeasure("   foodTick", &state.codePerformanceData);
             try foodTick(citizen, state);
+            codePerformanceZig.endMeasure("   foodTick", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("   thinkTick", &state.codePerformanceData);
             try thinkTick(citizen, state);
+            codePerformanceZig.endMeasure("   thinkTick", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("   move", &state.codePerformanceData);
             citizenMove(citizen);
+            codePerformanceZig.endMeasure("   move", &state.codePerformanceData);
         }
     }
 
     pub fn moveToPosition(self: *Citizen, target: main.Position, state: *main.ChatSimState) !void {
         // _ = state;
         // try self.moveTo.append(target);
+        try codePerformanceZig.startMeasure("   pathfind", &state.codePerformanceData);
         const start = mapZig.mapPositionToTileXy(self.position);
         const goal = mapZig.mapPositionToTileXy(target);
         const foundPath = try main.pathfindingZig.pathfindAStar(start, goal, self, state);
@@ -80,6 +88,7 @@ pub const Citizen: type = struct {
             self.moveTo.items[0] = target;
             recalculateCitizenImageIndex(self);
         }
+        codePerformanceZig.endMeasure("   pathfind", &state.codePerformanceData);
     }
 
     pub fn citizenMove(citizen: *Citizen) void {

@@ -7,12 +7,13 @@ pub const CodePerformanceData = struct {
     entries: std.StringArrayHashMap(CodePerformanceEntry),
 };
 
+pub const MEASURE: bool = false;
+
 pub const CodePerformanceEntry = struct {
     name: []const u8,
-    startMicroSeconds: ?i64 = null,
-    ///micro seconde
-    currentAddedTime: i64 = 0,
-    lastMeasurement: i64 = 0,
+    startNanoSeconds: ?i128 = null,
+    currentAddedTime: i128 = 0,
+    lastMeasurement: i128 = 0,
 };
 
 pub fn init(state: *main.ChatSimState) !void {
@@ -26,22 +27,24 @@ pub fn destroy(state: *main.ChatSimState) void {
 }
 
 pub fn startMeasure(name: []const u8, codePerformanceData: *CodePerformanceData) !void {
+    if (!MEASURE) return;
     if (!codePerformanceData.entries.contains(name)) {
         try codePerformanceData.entries.put(name, .{ .name = name });
     }
     const entry = codePerformanceData.entries.getPtr(name).?;
-    entry.startMicroSeconds = std.time.microTimestamp();
+    entry.startNanoSeconds = std.time.nanoTimestamp();
 }
 
 pub fn endMeasure(name: []const u8, codePerformanceData: *CodePerformanceData) void {
+    if (!MEASURE) return;
     if (!codePerformanceData.entries.contains(name)) {
         std.debug.print("missing startMeasure(1) for {s}", .{name});
         return;
     }
     const entry = codePerformanceData.entries.getPtr(name).?;
-    if (entry.startMicroSeconds) |startTime| {
-        entry.currentAddedTime += std.time.microTimestamp() - startTime;
-        entry.startMicroSeconds = null;
+    if (entry.startNanoSeconds) |startTime| {
+        entry.currentAddedTime += std.time.nanoTimestamp() - startTime;
+        entry.startNanoSeconds = null;
     } else {
         std.debug.print("missing startMeasure(2) for {s}", .{name});
     }
@@ -50,7 +53,7 @@ pub fn endMeasure(name: []const u8, codePerformanceData: *CodePerformanceData) v
 pub fn evaluateTickData(codePerformanceData: *CodePerformanceData) void {
     var iterator = codePerformanceData.entries.iterator();
     while (iterator.next()) |entry| {
-        entry.value_ptr.lastMeasurement = entry.value_ptr.currentAddedTime;
+        entry.value_ptr.lastMeasurement = @divFloor(entry.value_ptr.lastMeasurement * 63, 64) + @divFloor(entry.value_ptr.currentAddedTime, 64);
         entry.value_ptr.currentAddedTime = 0;
     }
 }

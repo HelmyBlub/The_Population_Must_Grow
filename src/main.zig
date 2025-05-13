@@ -299,7 +299,10 @@ fn tick(state: *ChatSimState) !void {
         const chunkKey = state.map.activeChunkKeys.items[i];
         try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
         const chunk = state.map.chunks.getPtr(chunkKey).?;
+        try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
         try Citizen.citizensTick(chunk, state);
+        codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
+        try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
         while (chunk.queue.items.len > 0) {
             const item = chunk.queue.items[0];
             if (item.executeTime <= state.gameTimeMs) {
@@ -318,6 +321,8 @@ fn tick(state: *ChatSimState) !void {
                 break;
             }
         }
+        codePerformanceZig.endMeasure(" chunkQueue", &state.codePerformanceData);
+        try codePerformanceZig.startMeasure(" chunkBuildOrders", &state.codePerformanceData);
 
         if (chunk.skipBuildOrdersUntilTimeMs) |time| {
             if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
@@ -371,6 +376,7 @@ fn tick(state: *ChatSimState) !void {
                 }
             }
         }
+        codePerformanceZig.endMeasure(" chunkBuildOrders", &state.codePerformanceData);
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
