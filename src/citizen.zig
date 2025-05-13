@@ -7,7 +7,6 @@ const soundMixerZig = @import("soundMixer.zig");
 
 pub const CitizenThinkAction = enum {
     idle,
-    hungry,
     potatoHarvest,
     potatoEat,
     potatoEatFinished,
@@ -175,20 +174,17 @@ fn thinkTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         .treePlantFinished => {
             try treePlantFinished(citizen, state);
         },
-        .hungry => {
-            try hungry(citizen, state);
-        },
         .idle => {
             try setRandomMoveTo(citizen, state);
         },
     }
 }
 
-fn nextThinkingAction(citizen: *Citizen) void {
-    if (citizen.buildingPosition != null) {
+fn nextThinkingAction(citizen: *Citizen, state: *main.ChatSimState) !void {
+    if (try checkHunger(citizen, state)) {
+        //nothing
+    } else if (citizen.buildingPosition != null) {
         citizen.nextThinkingAction = .buildingStart;
-    } else if (citizen.foodLevel <= 0.5) {
-        citizen.nextThinkingAction = .hungry;
     } else if (citizen.farmPosition != null) {
         citizen.nextThinkingAction = .potatoPlant;
     } else if (citizen.treePosition != null) {
@@ -198,14 +194,17 @@ fn nextThinkingAction(citizen: *Citizen) void {
     }
 }
 
-fn hungry(citizen: *Citizen, state: *main.ChatSimState) !void {
-    if (try findClosestFreePotato(citizen.position, state)) |potato| {
-        potato.citizenOnTheWay += 1;
-        citizen.potatoPosition = potato.position;
-        citizen.nextThinkingAction = .potatoHarvest;
-    } else {
-        citizen.nextThinkingTickTimeMs = state.gameTimeMs + Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+/// returns true if citizen goes to eat
+fn checkHunger(citizen: *Citizen, state: *main.ChatSimState) !bool {
+    if (citizen.foodLevel <= 0.5) {
+        if (try findClosestFreePotato(citizen.position, state)) |potato| {
+            potato.citizenOnTheWay += 1;
+            citizen.potatoPosition = potato.position;
+            citizen.nextThinkingAction = .potatoHarvest;
+            return true;
+        }
     }
+    return false;
 }
 
 fn treePlant(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -218,7 +217,7 @@ fn treePlant(citizen: *Citizen, state: *main.ChatSimState) !void {
         }
     } else {
         citizen.treePosition = null;
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     }
 }
 
@@ -228,7 +227,7 @@ fn treePlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
         try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
     }
     citizen.treePosition = null;
-    nextThinkingAction(citizen);
+    try nextThinkingAction(citizen, state);
 }
 
 fn buildingStart(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -238,7 +237,7 @@ fn buildingStart(citizen: *Citizen, state: *main.ChatSimState) !void {
             if (citizen.treePosition == null and try mapZig.getBuildingOnPosition(citizen.buildingPosition.?, state) == null) {
                 citizen.treePosition = null;
                 citizen.buildingPosition = null;
-                nextThinkingAction(citizen);
+                try nextThinkingAction(citizen, state);
             }
         } else {
             citizen.nextThinkingAction = .buildingGetWood;
@@ -289,9 +288,7 @@ fn buildingCutTree(citizen: *Citizen, state: *main.ChatSimState) !void {
             treeData.tree.growStartTimeMs = state.gameTimeMs;
             try treeData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
         }
-        if (citizen.foodLevel <= 0.5) {
-            citizen.nextThinkingAction = .hungry;
-        } else {
+        if (!try checkHunger(citizen, state)) {
             citizen.nextThinkingAction = .buildingBuild;
         }
     } else {
@@ -330,7 +327,7 @@ fn buildingBuild(citizen: *Citizen, state: *main.ChatSimState) !void {
     } else {
         citizen.hasWood = false;
         citizen.buildingPosition = null;
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     }
 }
 
@@ -363,11 +360,11 @@ fn buildingFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
                 }
             }
         }
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     } else {
         citizen.hasWood = false;
         citizen.buildingPosition = null;
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     }
 }
 
@@ -383,7 +380,7 @@ fn potatoPlant(citizen: *Citizen, state: *main.ChatSimState) !void {
         }
     } else {
         citizen.farmPosition = null;
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     }
 }
 
@@ -393,7 +390,7 @@ fn potatoPlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
         try farmData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
     }
     citizen.farmPosition = null;
-    nextThinkingAction(citizen);
+    try nextThinkingAction(citizen, state);
 }
 
 fn potatoHarvestTick(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -407,7 +404,7 @@ fn potatoHarvestTick(citizen: *Citizen, state: *main.ChatSimState) !void {
             try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 8 }, state);
         }
     } else {
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
         citizen.potatoPosition = null;
     }
 }
@@ -419,7 +416,7 @@ fn potatoEatFinishedTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
         citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
     }
-    nextThinkingAction(citizen);
+    try nextThinkingAction(citizen, state);
 }
 
 fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -433,7 +430,7 @@ fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         citizen.nextThinkingAction = .potatoEatFinished;
     } else {
         citizen.potatoPosition = null;
-        nextThinkingAction(citizen);
+        try nextThinkingAction(citizen, state);
     }
 }
 
@@ -496,7 +493,7 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const timePassed: f32 = @floatFromInt(state.gameTimeMs - citizen.foodLevelLastUpdateTimeMs);
     citizen.foodLevel -= 1.0 / 60.0 / 1000.0 * timePassed;
     citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
-    if (citizen.nextThinkingAction == .idle) nextThinkingAction(citizen);
+    if (citizen.nextThinkingAction == .idle) try nextThinkingAction(citizen, state);
     if (citizen.foodLevel > 0) {
         const timeUntilStarving: u32 = @intFromFloat((citizen.foodLevel + 0.01) * 60.0 * 1000.0);
         citizen.nextFoodTickTimeMs = state.gameTimeMs + timeUntilStarving;
