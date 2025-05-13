@@ -7,6 +7,7 @@ const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
 const imageZig = @import("../image.zig");
 const windowSdlZig = @import("../windowSdl.zig");
+const codePerformanceZig = @import("../codePerformance.zig");
 
 pub const VkFont = struct {
     pipelineLayout: vk.VkPipelineLayout = undefined,
@@ -81,14 +82,18 @@ fn dataUpdate(state: *main.ChatSimState) !void {
 
     if (state.vkState.font.displayPerformance) {
         const performanceFontSize = 20.0;
-        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = -0.99 }, performanceFontSize, state);
-        _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = -0.99 }, performanceFontSize, state);
+        var offsetY: f32 = -0.99;
+        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
+        offsetY += onePixelYInVulkan * performanceFontSize;
 
         if (state.cpuPerCent) |cpuPerCent| {
-            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
-            cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = -0.99 + cpuTextWidth, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
-            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = -0.99 + onePixelYInVulkan * performanceFontSize }, performanceFontSize, state);
+            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            offsetY += onePixelYInVulkan * performanceFontSize;
         }
+        try codePerformanceZig.paintData(state, offsetY);
     }
 }
 

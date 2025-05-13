@@ -7,6 +7,7 @@ const windowSdlZig = @import("windowSdl.zig");
 const soundMixerZig = @import("soundMixer.zig");
 const inputZig = @import("input.zig");
 const testZig = @import("test.zig");
+const codePerformanceZig = @import("codePerformance.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -40,6 +41,7 @@ pub const ChatSimState: type = struct {
     keyboardInfo: inputZig.KeyboardInfo = .{},
     mouseInfo: MouseInfo = .{},
     random: std.Random.Xoshiro256,
+    codePerformanceData: codePerformanceZig.CodePerformanceData = undefined,
 };
 
 pub const MouseInfo = struct {
@@ -123,6 +125,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .soundMixer = undefined,
         .random = prng,
     };
+    try codePerformanceZig.init(state);
     try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
@@ -287,6 +290,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
 }
 
 fn tick(state: *ChatSimState) !void {
+    try codePerformanceZig.startMeasure("total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
     try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
@@ -376,6 +380,8 @@ fn tick(state: *ChatSimState) !void {
         }
         state.citizenCounterLastTick = state.citizenCounter;
     }
+    codePerformanceZig.endMeasure("total", &state.codePerformanceData);
+    codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {
@@ -396,6 +402,8 @@ pub fn destroyGameState(state: *ChatSimState) void {
     }
     pathfindingZig.destoryPathfindingData(&state.pathfindingData);
     inputZig.destory(state);
+    codePerformanceZig.destroy(state);
+
     state.map.chunks.deinit();
     state.map.activeChunkKeys.deinit();
 }

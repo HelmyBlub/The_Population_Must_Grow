@@ -1,5 +1,4 @@
 tasks:
-- bug: starving citizen does nothing
 - real time code measurements
 - check code for performance improvement for single cpu and no simd
     - citizen tick could be changed to a queue which know which citizen to tick when
