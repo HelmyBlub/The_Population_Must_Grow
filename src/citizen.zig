@@ -60,6 +60,8 @@ pub const Citizen: type = struct {
     }
 
     pub fn citizensTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+        const thinkTickInterval = 10;
+        if (@mod(state.gameTimeMs, state.tickIntervalMs * thinkTickInterval) != @mod(chunk.chunkXY.chunkX, thinkTickInterval) * state.tickIntervalMs) return;
         for (0..chunk.citizens.items.len) |i| {
             if (chunk.citizens.unusedCapacitySlice().len < 1) try chunk.citizens.ensureUnusedCapacity(16);
             const citizen: *Citizen = &chunk.citizens.items[i];
@@ -69,10 +71,16 @@ pub const Citizen: type = struct {
             try codePerformanceZig.startMeasure("   thinkTick", &state.codePerformanceData);
             try thinkTick(citizen, state);
             codePerformanceZig.endMeasure("   thinkTick", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("   move", &state.codePerformanceData);
-            citizenMove(citizen);
-            codePerformanceZig.endMeasure("   move", &state.codePerformanceData);
         }
+    }
+
+    pub fn citizensMoveTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+        try codePerformanceZig.startMeasure("   move", &state.codePerformanceData);
+        for (0..chunk.citizens.items.len) |i| {
+            const citizen: *Citizen = &chunk.citizens.items[i];
+            citizenMove(citizen);
+        }
+        codePerformanceZig.endMeasure("   move", &state.codePerformanceData);
     }
 
     pub fn moveToPosition(self: *Citizen, target: main.Position, state: *main.ChatSimState) !void {

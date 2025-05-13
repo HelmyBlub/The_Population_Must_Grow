@@ -1,5 +1,4 @@
 tasks:
-- real time code measurements
 - check code for performance improvement for single cpu and no simd
     - citizen tick could be changed to a queue which know which citizen to tick when
 
@@ -19,10 +18,8 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- FPS: 109, citizens: 23646, gameTime: 305056, end FPS: 58.177357 (12.05.2025)
-- ~50_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 105, citizens: 23760, gameTime: 301152, end FPS: 55.984253 (fixed citizen not working when hungry and no food available)
-- FPS: 103, citizens: 23239, gameTime: 299008, end FPS: 55.353718 (with deactivated code time measurment)
+- FPS: 127, citizens: 25053, gameTime: 322096, end FPS: 77.300476 (13.05.2025)
+- ~75_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

@@ -301,7 +301,9 @@ fn tick(state: *ChatSimState) !void {
         const chunk = state.map.chunks.getPtr(chunkKey).?;
         try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
         try Citizen.citizensTick(chunk, state);
+        try Citizen.citizensMoveTick(chunk, state);
         codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
+
         try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
         while (chunk.queue.items.len > 0) {
             const item = chunk.queue.items[0];
