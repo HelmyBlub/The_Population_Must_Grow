@@ -7,7 +7,7 @@ pub const CodePerformanceData = struct {
     entries: std.StringArrayHashMap(CodePerformanceEntry),
 };
 
-pub const MEASURE: bool = false;
+pub const MEASURE: bool = true;
 
 pub const CodePerformanceEntry = struct {
     name: []const u8,
@@ -68,5 +68,14 @@ pub fn paintData(state: *main.ChatSimState, startY: f32) !void {
         const textWidth = fontVulkanZig.paintText(entry.key_ptr.*, .{ .x = -0.99, .y = startY + yOffset }, performanceFontSize, state) + onePixelXInVulkan * 5;
         _ = try fontVulkanZig.paintNumber(@intCast(entry.value_ptr.lastMeasurement), .{ .x = -0.99 + textWidth, .y = startY + yOffset }, performanceFontSize, state);
         yOffset += onePixelYInVulkan * performanceFontSize;
+    }
+}
+
+pub fn printToConsole(state: *main.ChatSimState) void {
+    if (!MEASURE) return;
+    std.debug.print("Performance", .{});
+    var iterator = state.codePerformanceData.entries.iterator();
+    while (iterator.next()) |entry| {
+        std.debug.print("  {s}: {d}\n", .{ entry.value_ptr.name, entry.value_ptr.lastMeasurement });
     }
 }

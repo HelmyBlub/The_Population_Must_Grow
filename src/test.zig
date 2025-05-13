@@ -1,6 +1,7 @@
 const std = @import("std");
 const main = @import("main.zig");
 const mapZig = @import("map.zig");
+const codePerformanceZig = @import("codePerformance.zig");
 const windowSdlZig = @import("windowSdl.zig");
 
 const TestActionType = enum {
@@ -60,6 +61,7 @@ pub fn executePerfromanceTest() !void {
     try main.mainLoop(&state);
     const timePassed = std.time.microTimestamp() - startTime;
     const fps = @divFloor(state.framesTotalCounter * 1_000_000, timePassed);
+    codePerformanceZig.printToConsole(&state);
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
 
