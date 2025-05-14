@@ -1,10 +1,16 @@
 tasks:
 - check code for performance improvement for single cpu
-    - performance total code, not only tick
-- check code for performance improvement for multiple cpu cores
+    - paint stuff
+        - sprite data setup changes
+            - continue: perfromane measurements confuse me. Why does big building take so much time, when i don't have a single one in my test?
+            - ideas: multiple vertex buffers
+            - simplify buffer size calculation
+                - estimate required sizes. Take from last frame
 
 - bug: deleting can crash game
     - integer overflow, D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:356:31: 0x7ff7f71f682c in buildingFinished (zig.exe.obj),  building.woodRequired -= 1;
+- delete test simd branch?
+
 
 - features:
     - performance            

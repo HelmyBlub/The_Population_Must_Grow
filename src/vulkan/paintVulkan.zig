@@ -207,6 +207,7 @@ pub const ColoredVertex = struct {
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
 fn setupVerticesForSprites(state: *main.ChatSimState) !void {
+    try codePerformanceZig.startMeasure("      sprite init", &state.codePerformanceData);
     var vkState = &state.vkState;
     var entityPaintCountLayer1: usize = 0;
     var entityPaintCountLayer1Citizen: usize = 0;
@@ -218,7 +219,9 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     chunkVisible.top -= @intCast(increaseBy);
     chunkVisible.columns += 2 * increaseBy;
     chunkVisible.rows += 2 * increaseBy;
+    codePerformanceZig.endMeasure("      sprite init", &state.codePerformanceData);
 
+    try codePerformanceZig.startMeasure("      sprite entity count", &state.codePerformanceData);
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
@@ -247,6 +250,9 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     }
     state.vkState.entityPaintCountLayer2 = @intCast(entityPaintCountLayer2);
     const totalEntityCount = state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer2 + state.vkState.entityPaintCountLayer1Citizen;
+    codePerformanceZig.endMeasure("      sprite entity count", &state.codePerformanceData);
+
+    try codePerformanceZig.startMeasure("      sprite entity size change", &state.codePerformanceData);
     // recreate buffer with new size
     if (vkState.vertexBufferSize == 0) return;
     if (vkState.vertexBufferCleanUp[vkState.currentFrame] != null) {
@@ -260,6 +266,7 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
         vkState.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.vertexBufferMemory;
         try createVertexBuffer(vkState, totalEntityCount, state.allocator);
     }
+    codePerformanceZig.endMeasure("      sprite entity size change", &state.codePerformanceData);
 
     var indexLayer1Citizen: u32 = 0;
     var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
@@ -273,12 +280,15 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 },
                 state,
             );
+            try codePerformanceZig.startMeasure("      sprite entity citizen", &state.codePerformanceData);
             if (!doComplexCitizen) {
                 for (chunk.citizens.items) |*citizen| {
                     vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
             }
+            codePerformanceZig.endMeasure("      sprite entity citizen", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("      sprite entity tree", &state.codePerformanceData);
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
                 var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
@@ -302,6 +312,8 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
                 indexLayer1 += 1;
             }
+            codePerformanceZig.endMeasure("      sprite entity tree", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("      sprite entity building", &state.codePerformanceData);
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
                 var cutY: f32 = 0;
@@ -314,6 +326,8 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
+            codePerformanceZig.endMeasure("      sprite entity building", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("      sprite entity big building", &state.codePerformanceData);
             for (chunk.bigBuildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_BIG_HOUSE;
                 var cutY: f32 = 0;
@@ -327,6 +341,8 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
+            codePerformanceZig.endMeasure("      sprite entity big building", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("      sprite entity potato", &state.codePerformanceData);
             for (chunk.potatoFields.items) |*field| {
                 vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
@@ -339,10 +355,13 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                 indexLayer1 += 1;
             }
+            codePerformanceZig.endMeasure("      sprite entity potato", &state.codePerformanceData);
+            try codePerformanceZig.startMeasure("      sprite entity path", &state.codePerformanceData);
             for (chunk.pathes.items) |*pathPos| {
                 vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
             }
+            codePerformanceZig.endMeasure("      sprite entity path", &state.codePerformanceData);
         }
     }
 }
