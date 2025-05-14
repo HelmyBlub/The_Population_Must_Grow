@@ -10,6 +10,7 @@ tasks:
         - check code for performance improvement for single cpu and simd
         - check code for performance improvement for multiple cpu cores
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
+        - arena allocator (buggy)?
     - save game progress?
     - put on steam
 
@@ -21,6 +22,8 @@ Some data:
 - FPS: 140, citizens: 29944, gameTime: 334736, end FPS: 92.22591 (increase copy paste area)
 - ~92_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 149, citizens: 31036, gameTime: 343360, end FPS: 99.03078 (changed direction to directionX and directionY)
+- FPS: 156, citizens: 31486, gameTime: 350064, end FPS: 105.621506 (move speed change)
+- FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (increased test copy area)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

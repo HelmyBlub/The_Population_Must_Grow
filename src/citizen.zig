@@ -103,6 +103,7 @@ pub const Citizen: type = struct {
             const direction = main.calculateDirection(self.position, self.moveTo.getLast());
             self.directionX = @cos(direction);
             self.directionY = @sin(direction);
+            calculateMoveSpeed(self);
         }
         codePerformanceZig.endMeasure("   pathfind", &state.codePerformanceData);
     }
@@ -110,11 +111,10 @@ pub const Citizen: type = struct {
     pub fn citizenMove(citizen: *Citizen) void {
         if (citizen.moveTo.items.len > 0) {
             const moveTo = citizen.moveTo.getLast();
-            var moveSpeed = citizen.moveSpeed;
-            if (citizen.hasWood) moveSpeed *= MOVE_SPEED_WODD_FACTOR;
+            const moveSpeed = citizen.moveSpeed;
             citizen.position.x += citizen.directionX * moveSpeed;
             citizen.position.y += citizen.directionY * moveSpeed;
-            if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
+            if (@abs(citizen.position.x - moveTo.x) < moveSpeed and @abs(citizen.position.y - moveTo.y) < moveSpeed) {
                 _ = citizen.moveTo.pop();
                 if (citizen.moveTo.items.len > 0) {
                     const direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
@@ -234,6 +234,14 @@ fn checkHunger(citizen: *Citizen, state: *main.ChatSimState) !bool {
         }
     }
     return false;
+}
+
+fn calculateMoveSpeed(citizen: *Citizen) void {
+    if (citizen.moveTo.items.len > 0) {
+        var moveSpeed: f16 = if (citizen.foodLevel > 0) Citizen.MOVE_SPEED_NORMAL else Citizen.MOVE_SPEED_STARVING;
+        if (citizen.hasWood) moveSpeed *= Citizen.MOVE_SPEED_WODD_FACTOR;
+        citizen.moveSpeed = moveSpeed;
+    }
 }
 
 fn treePlant(citizen: *Citizen, state: *main.ChatSimState) !void {
@@ -442,9 +450,6 @@ fn potatoEatFinishedTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     citizen.hasPotato = false;
     citizen.potatoPosition = null;
     eatFood(0.5, citizen, state);
-    if (citizen.foodLevel > 0 and citizen.moveSpeed == Citizen.MOVE_SPEED_STARVING) {
-        citizen.moveSpeed = Citizen.MOVE_SPEED_NORMAL;
-    }
     try nextThinkingAction(citizen, state);
 }
 
@@ -528,9 +533,7 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         citizen.nextFoodTickTimeMs = state.gameTimeMs + timeUntilStarving;
     } else {
         citizen.nextFoodTickTimeMs = state.gameTimeMs + 15_000;
-        if (citizen.moveSpeed == Citizen.MOVE_SPEED_NORMAL and citizen.foodLevel <= 0) {
-            citizen.moveSpeed = Citizen.MOVE_SPEED_STARVING;
-        }
+        calculateMoveSpeed(citizen);
     }
 }
 
