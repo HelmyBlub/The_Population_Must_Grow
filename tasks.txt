@@ -1,13 +1,13 @@
 tasks:
-- check code for performance improvement for single cpu and simd
-    - citizen move
+- check code for performance improvement for single cpu
+    - performance total code, not only tick
+- check code for performance improvement for multiple cpu cores
 
 - bug: deleting can crash game
     - integer overflow, D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:356:31: 0x7ff7f71f682c in buildingFinished (zig.exe.obj),  building.woodRequired -= 1;
 
 - features:
     - performance            
-        - check code for performance improvement for single cpu and simd
         - check code for performance improvement for multiple cpu cores
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
         - arena allocator (buggy)?

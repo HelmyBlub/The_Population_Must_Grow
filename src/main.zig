@@ -253,6 +253,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
     const totalStartTime = std.time.microTimestamp();
     var nextCpuPerCentUpdateTimeMs: i64 = 0;
     mainLoop: while (!state.gameEnd) {
+        try codePerformanceZig.startMeasure("main loop", &state.codePerformanceData);
         const startTime = std.time.microTimestamp();
         ticksRequired += state.gameSpeed;
         try windowSdlZig.handleEvents(state);
@@ -266,10 +267,17 @@ pub fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
+        try codePerformanceZig.startMeasure("input tick", &state.codePerformanceData);
         inputZig.tick(state);
+        codePerformanceZig.endMeasure("input tick", &state.codePerformanceData);
+        try codePerformanceZig.startMeasure("sound mixer tick", &state.codePerformanceData);
         try soundMixerZig.tickSoundMixer(state);
+        codePerformanceZig.endMeasure("sound mixer tick", &state.codePerformanceData);
+        try codePerformanceZig.startMeasure("draw fram", &state.codePerformanceData);
         try paintVulkanZig.drawFrame(state);
+        codePerformanceZig.endMeasure("draw fram", &state.codePerformanceData);
         const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
+        try codePerformanceZig.startMeasure("main loop end stuff", &state.codePerformanceData);
         if (state.testData == null or state.testData.?.fpsLimiter) {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
             if (std.time.milliTimestamp() > nextCpuPerCentUpdateTimeMs) {
@@ -285,12 +293,14 @@ pub fn mainLoop(state: *ChatSimState) !void {
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
             if (totalPassedTime > duration) state.gameEnd = true;
         }
+        codePerformanceZig.endMeasure("main loop end stuff", &state.codePerformanceData);
+        codePerformanceZig.endMeasure("main loop", &state.codePerformanceData);
     }
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
 fn tick(state: *ChatSimState) !void {
-    try codePerformanceZig.startMeasure("total", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
     try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
@@ -388,7 +398,7 @@ fn tick(state: *ChatSimState) !void {
         }
         state.citizenCounterLastTick = state.citizenCounter;
     }
-    codePerformanceZig.endMeasure("total", &state.codePerformanceData);
+    codePerformanceZig.endMeasure("tick total", &state.codePerformanceData);
     codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
 

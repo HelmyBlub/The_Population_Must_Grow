@@ -93,6 +93,11 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
+        if (state.gameSpeed != 1) {
+            const textWidth = paintText("Speed: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            _ = try paintNumber(@intFromFloat(state.gameSpeed), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            offsetY += onePixelYInVulkan * performanceFontSize;
+        }
         try codePerformanceZig.paintData(state, offsetY);
     }
 }

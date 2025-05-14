@@ -12,6 +12,7 @@ const fontVulkanZig = @import("fontVulkan.zig");
 const citizenVulkanZig = @import("citizenVulkan.zig");
 const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
 const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxVulkan.zig");
+const codePerformanceZig = @import("../codePerformance.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -205,7 +206,7 @@ pub const ColoredVertex = struct {
 
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
-fn setupVerticesForCitizens(state: *main.ChatSimState) !void {
+fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     var vkState = &state.vkState;
     var entityPaintCountLayer1: usize = 0;
     var entityPaintCountLayer1Citizen: usize = 0;
@@ -982,17 +983,30 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
 pub fn drawFrame(state: *main.ChatSimState) !void {
     state.framesTotalCounter += 1;
     var vkState = &state.vkState;
-    try setupVerticesForCitizens(state);
+    try codePerformanceZig.startMeasure("    sprite vertice setup", &state.codePerformanceData);
+    try setupVerticesForSprites(state);
+    codePerformanceZig.endMeasure("    sprite vertice setup", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure("    citizen vertice copy to gpu", &state.codePerformanceData);
     try setupVertexDataForGPU(&state.vkState);
+    codePerformanceZig.endMeasure("    citizen vertice copy to gpu", &state.codePerformanceData);
 
+    try codePerformanceZig.startMeasure("    window check", &state.codePerformanceData);
     if (!try createSwapChainRelatedStuffAndCheckWindowSize(vkState, state.allocator)) return;
+    codePerformanceZig.endMeasure("    window check", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure("    uniform buffer", &state.codePerformanceData);
     try updateUniformBuffer(state);
+    codePerformanceZig.endMeasure("    uniform buffer", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure("    rectangle data", &state.codePerformanceData);
     main.setupRectangleData(state);
     try rectangleVulkanZig.setupVertices(&state.rectangles, state);
+    codePerformanceZig.endMeasure("    rectangle data", &state.codePerformanceData);
 
+    try codePerformanceZig.startMeasure("    fences", &state.codePerformanceData);
     _ = vk.vkWaitForFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
     _ = vk.vkResetFences(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);
+    codePerformanceZig.endMeasure("    fences", &state.codePerformanceData);
 
+    try codePerformanceZig.startMeasure("    vulkan acquire next image", &state.codePerformanceData);
     var imageIndex: u32 = undefined;
     const acquireImageResult = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
 
@@ -1003,9 +1017,13 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
         return error.failedToAcquireSwapChainImage;
     }
 
+    codePerformanceZig.endMeasure("    vulkan acquire next image", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure("    record", &state.codePerformanceData);
     _ = vk.vkResetCommandBuffer(vkState.command_buffer[vkState.currentFrame], 0);
     try recordCommandBuffer(vkState.command_buffer[vkState.currentFrame], imageIndex, state);
+    codePerformanceZig.endMeasure("    record", &state.codePerformanceData);
 
+    try codePerformanceZig.startMeasure("    vulkan other stuff", &state.codePerformanceData);
     var submitInfo = vk.VkSubmitInfo{
         .sType = vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = 1,
@@ -1035,6 +1053,7 @@ pub fn drawFrame(state: *main.ChatSimState) !void {
     }
 
     vkState.currentFrame = (vkState.currentFrame + 1) % Vk_State.MAX_FRAMES_IN_FLIGHT;
+    codePerformanceZig.endMeasure("    vulkan other stuff", &state.codePerformanceData);
 }
 
 fn createSyncObjects(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
