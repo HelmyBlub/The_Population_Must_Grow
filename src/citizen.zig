@@ -27,7 +27,8 @@ pub const Citizen: type = struct {
     moveTo: std.ArrayList(main.Position),
     imageIndex: u8 = imageZig.IMAGE_CITIZEN_FRONT,
     moveSpeed: f16,
-    direction: f32 = 0,
+    directionX: f32 = 1,
+    directionY: f32 = 0,
     buildingPosition: ?main.Position = null,
     treePosition: ?main.Position = null,
     farmPosition: ?main.Position = null,
@@ -99,7 +100,9 @@ pub const Citizen: type = struct {
         } else {
             self.moveTo.items[0] = target;
             recalculateCitizenImageIndex(self);
-            self.direction = main.calculateDirection(self.position, self.moveTo.getLast());
+            const direction = main.calculateDirection(self.position, self.moveTo.getLast());
+            self.directionX = @cos(direction);
+            self.directionY = @sin(direction);
         }
         codePerformanceZig.endMeasure("   pathfind", &state.codePerformanceData);
     }
@@ -109,11 +112,15 @@ pub const Citizen: type = struct {
             const moveTo = citizen.moveTo.getLast();
             var moveSpeed = citizen.moveSpeed;
             if (citizen.hasWood) moveSpeed *= MOVE_SPEED_WODD_FACTOR;
-            citizen.position.x += std.math.cos(citizen.direction) * moveSpeed;
-            citizen.position.y += std.math.sin(citizen.direction) * moveSpeed;
+            citizen.position.x += citizen.directionX * moveSpeed;
+            citizen.position.y += citizen.directionY * moveSpeed;
             if (@abs(citizen.position.x - moveTo.x) < citizen.moveSpeed and @abs(citizen.position.y - moveTo.y) < citizen.moveSpeed) {
                 _ = citizen.moveTo.pop();
-                if (citizen.moveTo.items.len > 0) citizen.direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
+                if (citizen.moveTo.items.len > 0) {
+                    const direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
+                    citizen.directionX = @cos(direction);
+                    citizen.directionY = @sin(direction);
+                }
                 recalculateCitizenImageIndex(citizen);
             }
         }
