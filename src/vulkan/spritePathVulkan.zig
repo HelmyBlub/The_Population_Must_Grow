@@ -47,7 +47,7 @@ pub const SpritePathVertex = struct {
 pub fn setupVertices(state: *main.ChatSimState, chunkVisible: mapZig.VisibleChunksData) !void {
     var vkState = &state.vkState;
     const pathData = &vkState.path;
-    const buffer = 50;
+    const buffer = 500;
     pathData.entityPaintCount = pathData.nextEntityPaintCount;
     const pathCount = pathData.entityPaintCount + buffer;
 
