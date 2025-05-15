@@ -164,6 +164,60 @@ fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
 }
 
+fn setupTestInputsJustPath(testData: *TestData) !void {
+    //city block
+    for (0..11) |counter| {
+        const x: i32 = @intCast(counter);
+        try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(x, 1) }, .executeTime = 0 });
+    }
+    for (0..13) |counter| {
+        try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+            .from = .{ .tileX = 0, .tileY = 1 },
+            .to = .{ .tileX = 0, .tileY = @intCast(counter + 2) },
+            .columns = 11,
+            .rows = 1,
+        } }, .executeTime = 0 });
+    }
+
+    //copy paste entire city block
+    for (1..13) |distance| {
+        for (0..(distance * 2)) |pos| {
+            const executeTime: u32 = @intCast(5_000 + distance * 2_000 + pos * 20);
+            const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));
+            var toOffset2: i32 = -@as(i32, @intCast(distance));
+            //left
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = 1 },
+                .to = .{ .tileX = toOffset2 * 11, .tileY = toOffset1 * 13 + 1 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            // top
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = 1 },
+                .to = .{ .tileX = (toOffset1 + 1) * 11, .tileY = toOffset2 * 13 + 1 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            //right
+            toOffset2 = -toOffset2;
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = 1 },
+                .to = .{ .tileX = toOffset2 * 11, .tileY = (toOffset1 + 1) * 13 + 1 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+            //bottom
+            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                .from = .{ .tileX = 0, .tileY = 1 },
+                .to = .{ .tileX = toOffset1 * 11, .tileY = toOffset2 * 13 + 1 },
+                .columns = 11,
+                .rows = 13,
+            } }, .executeTime = executeTime });
+        }
+    }
+}
+
 fn tileToPos(tileX: i32, tileY: i32) main.Position {
     return mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = tileX, .tileY = tileY });
 }

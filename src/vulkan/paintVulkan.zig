@@ -11,6 +11,7 @@ const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
 const citizenVulkanZig = @import("citizenVulkan.zig");
 const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
+const spritePathVulkanZig = @import("spritePathVulkan.zig");
 const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxVulkan.zig");
 const codePerformanceZig = @import("../codePerformance.zig");
 
@@ -76,6 +77,7 @@ pub const Vk_State = struct {
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
     font: fontVulkanZig.VkFont = .{},
     citizen: citizenVulkanZig.VkCitizen = .{},
+    path: spritePathVulkanZig.VkPathVertices = .{},
     buildOptionsUx: buildOptionsUxVulkanZig.VkBuildOptionsUx = .{},
     citizenPopulationCounterUx: citizenPopulationCounterUxVulkanZig.VkCitizenPopulationCounterUx = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
@@ -237,9 +239,9 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
             entityPaintCountLayer1 += chunk.trees.items.len;
             entityPaintCountLayer1 += chunk.potatoFields.items.len;
             entityPaintCountLayer2 += chunk.potatoFields.items.len;
-            entityPaintCountLayer2 += chunk.pathes.items.len;
         }
     }
+    try spritePathVulkanZig.setupVertices(state, chunkVisible);
     state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
     const doComplexCitizen = state.camera.zoom > state.vkState.citizen.switchToComplexZoomAmount;
     if (doComplexCitizen) {
@@ -280,15 +282,12 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 },
                 state,
             );
-            try codePerformanceZig.startMeasure("      sprite entity citizen", &state.codePerformanceData);
             if (!doComplexCitizen) {
                 for (chunk.citizens.items) |*citizen| {
                     vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
             }
-            codePerformanceZig.endMeasure("      sprite entity citizen", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("      sprite entity tree", &state.codePerformanceData);
             for (chunk.trees.items) |*tree| {
                 var size: u8 = mapZig.GameMap.TILE_SIZE;
                 var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
@@ -312,8 +311,6 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
                 indexLayer1 += 1;
             }
-            codePerformanceZig.endMeasure("      sprite entity tree", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("      sprite entity building", &state.codePerformanceData);
             for (chunk.buildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
                 var cutY: f32 = 0;
@@ -326,8 +323,6 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
-            codePerformanceZig.endMeasure("      sprite entity building", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("      sprite entity big building", &state.codePerformanceData);
             for (chunk.bigBuildings.items) |*building| {
                 var imageIndex: u8 = imageZig.IMAGE_BIG_HOUSE;
                 var cutY: f32 = 0;
@@ -341,8 +336,6 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
                 indexLayer1 += 1;
             }
-            codePerformanceZig.endMeasure("      sprite entity big building", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("      sprite entity potato", &state.codePerformanceData);
             for (chunk.potatoFields.items) |*field| {
                 vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                 indexLayer2 += 1;
@@ -355,13 +348,6 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                 indexLayer1 += 1;
             }
-            codePerformanceZig.endMeasure("      sprite entity potato", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("      sprite entity path", &state.codePerformanceData);
-            for (chunk.pathes.items) |*pathPos| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ pathPos.x, pathPos.y }, .imageIndex = imageZig.IMAGE_PATH, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
-                indexLayer2 += 1;
-            }
-            codePerformanceZig.endMeasure("      sprite entity path", &state.codePerformanceData);
         }
     }
 }
@@ -393,6 +379,7 @@ pub fn initVulkan(state: *main.ChatSimState) !void {
     try createTextureSampler(vkState);
     try fontVulkanZig.initFont(state);
     try citizenVulkanZig.initCitizen(state);
+    try spritePathVulkanZig.init(state);
     try buildOptionsUxVulkanZig.init(state);
     try citizenPopulationCounterUxVulkanZig.init(state);
     try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
@@ -867,6 +854,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     rectangleVulkanZig.destroyRectangle(vkState, allocator);
     fontVulkanZig.destroyFont(vkState, allocator);
     citizenVulkanZig.destroyCitizen(vkState, allocator);
+    spritePathVulkanZig.destroy(vkState, allocator);
     buildOptionsUxVulkanZig.destroy(vkState, allocator);
     citizenPopulationCounterUxVulkanZig.destroy(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
@@ -1151,6 +1139,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     );
 
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer2), 1, @intCast(state.vkState.entityPaintCountLayer1 + state.vkState.entityPaintCountLayer1Citizen), 0);
+    try spritePathVulkanZig.recordCommandBuffer(commandBuffer, state);
+    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.graphicsPipelineLayer2);
     vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.entityPaintCountLayer1), 1, @intCast(state.vkState.entityPaintCountLayer1Citizen), 0);

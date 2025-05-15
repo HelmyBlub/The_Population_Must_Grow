@@ -2,7 +2,6 @@ tasks:
 - check code for performance improvement for single cpu
     - paint stuff
         - sprite data setup changes
-            - continue: perfromane measurements confuse me. Why does big building take so much time, when i don't have a single one in my test?
             - ideas: multiple vertex buffers
             - simplify buffer size calculation
                 - estimate required sizes. Take from last frame
@@ -28,6 +27,10 @@ Some data:
 - FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
+- Path test case performance
+    FPS: 399, citizens: 1, gameTime: 63184, end FPS: 315.85925
+    FPS: 426, citizens: 1, gameTime: 60160, end FPS: 352.79428    
+    FPS: 486, citizens: 1, gameTime: 60272, end FPS: 373.473    
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter
