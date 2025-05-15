@@ -238,10 +238,9 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
                 _ = try mapZig.placePotatoField(newPotatoField, state);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_TREE_FARM) {
                 const newTree: mapZig.MapTree = .{
-                    .position = position,
                     .regrow = true,
                 };
-                _ = try mapZig.placeTree(newTree, state);
+                _ = try mapZig.placeTree(newTree, position, state);
             }
         }
     }

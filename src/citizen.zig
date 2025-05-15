@@ -246,11 +246,12 @@ fn calculateMoveSpeed(citizen: *Citizen) void {
 
 fn treePlant(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeAndChunk| {
-        if (main.calculateDistance(citizen.position, treeAndChunk.tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
+        const treePos = treeAndChunk.chunk.treesPos.items[treeAndChunk.treeIndex];
+        if (main.calculateDistance(citizen.position, treePos) < mapZig.GameMap.TILE_SIZE / 2) {
             citizen.nextThinkingTickTimeMs = state.gameTimeMs + 1000;
             citizen.nextThinkingAction = .treePlantFinished;
         } else {
-            try citizen.moveToPosition(.{ .x = treeAndChunk.tree.position.x, .y = treeAndChunk.tree.position.y - 4 }, state);
+            try citizen.moveToPosition(.{ .x = treePos.x, .y = treePos.y - 4 }, state);
         }
     } else {
         citizen.treePosition = null;
@@ -260,7 +261,7 @@ fn treePlant(citizen: *Citizen, state: *main.ChatSimState) !void {
 
 fn treePlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeAndChunk| {
-        treeAndChunk.tree.growStartTimeMs = state.gameTimeMs;
+        treeAndChunk.chunk.trees.items[treeAndChunk.treeIndex].growStartTimeMs = state.gameTimeMs;
         try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
     }
     citizen.treePosition = null;
@@ -289,7 +290,7 @@ fn buildingGetWood(citizen: *Citizen, state: *main.ChatSimState) !void {
         if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeData| {
             citizen.nextThinkingTickTimeMs = state.gameTimeMs + main.CITIZEN_TREE_CUT_DURATION;
             citizen.nextThinkingAction = .buildingCutTree;
-            treeData.tree.beginCuttingTime = state.gameTimeMs;
+            treeData.chunk.trees.items[treeData.treeIndex].beginCuttingTime = state.gameTimeMs;
             const woodCutSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
             var temp: u32 = @divFloor(woodCutSoundInterval, 2);
             if (state.camera.zoom > 0.5) {
@@ -314,15 +315,16 @@ fn buildingGetWood(citizen: *Citizen, state: *main.ChatSimState) !void {
 
 fn buildingCutTree(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeData| {
+        const treePtr = &treeData.chunk.trees.items[treeData.treeIndex];
         citizen.hasWood = true;
-        treeData.tree.fullyGrown = false;
-        treeData.tree.citizenOnTheWay = false;
-        treeData.tree.beginCuttingTime = null;
+        treePtr.fullyGrown = false;
+        treePtr.citizenOnTheWay = false;
+        treePtr.beginCuttingTime = null;
         citizen.treePosition = null;
-        if (!treeData.tree.regrow) {
+        if (!treePtr.regrow) {
             mapZig.removeTree(treeData.treeIndex, treeData.chunk);
         } else {
-            treeData.tree.growStartTimeMs = state.gameTimeMs;
+            treePtr.growStartTimeMs = state.gameTimeMs;
             try treeData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
         }
         if (!try checkHunger(citizen, state)) {
@@ -577,6 +579,7 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
 
 fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *main.ChatSimState) !void {
     var closestTree: ?*mapZig.MapTree = null;
+    var closestTreePos: main.Position = .{ .x = 0, .y = 0 };
     var fastestDistance: f32 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
     var iteration: u8 = 0;
@@ -591,11 +594,13 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
                     .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
                 };
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
-                for (chunk.trees.items) |*tree| {
+                for (chunk.trees.items, 0..) |*tree, treeIndex| {
                     if (!tree.fullyGrown or tree.citizenOnTheWay) continue;
-                    const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
+                    const treePos = chunk.treesPos.items[treeIndex];
+                    const tempDistance: f32 = main.calculateDistance(citizen.position, treePos) + main.calculateDistance(treePos, targetPosition);
                     if (closestTree == null or fastestDistance > tempDistance) {
                         closestTree = tree;
+                        closestTreePos = treePos;
                         fastestDistance = tempDistance;
                     }
                 }
@@ -606,7 +611,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, state: *ma
         topLeftChunk.chunkY -= 1;
     }
     if (closestTree != null) {
-        citizen.treePosition = closestTree.?.position;
+        citizen.treePosition = closestTreePos;
         closestTree.?.citizenOnTheWay = true;
     } else {
         try setRandomMoveTo(citizen, state);
