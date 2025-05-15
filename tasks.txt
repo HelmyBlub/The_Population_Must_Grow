@@ -2,9 +2,14 @@ tasks:
 - check code for performance improvement for single cpu
     - paint stuff
         - sprite data setup changes
-            - ideas: multiple vertex buffers
-            - simplify buffer size calculation
-                - estimate required sizes. Take from last frame
+            - simplfy and use memcpy on far zooms
+            - for near zoom values i have to keep default
+            - try the not counting before and use last frame values
+        - citizens
+        - tree
+        - potato
+        - building
+        - big building
 
 - bug: deleting can crash game
     - integer overflow, D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:356:31: 0x7ff7f71f682c in buildingFinished (zig.exe.obj),  building.woodRequired -= 1;
@@ -27,10 +32,9 @@ Some data:
 - FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
-- Path test case performance
-    FPS: 399, citizens: 1, gameTime: 63184, end FPS: 315.85925
-    FPS: 426, citizens: 1, gameTime: 60160, end FPS: 352.79428    
-    FPS: 486, citizens: 1, gameTime: 60272, end FPS: 373.473    
+- fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
+  FPS: 157, citizens: 31186, gameTime: 330768, end FPS: 118.71034
+
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter

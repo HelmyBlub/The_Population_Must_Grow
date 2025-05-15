@@ -241,7 +241,6 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
             entityPaintCountLayer2 += chunk.potatoFields.items.len;
         }
     }
-    try spritePathVulkanZig.setupVertices(state, chunkVisible);
     state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
     const doComplexCitizen = state.camera.zoom > state.vkState.citizen.switchToComplexZoomAmount;
     if (doComplexCitizen) {
@@ -270,6 +269,7 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     }
     codePerformanceZig.endMeasure("      sprite entity size change", &state.codePerformanceData);
 
+    try spritePathVulkanZig.setupVertices(state, chunkVisible);
     var indexLayer1Citizen: u32 = 0;
     var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
     var indexLayer2: u32 = indexLayer1 + state.vkState.entityPaintCountLayer1;
