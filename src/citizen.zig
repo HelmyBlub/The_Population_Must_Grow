@@ -376,6 +376,7 @@ fn buildingFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
         building.woodRequired -= 1;
         if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
             building.inConstruction = false;
+            building.imageIndex = imageZig.IMAGE_HOUSE;
             const buildRectangle = mapZig.get1x1RectangleFromPosition(building.position);
             try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
             var newCitizen = main.Citizen.createCitizen(state.allocator);
@@ -386,6 +387,7 @@ fn buildingFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
         } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
             if (building.woodRequired == 0) {
                 building.inConstruction = false;
+                building.imageIndex = imageZig.IMAGE_BIG_HOUSE;
                 const buildRectangle = mapZig.getBigBuildingRectangle(building.position);
                 try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, state);
                 while (building.citizensSpawned < 8) {

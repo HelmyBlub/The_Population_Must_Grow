@@ -1,6 +1,7 @@
 const std = @import("std");
 const main = @import("main.zig");
 const windowSdlZig = @import("windowSdl.zig");
+const imageZig = @import("image.zig");
 
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
@@ -81,6 +82,7 @@ pub const MapTree = struct {
     growStartTimeMs: ?u32 = null,
     beginCuttingTime: ?u32 = null,
     regrow: bool = false,
+    imageIndex: u8 = imageZig.IMAGE_TREE,
 };
 
 pub const Building = struct {
@@ -90,6 +92,7 @@ pub const Building = struct {
     woodRequired: u8 = 1,
     citizensSpawned: u8 = 0,
     constructionStartedTime: ?u32 = null,
+    imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE,
 };
 
 pub const PotatoField = struct {
@@ -810,6 +813,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                     const newTree: MapTree = .{
                         .position = targetPosition,
                         .regrow = true,
+                        .imageIndex = imageZig.IMAGE_GREEN_RECTANGLE,
                     };
                     _ = try placeTree(newTree, state);
                     continue :nextTile;
@@ -911,7 +915,7 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
         .queue = std.ArrayList(ChunkQueueItem).init(allocator),
     };
     const halveTileSize = GameMap.TILE_SIZE / 2;
-    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1 });
+    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .fullyGrown = true });
     var citizen = main.Citizen.createCitizen(allocator);

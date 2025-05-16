@@ -273,80 +273,121 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     var indexLayer1Citizen: u32 = 0;
     var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
     var indexLayer2: u32 = indexLayer1 + state.vkState.entityPaintCountLayer1;
-    for (0..chunkVisible.columns) |x| {
-        for (0..chunkVisible.rows) |y| {
-            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                .{
-                    .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
-                    .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
-                },
-                state,
-            );
-            if (!doComplexCitizen) {
+    const simple: bool = state.camera.zoom < 0.25;
+    if (simple) {
+        for (0..chunkVisible.columns) |x| {
+            for (0..chunkVisible.rows) |y| {
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
+                    .{
+                        .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
+                        .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
+                    },
+                    state,
+                );
                 for (chunk.citizens.items) |*citizen| {
                     vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
-            }
-            for (chunk.trees.items) |*tree| {
-                var size: u8 = mapZig.GameMap.TILE_SIZE;
-                var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
-                if (tree.fullyGrown) {
-                    imageIndex = imageZig.IMAGE_TREE;
-                } else if (tree.growStartTimeMs) |time| {
-                    size = @intCast(@divFloor(mapZig.GameMap.TILE_SIZE * (state.gameTimeMs - time), mapZig.GROW_TIME_MS));
-                    imageIndex = imageZig.IMAGE_TREE;
+                for (chunk.trees.items) |*tree| {
+                    const size: u8 = mapZig.GameMap.TILE_SIZE;
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = tree.imageIndex, .size = size, .rotate = 0, .cutY = 0 };
+                    indexLayer1 += 1;
                 }
-                var rotate: f32 = 0;
-                if (tree.beginCuttingTime) |cutTime| {
-                    const fallTime = main.CITIZEN_TREE_CUT_PART2_DURATION_TREE_FALLING;
-                    const startFalling = main.CITIZEN_TREE_CUT_PART1_DURATION;
-                    const timePassed = state.gameTimeMs - cutTime;
-                    if (timePassed > startFalling) {
-                        const fallingTimePerCent = @min(@as(f32, @floatFromInt(timePassed - startFalling)) / fallTime, 1);
-                        const fallingAngle = std.math.pow(f32, fallingTimePerCent, 3.0) * std.math.pi / 2.0;
-                        rotate = fallingAngle;
+                for (chunk.buildings.items) |*building| {
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    indexLayer1 += 1;
+                }
+                for (chunk.bigBuildings.items) |*building| {
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = 0 };
+                    indexLayer1 += 1;
+                }
+                for (chunk.potatoFields.items) |*field| {
+                    vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    indexLayer2 += 1;
+                    if (!field.fullyGrown) {
+                        continue;
+                    }
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    indexLayer1 += 1;
+                }
+            }
+        }
+    } else {
+        for (0..chunkVisible.columns) |x| {
+            for (0..chunkVisible.rows) |y| {
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
+                    .{
+                        .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
+                        .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
+                    },
+                    state,
+                );
+                if (!doComplexCitizen) {
+                    for (chunk.citizens.items) |*citizen| {
+                        vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                        indexLayer1Citizen += 1;
                     }
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
-                indexLayer1 += 1;
-            }
-            for (chunk.buildings.items) |*building| {
-                var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
-                var cutY: f32 = 0;
-                if (!building.inConstruction) {
-                    imageIndex = imageZig.IMAGE_HOUSE;
-                } else if (building.constructionStartedTime) |time| {
-                    imageIndex = imageZig.IMAGE_HOUSE;
-                    cutY = @max(1 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 3000.0, 0);
-                }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
-                indexLayer1 += 1;
-            }
-            for (chunk.bigBuildings.items) |*building| {
-                var imageIndex: u8 = imageZig.IMAGE_BIG_HOUSE;
-                var cutY: f32 = 0;
-                if (building.inConstruction) {
-                    if (building.woodRequired > 15) {
-                        imageIndex = imageZig.IMAGE_WHITE_RECTANGLE;
-                    } else {
-                        cutY = @as(f32, @floatFromInt(building.woodRequired)) / 16.0 * 0.8 + 0.2;
+                for (chunk.trees.items) |*tree| {
+                    var size: u8 = mapZig.GameMap.TILE_SIZE;
+                    var imageIndex: u8 = imageZig.IMAGE_GREEN_RECTANGLE;
+                    if (tree.fullyGrown) {
+                        imageIndex = imageZig.IMAGE_TREE;
+                    } else if (tree.growStartTimeMs) |time| {
+                        size = @intCast(@divFloor(mapZig.GameMap.TILE_SIZE * (state.gameTimeMs - time), mapZig.GROW_TIME_MS));
+                        imageIndex = imageZig.IMAGE_TREE;
                     }
+                    var rotate: f32 = 0;
+                    if (tree.beginCuttingTime) |cutTime| {
+                        const fallTime = main.CITIZEN_TREE_CUT_PART2_DURATION_TREE_FALLING;
+                        const startFalling = main.CITIZEN_TREE_CUT_PART1_DURATION;
+                        const timePassed = state.gameTimeMs - cutTime;
+                        if (timePassed > startFalling) {
+                            const fallingTimePerCent = @min(@as(f32, @floatFromInt(timePassed - startFalling)) / fallTime, 1);
+                            const fallingAngle = std.math.pow(f32, fallingTimePerCent, 3.0) * std.math.pi / 2.0;
+                            rotate = fallingAngle;
+                        }
+                    }
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
+                    indexLayer1 += 1;
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
-                indexLayer1 += 1;
-            }
-            for (chunk.potatoFields.items) |*field| {
-                vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
-                indexLayer2 += 1;
-                var size: u8 = mapZig.GameMap.TILE_SIZE;
-                if (field.growStartTimeMs) |time| {
-                    size = @intCast(@divFloor((state.gameTimeMs - time) * mapZig.GameMap.TILE_SIZE, mapZig.GROW_TIME_MS));
-                } else if (!field.fullyGrown) {
-                    size = 0;
+                for (chunk.buildings.items) |*building| {
+                    var imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE;
+                    var cutY: f32 = 0;
+                    if (!building.inConstruction) {
+                        imageIndex = imageZig.IMAGE_HOUSE;
+                    } else if (building.constructionStartedTime) |time| {
+                        imageIndex = imageZig.IMAGE_HOUSE;
+                        cutY = @max(1 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 3000.0, 0);
+                    }
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
+                    indexLayer1 += 1;
                 }
-                vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
-                indexLayer1 += 1;
+                for (chunk.bigBuildings.items) |*building| {
+                    var imageIndex: u8 = imageZig.IMAGE_BIG_HOUSE;
+                    var cutY: f32 = 0;
+                    if (building.inConstruction) {
+                        if (building.woodRequired > 15) {
+                            imageIndex = imageZig.IMAGE_WHITE_RECTANGLE;
+                        } else {
+                            cutY = @as(f32, @floatFromInt(building.woodRequired)) / 16.0 * 0.8 + 0.2;
+                        }
+                    }
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
+                    indexLayer1 += 1;
+                }
+                for (chunk.potatoFields.items) |*field| {
+                    vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    indexLayer2 += 1;
+                    var size: u8 = mapZig.GameMap.TILE_SIZE;
+                    if (field.growStartTimeMs) |time| {
+                        size = @intCast(@divFloor((state.gameTimeMs - time) * mapZig.GameMap.TILE_SIZE, mapZig.GROW_TIME_MS));
+                    } else if (!field.fullyGrown) {
+                        size = 0;
+                    }
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
+                    indexLayer1 += 1;
+                }
             }
         }
     }

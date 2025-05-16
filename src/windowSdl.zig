@@ -11,6 +11,7 @@ const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
 const soundMixerZig = @import("soundMixer.zig");
 const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
+const imageZig = @import("image.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -240,6 +241,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
                 const newTree: mapZig.MapTree = .{
                     .position = position,
                     .regrow = true,
+                    .imageIndex = imageZig.IMAGE_GREEN_RECTANGLE,
                 };
                 _ = try mapZig.placeTree(newTree, state);
             }

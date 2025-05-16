@@ -8,6 +8,7 @@ const soundMixerZig = @import("soundMixer.zig");
 const inputZig = @import("input.zig");
 const testZig = @import("test.zig");
 const codePerformanceZig = @import("codePerformance.zig");
+const imageZig = @import("image.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -322,6 +323,7 @@ fn tick(state: *ChatSimState) !void {
                     .tree => |data| {
                         chunk.trees.items[data].fullyGrown = true;
                         chunk.trees.items[data].growStartTimeMs = null;
+                        chunk.trees.items[data].imageIndex = imageZig.IMAGE_TREE;
                     },
                     .potatoField => |data| {
                         chunk.potatoFields.items[data].fullyGrown = true;
