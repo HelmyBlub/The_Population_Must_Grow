@@ -22,14 +22,11 @@ tasks:
         - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
-- FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 92.29745
+- FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (16.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
-  FPS: 155, citizens: 30901, gameTime: 329648, end FPS: 103.1204
-  FPS: 156, citizens: 31011, gameTime: 330096, end FPS: 113.827225 (with path changed)
-  FPS: 157, citizens: 31190, gameTime: 330784, end FPS: 118.20778 (simplified, tree imageindex)
-  FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (buildings simpified)
+  FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

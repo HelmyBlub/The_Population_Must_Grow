@@ -556,7 +556,7 @@ pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath:
 pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
     const newBuilding: Building = .{
         .position = position,
-        .type = BUILD_TYPE_BIG_HOUSE,
+        .type = BUILDING_TYPE_BIG_HOUSE,
         .woodRequired = 16,
     };
     return try placeBuilding(newBuilding, state, checkPath, displayHelpText);
