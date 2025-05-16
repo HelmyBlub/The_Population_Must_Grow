@@ -1,8 +1,15 @@
 tasks:
-- bug: big buildings broken
-- check code for performance improvement for single cpu
-    - paint stuff
-        - simplify vertice setup code
+- check code for performance improvement for multiple cpu cores
+    - tick chunks far away from each other, so they can not interfere
+        - continue: got a "unreachable code" error which i don't undestand. Threading still pretty slow
+        - algorithm to split active chunks into multiple arrays for each thread/core
+        - how efficient is thread spawn and join?
+
+    - threads gets chunks assigned
+    - handle memory access from one chunk to another. Mutex? atomic? something different?
+    - vulkan data setup. Can it also be split to multiple cpus?
+
+
 
 - bug: deleting can crash game
     - integer overflow, D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:356:31: 0x7ff7f71f682c in buildingFinished (zig.exe.obj),  building.woodRequired -= 1;

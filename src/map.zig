@@ -701,6 +701,7 @@ pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
         if (newKey == key) return;
     }
     try state.map.activeChunkKeys.append(newKey);
+    try main.splitActiveChunksForThreads(state.map.activeChunkKeys, state.activeChunksThreadSplit);
 }
 
 pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
@@ -845,6 +846,13 @@ pub fn getKeyForPosition(position: main.Position) !u64 {
 
 pub fn getKeyForChunkXY(chunkXY: ChunkXY) u64 {
     return @intCast(chunkXY.chunkX * GameMap.MAX_CHUNKS_ROWS_COLUMNS + chunkXY.chunkY + GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS);
+}
+
+pub fn getChunkXyForKey(chunkKey: u64) ChunkXY {
+    return .{
+        .chunkX = @divFloor(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
+        .chunkY = @mod(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
+    };
 }
 
 pub fn getChunkXyForPosition(position: main.Position) ChunkXY {

@@ -43,6 +43,10 @@ pub const ChatSimState: type = struct {
     mouseInfo: MouseInfo = .{},
     random: std.Random.Xoshiro256,
     codePerformanceData: codePerformanceZig.CodePerformanceData = undefined,
+    cpuCount: usize,
+    activeChunksThreadSplit: []std.ArrayList(u64) = undefined,
+    activeChunkSplitIndex: []usize = undefined,
+    activeChunkAllowedIndex: usize = 0,
 };
 
 pub const MouseInfo = struct {
@@ -85,6 +89,30 @@ test "test measure performance" {
     try testZig.executePerfromanceTest();
 }
 
+test "temp split active chunks" {
+    const test_allocator = std.testing.allocator;
+    var activeChunks = std.ArrayList(u64).init(test_allocator);
+    defer activeChunks.deinit();
+    for (0..20) |i| {
+        const x: i32 = @intCast(i);
+        try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 0 }));
+        try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 1 }));
+    }
+    const cpuCount = 4;
+    var chunkSplits = try test_allocator.alloc(std.ArrayList(u64), cpuCount);
+    for (0..cpuCount) |i| {
+        chunkSplits[i] = std.ArrayList(u64).init(test_allocator);
+    }
+
+    try splitActiveChunksForThreads(activeChunks, chunkSplits);
+
+    for (0..cpuCount) |i| {
+        std.debug.print("list {}: {any}\n", .{ i, chunkSplits[i].items });
+        chunkSplits[i].deinit();
+    }
+    test_allocator.free(chunkSplits);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
@@ -125,7 +153,13 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
         .soundMixer = undefined,
         .random = prng,
+        .cpuCount = std.Thread.getCpuCount() catch 1,
     };
+    state.activeChunksThreadSplit = try allocator.alloc(std.ArrayList(u64), state.cpuCount);
+    state.activeChunkSplitIndex = try allocator.alloc(usize, state.cpuCount);
+    for (0..state.cpuCount) |i| {
+        state.activeChunksThreadSplit[i] = std.ArrayList(u64).init(allocator);
+    }
     try codePerformanceZig.init(state);
     try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
@@ -236,7 +270,7 @@ fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     try paintVulkanZig.initVulkan(state);
 }
 
-fn destoryPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
+fn destroyPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     try paintVulkanZig.destroyPaintVulkan(&state.vkState, state.allocator);
     windowSdlZig.destroyWindowSdl();
 }
@@ -300,98 +334,94 @@ pub fn mainLoop(state: *ChatSimState) !void {
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
+pub fn splitActiveChunksForThreads(activeChunks: std.ArrayList(u64), activeChunksSplits: []std.ArrayList(u64)) !void {
+    for (0..activeChunksSplits.len) |i| {
+        activeChunksSplits[i].clearRetainingCapacity();
+    }
+    const placeHolder: u64 = 0;
+    var highestFreeIndex: usize = 0;
+    const minDistance = 6;
+    main: for (activeChunks.items) |chunkKey| {
+        const chunkXY = mapZig.getChunkXyForKey(chunkKey);
+        for (0..(highestFreeIndex + 1)) |indexHeight| {
+            var availableSplitIndex: ?usize = null;
+            for (activeChunksSplits, 0..) |split, splitIndex| {
+                if (split.items.len <= indexHeight or split.items[indexHeight] == placeHolder) {
+                    availableSplitIndex = splitIndex;
+                    break;
+                }
+            }
+            if (availableSplitIndex != null) {
+                var isValidSpot = true;
+                for (activeChunksSplits) |split| {
+                    if (split.items.len > indexHeight and split.items[indexHeight] != placeHolder) {
+                        const otherChunkXY = mapZig.getChunkXyForKey(split.items[indexHeight]);
+                        if (@abs(chunkXY.chunkX - otherChunkXY.chunkX) < minDistance and @abs(chunkXY.chunkY - otherChunkXY.chunkY) < minDistance) {
+                            isValidSpot = false;
+                            break;
+                        }
+                    }
+                }
+                if (isValidSpot) {
+                    const splitPtr = &activeChunksSplits[availableSplitIndex.?];
+                    if (splitPtr.items.len == indexHeight) {
+                        try splitPtr.append(chunkKey);
+                        if (highestFreeIndex <= indexHeight) highestFreeIndex = indexHeight + 1;
+                    } else if (splitPtr.items.len > indexHeight) {
+                        splitPtr.items[indexHeight] = chunkKey;
+                    } else {
+                        while (splitPtr.items.len < indexHeight) {
+                            try splitPtr.append(placeHolder);
+                        }
+                        try splitPtr.append(chunkKey);
+                    }
+                    continue :main;
+                }
+            }
+        }
+    }
+}
+
 fn tick(state: *ChatSimState) !void {
     try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
     try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
 
-    for (0..state.map.activeChunkKeys.items.len) |i| {
-        const chunkKey = state.map.activeChunkKeys.items[i];
-        try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
-        const chunk = state.map.chunks.getPtr(chunkKey).?;
-        try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
-        try Citizen.citizensTick(chunk, state);
-        try Citizen.citizensMoveTick(chunk, state);
-        codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
-
-        try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
-        while (chunk.queue.items.len > 0) {
-            const item = chunk.queue.items[0];
-            if (item.executeTime <= state.gameTimeMs) {
-                switch (item.itemData) {
-                    .tree => |data| {
-                        chunk.trees.items[data].fullyGrown = true;
-                        chunk.trees.items[data].growStartTimeMs = null;
-                        chunk.trees.items[data].imageIndex = imageZig.IMAGE_TREE;
-                    },
-                    .potatoField => |data| {
-                        chunk.potatoFields.items[data].fullyGrown = true;
-                        chunk.potatoFields.items[data].growStartTimeMs = null;
-                    },
-                }
-                _ = chunk.queue.orderedRemove(0);
-            } else {
+    var maxIndex: usize = 0;
+    for (0..state.activeChunkSplitIndex.len) |i| {
+        state.activeChunkSplitIndex[i] = 0;
+    }
+    state.activeChunkAllowedIndex = 0;
+    var threads: []?std.Thread = try state.allocator.alloc(?std.Thread, state.cpuCount);
+    defer state.allocator.free(threads);
+    for (state.activeChunksThreadSplit, 0..) |split, index| {
+        threads[index] = try std.Thread.spawn(.{}, tickThreadChunks, .{ index, state });
+        if (maxIndex < split.items.len) maxIndex = split.items.len;
+    }
+    while (true) {
+        var chunksDone = true;
+        for (0..state.cpuCount) |index| {
+            if (state.activeChunksThreadSplit[index].items.len > state.activeChunkAllowedIndex and state.activeChunkSplitIndex[index] <= state.activeChunkAllowedIndex) {
+                chunksDone = false;
                 break;
             }
         }
-        codePerformanceZig.endMeasure(" chunkQueue", &state.codePerformanceData);
-        try codePerformanceZig.startMeasure(" chunkBuildOrders", &state.codePerformanceData);
-
-        if (chunk.skipBuildOrdersUntilTimeMs) |time| {
-            if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
+        if (chunksDone) {
+            state.activeChunkAllowedIndex += 1;
+            if (state.activeChunkAllowedIndex >= maxIndex) break;
         }
-        var iterator = chunk.buildOrders.items.len;
-        if (chunk.skipBuildOrdersUntilTimeMs == null) {
-            while (iterator > 0) {
-                iterator -= 1;
-                const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
-                const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
-                if (optMapObject) |mapObject| {
-                    if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizen| {
-                        switch (mapObject) {
-                            mapZig.MapObject.building => |building| {
-                                freeCitizen.buildingPosition = building.position;
-                                freeCitizen.nextThinkingAction = .buildingStart;
-                                freeCitizen.moveTo.clearAndFree();
-                                _ = chunk.buildOrders.pop();
-                            },
-                            mapZig.MapObject.bigBuilding => |building| {
-                                freeCitizen.buildingPosition = building.position;
-                                freeCitizen.nextThinkingAction = .buildingStart;
-                                freeCitizen.moveTo.clearAndFree();
-                                if (buildOrder.materialCount > 1) {
-                                    buildOrder.materialCount -= 1;
-                                    iterator += 1;
-                                } else {
-                                    _ = chunk.buildOrders.pop();
-                                }
-                            },
-                            mapZig.MapObject.potatoField => |potatoField| {
-                                freeCitizen.farmPosition = potatoField.position;
-                                freeCitizen.nextThinkingAction = .potatoPlant;
-                                freeCitizen.moveTo.clearAndFree();
-                                _ = chunk.buildOrders.pop();
-                            },
-                            mapZig.MapObject.tree => |tree| {
-                                freeCitizen.treePosition = tree.position;
-                                freeCitizen.nextThinkingAction = .treePlant;
-                                freeCitizen.moveTo.clearAndFree();
-                                _ = chunk.buildOrders.pop();
-                            },
-                            mapZig.MapObject.path => {
-                                _ = chunk.buildOrders.pop();
-                            },
-                        }
-                    } else {
-                        chunk.skipBuildOrdersUntilTimeMs = state.gameTimeMs + 250;
-                        break;
-                    }
-                }
-            }
-        }
-        codePerformanceZig.endMeasure(" chunkBuildOrders", &state.codePerformanceData);
     }
+    for (threads) |optThread| {
+        if (optThread) |thread| {
+            thread.join();
+        }
+    }
+
+    // for (0..state.map.activeChunkKeys.items.len) |i| {
+    //     const chunkKey = state.map.activeChunkKeys.items[i];
+    //     try tickSingleChunk(chunkKey, state);
+    // }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
         const citizenChange: f32 = (@as(f32, @floatFromInt(state.citizenCounter)) - @as(f32, @floatFromInt(state.citizenCounterLastTick))) * 60.0 * 60.0 / updateTickInterval;
@@ -404,9 +434,109 @@ fn tick(state: *ChatSimState) !void {
     codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
 
+fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
+    const splitKeys = state.activeChunksThreadSplit[threadNumber];
+    while (true) {
+        if (state.activeChunkSplitIndex[threadNumber] <= state.activeChunkAllowedIndex) {
+            if (splitKeys.items.len <= state.activeChunkAllowedIndex) break;
+            try tickSingleChunk(splitKeys.items[state.activeChunkAllowedIndex], state);
+            state.activeChunkSplitIndex[threadNumber] += 1;
+        } else {
+            std.Thread.sleep(1000);
+        }
+    }
+}
+
+fn tickSingleChunk(chunkKey: u64, state: *ChatSimState) !void {
+    if (chunkKey == 0) return;
+    try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
+    const chunk = state.map.chunks.getPtr(chunkKey).?;
+    try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
+    try Citizen.citizensTick(chunk, state);
+    try Citizen.citizensMoveTick(chunk, state);
+    codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
+
+    try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
+    while (chunk.queue.items.len > 0) {
+        const item = chunk.queue.items[0];
+        if (item.executeTime <= state.gameTimeMs) {
+            switch (item.itemData) {
+                .tree => |data| {
+                    chunk.trees.items[data].fullyGrown = true;
+                    chunk.trees.items[data].growStartTimeMs = null;
+                    chunk.trees.items[data].imageIndex = imageZig.IMAGE_TREE;
+                },
+                .potatoField => |data| {
+                    chunk.potatoFields.items[data].fullyGrown = true;
+                    chunk.potatoFields.items[data].growStartTimeMs = null;
+                },
+            }
+            _ = chunk.queue.orderedRemove(0);
+        } else {
+            break;
+        }
+    }
+    codePerformanceZig.endMeasure(" chunkQueue", &state.codePerformanceData);
+    try codePerformanceZig.startMeasure(" chunkBuildOrders", &state.codePerformanceData);
+
+    if (chunk.skipBuildOrdersUntilTimeMs) |time| {
+        if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
+    }
+    var iterator = chunk.buildOrders.items.len;
+    if (chunk.skipBuildOrdersUntilTimeMs == null) {
+        while (iterator > 0) {
+            iterator -= 1;
+            const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
+            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
+            if (optMapObject) |mapObject| {
+                if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizen| {
+                    switch (mapObject) {
+                        mapZig.MapObject.building => |building| {
+                            freeCitizen.buildingPosition = building.position;
+                            freeCitizen.nextThinkingAction = .buildingStart;
+                            freeCitizen.moveTo.clearAndFree();
+                            _ = chunk.buildOrders.pop();
+                        },
+                        mapZig.MapObject.bigBuilding => |building| {
+                            freeCitizen.buildingPosition = building.position;
+                            freeCitizen.nextThinkingAction = .buildingStart;
+                            freeCitizen.moveTo.clearAndFree();
+                            if (buildOrder.materialCount > 1) {
+                                buildOrder.materialCount -= 1;
+                                iterator += 1;
+                            } else {
+                                _ = chunk.buildOrders.pop();
+                            }
+                        },
+                        mapZig.MapObject.potatoField => |potatoField| {
+                            freeCitizen.farmPosition = potatoField.position;
+                            freeCitizen.nextThinkingAction = .potatoPlant;
+                            freeCitizen.moveTo.clearAndFree();
+                            _ = chunk.buildOrders.pop();
+                        },
+                        mapZig.MapObject.tree => |tree| {
+                            freeCitizen.treePosition = tree.position;
+                            freeCitizen.nextThinkingAction = .treePlant;
+                            freeCitizen.moveTo.clearAndFree();
+                            _ = chunk.buildOrders.pop();
+                        },
+                        mapZig.MapObject.path => {
+                            _ = chunk.buildOrders.pop();
+                        },
+                    }
+                } else {
+                    chunk.skipBuildOrdersUntilTimeMs = state.gameTimeMs + 250;
+                    break;
+                }
+            }
+        }
+    }
+    codePerformanceZig.endMeasure(" chunkBuildOrders", &state.codePerformanceData);
+}
+
 pub fn destroyGameState(state: *ChatSimState) void {
     soundMixerZig.destroySoundMixer(state);
-    try destoryPaintVulkanAndWindowSdl(state);
+    try destroyPaintVulkanAndWindowSdl(state);
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
         chunk.buildings.deinit();
@@ -420,6 +550,12 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.queue.deinit();
         pathfindingZig.destoryChunkData(&chunk.pathingData);
     }
+    for (0..state.cpuCount) |i| {
+        state.activeChunksThreadSplit[i].deinit();
+    }
+    state.allocator.free(state.activeChunksThreadSplit);
+    state.allocator.free(state.activeChunkSplitIndex);
+
     pathfindingZig.destoryPathfindingData(&state.pathfindingData);
     inputZig.destory(state);
     codePerformanceZig.destroy(state);
