@@ -65,7 +65,7 @@ pub const Citizen: type = struct {
         const thinkTickInterval = 10;
         if (@mod(state.gameTimeMs, state.tickIntervalMs * thinkTickInterval) != @mod(chunk.chunkXY.chunkX, thinkTickInterval) * state.tickIntervalMs) return;
         for (0..chunk.citizens.items.len) |i| {
-            if (chunk.citizens.unusedCapacitySlice().len < 1) try chunk.citizens.ensureUnusedCapacity(16);
+            if (chunk.citizens.unusedCapacitySlice().len < 16) try chunk.citizens.ensureUnusedCapacity(32);
             const citizen: *Citizen = &chunk.citizens.items[i];
             try codePerformanceZig.startMeasure("   foodTick", &state.codePerformanceData);
             try foodTick(citizen, state);
