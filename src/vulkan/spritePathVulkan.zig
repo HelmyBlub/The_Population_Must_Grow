@@ -13,7 +13,7 @@ pub const VkPathVertices = struct {
     graphicsPipeline: vk.VkPipeline = undefined,
     entityPaintCount: u32 = 0,
     nextEntityPaintCount: u32 = 0,
-    vertices: []SpriteJustPosVertex = undefined,
+    vertices: []SpritePathVertex = undefined,
     vertexBufferSize: u64 = 0,
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
@@ -21,13 +21,13 @@ pub const VkPathVertices = struct {
     vertexBufferMemoryCleanUp: []?vk.VkDeviceMemory = undefined,
 };
 
-pub const SpriteJustPosVertex = struct {
+pub const SpritePathVertex = struct {
     pos: [2]f32,
 
     pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
             .binding = 0,
-            .stride = @sizeOf(SpriteJustPosVertex),
+            .stride = @sizeOf(SpritePathVertex),
             .inputRate = vk.VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
@@ -39,7 +39,7 @@ pub const SpriteJustPosVertex = struct {
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset = @offsetOf(SpriteJustPosVertex, "pos");
+        attributeDescriptions[0].offset = @offsetOf(SpritePathVertex, "pos");
         return attributeDescriptions;
     }
 };
@@ -131,8 +131,8 @@ pub fn destroy(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) 
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.path.vertexBufferMemory, 0, @sizeOf(SpriteJustPosVertex) * vkState.path.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
-    const gpu_vertices: [*]SpriteJustPosVertex = @ptrCast(@alignCast(data));
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.path.vertexBufferMemory, 0, @sizeOf(SpritePathVertex) * vkState.path.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    const gpu_vertices: [*]SpritePathVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.path.vertices[0..]);
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.path.vertexBufferMemory);
 }
@@ -140,9 +140,9 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, entityCount: u64, allocator: std.mem.Allocator) !void {
     if (vkState.path.vertexBufferSize != 0) allocator.free(vkState.path.vertices);
     vkState.path.vertexBufferSize = entityCount + paintVulkanZig.Vk_State.BUFFER_ADDITIOAL_SIZE;
-    vkState.path.vertices = try allocator.alloc(SpriteJustPosVertex, vkState.path.vertexBufferSize);
+    vkState.path.vertices = try allocator.alloc(SpritePathVertex, vkState.path.vertexBufferSize);
     try paintVulkanZig.createBuffer(
-        @sizeOf(SpriteJustPosVertex) * vkState.path.vertexBufferSize,
+        @sizeOf(SpritePathVertex) * vkState.path.vertexBufferSize,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &vkState.path.vertexBuffer,
@@ -187,8 +187,8 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     };
 
     const shaderStages = [_]vk.VkPipelineShaderStageCreateInfo{ vertShaderStageInfo, fragShaderStageInfo, geomShaderStageInfo };
-    const bindingDescription = SpriteJustPosVertex.getBindingDescription();
-    const attributeDescriptions = SpriteJustPosVertex.getAttributeDescriptions();
+    const bindingDescription = SpritePathVertex.getBindingDescription();
+    const attributeDescriptions = SpritePathVertex.getAttributeDescriptions();
     var vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,

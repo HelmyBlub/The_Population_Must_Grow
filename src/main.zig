@@ -410,7 +410,6 @@ pub fn destroyGameState(state: *ChatSimState) void {
         chunk.buildings.deinit();
         chunk.bigBuildings.deinit();
         chunk.trees.deinit();
-        chunk.treesPos.deinit();
         chunk.potatoFields.deinit();
         Citizen.destroyCitizens(chunk);
         chunk.citizens.deinit();
