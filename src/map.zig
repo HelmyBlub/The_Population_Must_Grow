@@ -545,24 +545,24 @@ pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
     return true;
 }
 
-pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
+pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
         .type = BUILD_TYPE_HOUSE,
     };
-    return try placeBuilding(newBuilding, state, checkPath, displayHelpText);
+    return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
 
-pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
+pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
         .type = BUILDING_TYPE_BIG_HOUSE,
         .woodRequired = 16,
     };
-    return try placeBuilding(newBuilding, state, checkPath, displayHelpText);
+    return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
 
-pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool) !bool {
+pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
     if (building.type == BUILDING_TYPE_BIG_HOUSE) {
         const buildRectangle = getBigBuildingRectangle(building.position);
@@ -570,7 +570,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
         var tempBuilding = building;
         try replace1TileBuildingsFor2x2Building(&tempBuilding, state);
-        try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.slow, state);
+        try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.slow, threadIndex, state);
         try chunk.bigBuildings.append(tempBuilding);
         try chunk.buildOrders.append(.{ .position = tempBuilding.position, .materialCount = tempBuilding.woodRequired });
     } else {
@@ -795,7 +795,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
             };
             for (chunk.buildings.items) |building| {
                 if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
-                    _ = try placeHouse(targetPosition, state, false, false);
+                    _ = try placeHouse(targetPosition, state, false, false, 0);
                     continue :nextTile;
                 }
             }
@@ -805,7 +805,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                         .x = building.position.x + targetTopLeftTileMiddle.x - fromTopLeftTileMiddle.x,
                         .y = building.position.y + targetTopLeftTileMiddle.y - fromTopLeftTileMiddle.y,
                     };
-                    _ = try placeBigHouse(position, state, false, false);
+                    _ = try placeBigHouse(position, state, false, false, 0);
                     continue :nextTile;
                 }
             }

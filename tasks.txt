@@ -39,7 +39,8 @@ tasks:
 Some data:
 - FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (16.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 143, citizens: 33112, gameTime: 338112, end FPS: 90.19086 (pathfinding code change for multi thread)
+- FPS: 143, citizens: 33112, gameTime: 338112, end FPS: 90.19086 (pathfinding code change for multi thread -> graph data)
+- FPS: 143, citizens: 33064, gameTime: 337904, end FPS: 89.50953 (pathfinding -> temp data)
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
   FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)

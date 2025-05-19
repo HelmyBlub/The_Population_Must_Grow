@@ -101,7 +101,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (state.buildMode == mapZig.BUILD_MODE_SINGLE and event.button.button == 1) {
                 const position = mapZig.mapPositionToTileMiddlePosition(mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera));
-                _ = try mapZig.placeHouse(position, state, true, true);
+                _ = try mapZig.placeHouse(position, state, true, true, 0);
             }
         } else if (event.type == sdl.SDL_EVENT_KEY_UP) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
@@ -228,10 +228,10 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             }
 
             if (state.currentBuildType == mapZig.BUILD_TYPE_HOUSE) {
-                _ = try mapZig.placeHouse(position, state, true, false);
+                _ = try mapZig.placeHouse(position, state, true, false, 0);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
                 const bigHousePosition: main.Position = .{ .x = position.x + mapZig.GameMap.TILE_SIZE / 2, .y = position.y + mapZig.GameMap.TILE_SIZE / 2 };
-                _ = try mapZig.placeBigHouse(bigHousePosition, state, true, false);
+                _ = try mapZig.placeBigHouse(bigHousePosition, state, true, false, 0);
             } else if (state.currentBuildType == mapZig.BUILD_TYPE_POTATO_FARM) {
                 const newPotatoField: mapZig.PotatoField = .{
                     .position = position,
@@ -248,7 +248,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
         }
     }
     if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
-        try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, state);
+        try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, 0, state);
     }
 }
 

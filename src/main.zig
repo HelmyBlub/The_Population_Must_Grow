@@ -37,16 +37,20 @@ pub const ChatSimState: type = struct {
     citizenCounter: u32 = 0,
     citizenCounterLastTick: u32 = 0,
     citizensPerMinuteCounter: f32 = 0,
-    pathfindingData: pathfindingZig.PathfindingData,
     soundMixer: soundMixerZig.SoundMixer,
     keyboardInfo: inputZig.KeyboardInfo = .{},
     mouseInfo: MouseInfo = .{},
     random: std.Random.Xoshiro256,
     codePerformanceData: codePerformanceZig.CodePerformanceData = undefined,
     cpuCount: usize,
+    threadData: []ThreadData = undefined,
     activeChunksThreadSplit: []std.ArrayList(u64) = undefined,
     activeChunkSplitIndex: []usize = undefined,
     activeChunkAllowedIndex: usize = 0,
+};
+
+pub const ThreadData = struct {
+    pathfindingTempData: pathfindingZig.PathfindingTempData,
 };
 
 pub const MouseInfo = struct {
@@ -150,14 +154,15 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
             .zoom = 1,
         },
         .allocator = allocator,
-        .pathfindingData = try pathfindingZig.createPathfindingData(allocator),
         .soundMixer = undefined,
         .random = prng,
         .cpuCount = std.Thread.getCpuCount() catch 1,
     };
     state.activeChunksThreadSplit = try allocator.alloc(std.ArrayList(u64), state.cpuCount);
     state.activeChunkSplitIndex = try allocator.alloc(usize, state.cpuCount);
+    state.threadData = try allocator.alloc(ThreadData, state.cpuCount);
     for (0..state.cpuCount) |i| {
+        state.threadData[i].pathfindingTempData = try pathfindingZig.createPathfindingData(allocator);
         state.activeChunksThreadSplit[i] = std.ArrayList(u64).init(allocator);
     }
     try codePerformanceZig.init(state);
@@ -420,7 +425,7 @@ fn tick(state: *ChatSimState) !void {
 
     for (0..state.map.activeChunkKeys.items.len) |i| {
         const chunkKey = state.map.activeChunkKeys.items[i];
-        try tickSingleChunk(chunkKey, state);
+        try tickSingleChunk(chunkKey, 0, state);
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
@@ -439,7 +444,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.activeChunkSplitIndex[threadNumber] <= state.activeChunkAllowedIndex) {
             if (splitKeys.items.len <= state.activeChunkAllowedIndex) break;
-            try tickSingleChunk(splitKeys.items[state.activeChunkAllowedIndex], state);
+            try tickSingleChunk(splitKeys.items[state.activeChunkAllowedIndex], threadNumber, state);
             state.activeChunkSplitIndex[threadNumber] += 1;
         } else {
             std.Thread.sleep(1000);
@@ -447,11 +452,11 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     }
 }
 
-fn tickSingleChunk(chunkKey: u64, state: *ChatSimState) !void {
+fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !void {
     if (chunkKey == 0) return;
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
-    try Citizen.citizensTick(chunk, state);
+    try Citizen.citizensTick(chunk, threadIndex, state);
     try Citizen.citizensMoveTick(chunk, state);
     codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
 
@@ -555,7 +560,9 @@ pub fn destroyGameState(state: *ChatSimState) void {
     state.allocator.free(state.activeChunksThreadSplit);
     state.allocator.free(state.activeChunkSplitIndex);
 
-    pathfindingZig.destoryPathfindingData(&state.pathfindingData);
+    for (0..state.cpuCount) |i| {
+        pathfindingZig.destoryPathfindingData(&state.threadData[i].pathfindingTempData);
+    }
     inputZig.destory(state);
     codePerformanceZig.destroy(state);
 

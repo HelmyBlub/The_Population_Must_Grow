@@ -75,7 +75,7 @@ pub fn tick(state: *main.ChatSimState) !void {
                         _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(data), state);
                     },
                     .buildHouse => |data| {
-                        _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, true, true);
+                        _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, true, true, 0);
                     },
                     .buildTreeArea => |data| {
                         state.currentBuildType = mapZig.BUILD_TYPE_TREE_FARM;

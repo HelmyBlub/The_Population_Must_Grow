@@ -6,7 +6,7 @@ const fontVulkanZig = @import("vulkan/fontVulkan.zig");
 
 const PATHFINDING_DEBUG = false;
 
-pub const PathfindingData = struct {
+pub const PathfindingTempData = struct {
     openSet: std.ArrayList(Node),
     cameFrom: std.HashMap(*ChunkGraphRectangle, *ChunkGraphRectangle, ChunkGraphRectangleContext, 80),
     gScore: std.AutoHashMap(*ChunkGraphRectangle, i32),
@@ -96,7 +96,7 @@ pub fn createChunkData(chunkXY: mapZig.ChunkXY, allocator: std.mem.Allocator, st
     return result;
 }
 
-pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, state: *main.ChatSimState) !void {
+pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, threadIndex: usize, state: *main.ChatSimState) !void {
     if (pathingType == mapZig.PathingType.blocking) {
         const chunkXYRectangles = getChunksOfRectangle(rectangle);
 
@@ -106,7 +106,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 if (PATHFINDING_DEBUG) std.debug.print("start change graph\n", .{});
                 if (PATHFINDING_DEBUG) std.debug.print("    placed blocking rectangle: {}\n", .{chunkXYRectangle});
-                const pathingIndexForGraphRectangleIndexes = try getPathingIndexesForUniqueGraphRectanglesOfRectangle(chunkXYRectangle, chunk, state);
+                const pathingIndexForGraphRectangleIndexes = try getPathingIndexesForUniqueGraphRectanglesOfRectangle(chunkXYRectangle, chunk, threadIndex, state);
                 for (pathingIndexForGraphRectangleIndexes) |pathingIndex| {
                     if (chunk.pathingData.pathingData[pathingIndex]) |graphIndex| {
                         const graphTileRectangle = chunk.pathingData.graphRectangles.items[graphIndex].tileRectangle;
@@ -277,12 +277,12 @@ fn getOverlappingRectangle(rect1: mapZig.MapTileRectangle, rect2: mapZig.MapTile
     };
 }
 
-fn getPathingIndexesForUniqueGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, state: *main.ChatSimState) ![]usize {
-    state.pathfindingData.tempUsizeList.clearRetainingCapacity();
-    state.pathfindingData.tempUsizeList2.clearRetainingCapacity();
+fn getPathingIndexesForUniqueGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) ![]usize {
+    state.threadData[threadIndex].pathfindingTempData.tempUsizeList.clearRetainingCapacity();
+    state.threadData[threadIndex].pathfindingTempData.tempUsizeList2.clearRetainingCapacity();
 
-    var graphRecIndexes = &state.pathfindingData.tempUsizeList;
-    var result = &state.pathfindingData.tempUsizeList2;
+    var graphRecIndexes = &state.threadData[threadIndex].pathfindingTempData.tempUsizeList;
+    var result = &state.threadData[threadIndex].pathfindingTempData.tempUsizeList2;
     for (0..rectangle.columnCount) |x| {
         for (0..rectangle.rowCount) |y| {
             const pathingIndex = getPathingIndexForTileXY(.{
@@ -769,8 +769,8 @@ fn createAjdacentTileRectangle(adjacentTile: mapZig.TileXY, i: usize, graphRecta
     };
 }
 
-pub fn createPathfindingData(allocator: std.mem.Allocator) !PathfindingData {
-    return PathfindingData{
+pub fn createPathfindingData(allocator: std.mem.Allocator) !PathfindingTempData {
+    return PathfindingTempData{
         .openSet = std.ArrayList(Node).init(allocator),
         .cameFrom = std.HashMap(*ChunkGraphRectangle, *ChunkGraphRectangle, ChunkGraphRectangleContext, 80).init(allocator),
         .gScore = std.AutoHashMap(*ChunkGraphRectangle, i32).init(allocator),
@@ -787,7 +787,7 @@ pub fn destoryChunkData(pathingData: *PathfindingChunkData) void {
     pathingData.graphRectangles.deinit();
 }
 
-pub fn destoryPathfindingData(data: *PathfindingData) void {
+pub fn destoryPathfindingData(data: *PathfindingTempData) void {
     data.cameFrom.deinit();
     data.gScore.deinit();
     data.openSet.deinit();
@@ -860,6 +860,7 @@ fn reconstructPath(
 pub fn pathfindAStar(
     goalTile: mapZig.TileXY,
     citizen: *main.Citizen,
+    threadIndex: usize,
     state: *main.ChatSimState,
 ) !bool {
     const startTile = mapZig.mapPositionToTileXy(citizen.position);
@@ -871,13 +872,13 @@ pub fn pathfindAStar(
         if (PATHFINDING_DEBUG) std.debug.print("goal on blocking tile {}\n", .{goalTile});
         return false;
     }
-    var openSet = &state.pathfindingData.openSet;
+    var openSet = &state.threadData[threadIndex].pathfindingTempData.openSet;
     openSet.clearRetainingCapacity();
-    var cameFrom = &state.pathfindingData.cameFrom;
+    var cameFrom = &state.threadData[threadIndex].pathfindingTempData.cameFrom;
     cameFrom.clearRetainingCapacity();
-    var gScore = &state.pathfindingData.gScore;
+    var gScore = &state.threadData[threadIndex].pathfindingTempData.gScore;
     gScore.clearRetainingCapacity();
-    var neighbors = &state.pathfindingData.neighbors;
+    var neighbors = &state.threadData[threadIndex].pathfindingTempData.neighbors;
     var startRecData = try getChunkGraphRectangleIndexForTileXY(startTile, state);
     if (startRecData == null) {
         if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY - 1 }, state)) |topOfStart| {
