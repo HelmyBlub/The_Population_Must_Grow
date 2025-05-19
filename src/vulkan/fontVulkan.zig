@@ -100,6 +100,7 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         }
         try codePerformanceZig.paintData(state, offsetY);
     }
+    try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
 }
 
 /// returns vulkan surface width of text

@@ -62,7 +62,7 @@ pub fn executePerfromanceTest() !void {
     const timePassed = std.time.microTimestamp() - startTime;
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(&state);
-    std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
+    std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
 
 pub fn tick(state: *main.ChatSimState) !void {

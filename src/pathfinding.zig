@@ -521,7 +521,8 @@ fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.
         }
         for (graphRectForMergeCheck.connectionIndexes.items) |conData| {
             if (mergeIndex == conData.index and conData.chunkKey == chunkKey) continue;
-            const connectionGraphRectangle = &chunk.pathingData.graphRectangles.items[conData.index];
+            const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
+            const connectionGraphRectangle = &conChunk.pathingData.graphRectangles.items[conData.index];
             for (connectionGraphRectangle.connectionIndexes.items, 0..) |mergedToCon, mergeToIndexIndex| {
                 if (mergedToCon.index == graphRectForMergeCheck.index and mergedToCon.chunkKey == graphRectForMergeCheck.chunkKey) {
                     if (!connectionsIndexesContains(connectionGraphRectangle.connectionIndexes.items, .{ .index = mergeIndex, .chunkKey = chunkKey })) {
@@ -682,7 +683,7 @@ fn swapRemoveGraphIndex(toRemoveGraph: GraphConnection, state: *main.ChatSimStat
         const connectedChunk = state.map.chunks.getPtr(newAtConData.chunkKey).?;
         const connectedGraph = &connectedChunk.pathingData.graphRectangles.items[newAtConData.index];
         for (connectedGraph.connectionIndexes.items, 0..) |checkConData, i| {
-            if (newAtConData.index == checkConData.index and newAtConData.chunkKey == checkConData.chunkKey) {
+            if (oldIndex == checkConData.index and newAtIndex.chunkKey == checkConData.chunkKey) {
                 connectedGraph.connectionIndexes.items[i] = toRemoveGraph;
                 if (PATHFINDING_DEBUG) {
                     std.debug.print("       updated connection in rec {} from {} to {}. ", .{ connectedGraph.index, oldIndex, toRemoveGraph });
@@ -928,7 +929,7 @@ pub fn pathfindAStar(
         for (current.rectangle.connectionIndexes.items) |conData| {
             const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
             if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
-                if (PATHFINDING_DEBUG) std.debug.print("beforePathfinding crash: {}, {}", .{ current.rectangle.tileRectangle, current.rectangle.index });
+                std.debug.print("beforePathfinding crash: {}, {}", .{ current.rectangle.tileRectangle, current.rectangle.index });
             }
             const neighborGraph = &conChunk.pathingData.graphRectangles.items[conData.index];
             const neighborMiddle = mapZig.getTileRectangleMiddlePosition(neighborGraph.tileRectangle);
@@ -1014,9 +1015,9 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
     const connectionRectangleColor = [_]f32{ 0, 0, 1 };
     const visibleChunks = mapZig.getTopLeftVisibleChunkXY(state);
 
-    for (0..visibleChunks.rows) |row| {
-        for (0..visibleChunks.columns) |column| {
-            const chunkXY: mapZig.ChunkXY = .{ .chunkX = row + visibleChunks.left, .chunkY = column + visibleChunks.top };
+    mainLoop: for (0..visibleChunks.rows + 2) |row| {
+        for (0..visibleChunks.columns + 2) |column| {
+            const chunkXY: mapZig.ChunkXY = .{ .chunkX = @as(i32, @intCast(row)) + visibleChunks.left, .chunkY = @as(i32, @intCast(column)) + visibleChunks.top };
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
             for (chunk.pathingData.graphRectangles.items) |rectangle| {
                 const topLeftVulkan = mapZig.mapTileXyToVulkanSurfacePosition(rectangle.tileRectangle.topLeftTileXY, state.camera);
@@ -1035,9 +1036,10 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
                 state.vkState.rectangle.verticeCount += recVertCount;
                 for (rectangle.connectionIndexes.items) |conData| {
                     const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
-                    if (state.vkState.rectangle.verticeCount + 6 >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break;
+                    if (state.vkState.rectangle.verticeCount + 6 >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
                     if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
-                        std.debug.print("beforeCrash: {}, {}\n", .{ rectangle.tileRectangle, rectangle.index });
+                        std.debug.print("beforeCrash: {}, {}, {}, {}\n", .{ rectangle.tileRectangle, rectangle.index, rectangle.chunkKey, conData.chunkKey });
+                        continue;
                     }
                     const conRect = conChunk.pathingData.graphRectangles.items[conData.index].tileRectangle;
                     var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
@@ -1083,11 +1085,14 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
                     state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction - 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
                     state.vkState.rectangle.verticeCount += 6;
                 }
-                if (state.vkState.rectangle.verticeCount + recVertCount >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break;
+                if (state.vkState.rectangle.verticeCount + recVertCount >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
             }
         }
     }
+}
 
+pub fn paintDebugPathfindingVisualizationFont(state: *main.ChatSimState) !void {
+    if (!PATHFINDING_DEBUG) return;
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(state.camera.position, state);
     for (chunk.pathingData.pathingData, 0..) |optGraphIndex, i| {
         if (optGraphIndex) |graphIndex| {
