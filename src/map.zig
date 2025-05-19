@@ -849,10 +849,16 @@ pub fn getKeyForChunkXY(chunkXY: ChunkXY) u64 {
 }
 
 pub fn getChunkXyForKey(chunkKey: u64) ChunkXY {
-    return .{
+    var tempChunkXY: ChunkXY = .{
         .chunkX = @divFloor(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
         .chunkY = @mod(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
     };
+
+    if (tempChunkXY.chunkY > GameMap.MAX_CHUNKS_ROWS_COLUMNS / 2) {
+        tempChunkXY.chunkY -= GameMap.MAX_CHUNKS_ROWS_COLUMNS;
+        tempChunkXY.chunkX += 1;
+    }
+    return tempChunkXY;
 }
 
 pub fn getChunkXyForPosition(position: main.Position) ChunkXY {
