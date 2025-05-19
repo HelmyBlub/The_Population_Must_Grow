@@ -1,5 +1,14 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
+    - continue: check error message index out of bounds
+    - update code for multi thread 
+        - pathfinding 
+            - data structure PathfindingData fit to chunks and tempData for each thread
+        - citizenCounter: u32 = 0,
+        - citizenCounterLastTick: u32 = 0,
+        - citizensPerMinuteCounter: f32 = 0,            
+        - activeChunkKeys
+
     - tick chunks far away from each other, so they can not interfere
         - continue: got a "unreachable code" error which i don't undestand. Threading still pretty slow
         - algorithm to split active chunks into multiple arrays for each thread/core

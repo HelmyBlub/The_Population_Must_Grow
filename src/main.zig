@@ -388,40 +388,40 @@ fn tick(state: *ChatSimState) !void {
     try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
 
-    var maxIndex: usize = 0;
-    for (0..state.activeChunkSplitIndex.len) |i| {
-        state.activeChunkSplitIndex[i] = 0;
-    }
-    state.activeChunkAllowedIndex = 0;
-    var threads: []?std.Thread = try state.allocator.alloc(?std.Thread, state.cpuCount);
-    defer state.allocator.free(threads);
-    for (state.activeChunksThreadSplit, 0..) |split, index| {
-        threads[index] = try std.Thread.spawn(.{}, tickThreadChunks, .{ index, state });
-        if (maxIndex < split.items.len) maxIndex = split.items.len;
-    }
-    while (true) {
-        var chunksDone = true;
-        for (0..state.cpuCount) |index| {
-            if (state.activeChunksThreadSplit[index].items.len > state.activeChunkAllowedIndex and state.activeChunkSplitIndex[index] <= state.activeChunkAllowedIndex) {
-                chunksDone = false;
-                break;
-            }
-        }
-        if (chunksDone) {
-            state.activeChunkAllowedIndex += 1;
-            if (state.activeChunkAllowedIndex >= maxIndex) break;
-        }
-    }
-    for (threads) |optThread| {
-        if (optThread) |thread| {
-            thread.join();
-        }
-    }
-
-    // for (0..state.map.activeChunkKeys.items.len) |i| {
-    //     const chunkKey = state.map.activeChunkKeys.items[i];
-    //     try tickSingleChunk(chunkKey, state);
+    // var maxIndex: usize = 0;
+    // for (0..state.activeChunkSplitIndex.len) |i| {
+    //     state.activeChunkSplitIndex[i] = 0;
     // }
+    // state.activeChunkAllowedIndex = 0;
+    // var threads: []?std.Thread = try state.allocator.alloc(?std.Thread, state.cpuCount);
+    // defer state.allocator.free(threads);
+    // for (state.activeChunksThreadSplit, 0..) |split, index| {
+    //     threads[index] = try std.Thread.spawn(.{}, tickThreadChunks, .{ index, state });
+    //     if (maxIndex < split.items.len) maxIndex = split.items.len;
+    // }
+    // while (true) {
+    //     var chunksDone = true;
+    //     for (0..state.cpuCount) |index| {
+    //         if (state.activeChunksThreadSplit[index].items.len > state.activeChunkAllowedIndex and state.activeChunkSplitIndex[index] <= state.activeChunkAllowedIndex) {
+    //             chunksDone = false;
+    //             break;
+    //         }
+    //     }
+    //     if (chunksDone) {
+    //         state.activeChunkAllowedIndex += 1;
+    //         if (state.activeChunkAllowedIndex >= maxIndex) break;
+    //     }
+    // }
+    // for (threads) |optThread| {
+    //     if (optThread) |thread| {
+    //         thread.join();
+    //     }
+    // }
+
+    for (0..state.map.activeChunkKeys.items.len) |i| {
+        const chunkKey = state.map.activeChunkKeys.items[i];
+        try tickSingleChunk(chunkKey, state);
+    }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
         const citizenChange: f32 = (@as(f32, @floatFromInt(state.citizenCounter)) - @as(f32, @floatFromInt(state.citizenCounterLastTick))) * 60.0 * 60.0 / updateTickInterval;
@@ -449,7 +449,6 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
 
 fn tickSingleChunk(chunkKey: u64, state: *ChatSimState) !void {
     if (chunkKey == 0) return;
-    try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
     try Citizen.citizensTick(chunk, state);
