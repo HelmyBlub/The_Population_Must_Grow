@@ -1,12 +1,15 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
+    - check out how to set thread to sleep and wake them up
+        - currently thread creating might take a lot of cpu time. Maybe better to create once.
+
+    - check thread active chunks setup to ensure distance between following indexes. With this i can better let threads run and would be blocking less
+
     - update code for multi thread 
-        - pathfinding 
-            - data structure PathfindingData fit to chunks and tempData for each thread
+        - activeChunkKeys
         - citizenCounter: u32 = 0,
         - citizenCounterLastTick: u32 = 0,
         - citizensPerMinuteCounter: f32 = 0,            
-        - activeChunkKeys
 
     - tick chunks far away from each other, so they can not interfere
         - continue: got a "unreachable code" error which i don't undestand. Threading still pretty slow
@@ -41,6 +44,7 @@ Some data:
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 143, citizens: 33112, gameTime: 338112, end FPS: 90.19086 (pathfinding code change for multi thread -> graph data)
 - FPS: 143, citizens: 33064, gameTime: 337904, end FPS: 89.50953 (pathfinding -> temp data)
+- FPS: 113, citizens: 24814, gameTime: 309088, end FPS: 90.7173 (multi thread v1)
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
   FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)

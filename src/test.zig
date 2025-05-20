@@ -62,6 +62,13 @@ pub fn executePerfromanceTest() !void {
     const timePassed = std.time.microTimestamp() - startTime;
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(&state);
+    for (0..state.cpuCount) |i| {
+        var count: usize = 0;
+        for (state.activeChunksThreadSplit[i].items) |item| {
+            if (item != 0) count += 1;
+        }
+        std.debug.print("list {}: {any}\n", .{ i, count });
+    }
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
 

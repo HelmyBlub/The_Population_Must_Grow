@@ -51,6 +51,7 @@ pub const ChatSimState: type = struct {
 
 pub const ThreadData = struct {
     pathfindingTempData: pathfindingZig.PathfindingTempData,
+    thread: ?std.Thread = null,
 };
 
 pub const MouseInfo = struct {
@@ -93,29 +94,31 @@ test "test measure performance" {
     try testZig.executePerfromanceTest();
 }
 
-test "temp split active chunks" {
-    const test_allocator = std.testing.allocator;
-    var activeChunks = std.ArrayList(u64).init(test_allocator);
-    defer activeChunks.deinit();
-    for (0..20) |i| {
-        const x: i32 = @intCast(i);
-        try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 0 }));
-        try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 1 }));
-    }
-    const cpuCount = 4;
-    var chunkSplits = try test_allocator.alloc(std.ArrayList(u64), cpuCount);
-    for (0..cpuCount) |i| {
-        chunkSplits[i] = std.ArrayList(u64).init(test_allocator);
-    }
+// test "temp split active chunks" {
+//     const test_allocator = std.testing.allocator;
+//     var activeChunks = std.ArrayList(u64).init(test_allocator);
+//     defer activeChunks.deinit();
+//     for (0..20) |i| {
+//         const x: i32 = @intCast(i);
+//         try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 0 }));
+//         try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = -1 }));
+//         try activeChunks.append(mapZig.getKeyForChunkXY(.{ .chunkX = x, .chunkY = 1 }));
+//     }
+//     const cpuCount = 4;
+//     var chunkSplits = try test_allocator.alloc(std.ArrayList(u64), cpuCount);
+//     for (0..cpuCount) |i| {
+//         chunkSplits[i] = std.ArrayList(u64).init(test_allocator);
+//     }
 
-    try splitActiveChunksForThreads(activeChunks, chunkSplits);
+//     try splitActiveChunksForThreads(activeChunks, chunkSplits);
 
-    for (0..cpuCount) |i| {
-        std.debug.print("list {}: {any}\n", .{ i, chunkSplits[i].items });
-        chunkSplits[i].deinit();
-    }
-    test_allocator.free(chunkSplits);
-}
+//     for (0..cpuCount) |i| {
+//         std.debug.print("list {}: {any}\n", .{ i, chunkSplits[i].items });
+//         chunkSplits[i].deinit();
+//     }
+
+//     test_allocator.free(chunkSplits);
+// }
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
@@ -158,12 +161,15 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .random = prng,
         .cpuCount = std.Thread.getCpuCount() catch 1,
     };
+    state.cpuCount = 3;
     state.activeChunksThreadSplit = try allocator.alloc(std.ArrayList(u64), state.cpuCount);
     state.activeChunkSplitIndex = try allocator.alloc(usize, state.cpuCount);
     state.threadData = try allocator.alloc(ThreadData, state.cpuCount);
     for (0..state.cpuCount) |i| {
         state.threadData[i].pathfindingTempData = try pathfindingZig.createPathfindingData(allocator);
+        state.threadData[i].thread = null;
         state.activeChunksThreadSplit[i] = std.ArrayList(u64).init(allocator);
+        state.activeChunkSplitIndex[i] = 1;
     }
     try codePerformanceZig.init(state);
     try mapZig.createSpawnChunk(allocator, state);
@@ -345,7 +351,7 @@ pub fn splitActiveChunksForThreads(activeChunks: std.ArrayList(u64), activeChunk
     }
     const placeHolder: u64 = 0;
     var highestFreeIndex: usize = 0;
-    const minDistance = 6;
+    const minDistance = 12;
     main: for (activeChunks.items) |chunkKey| {
         const chunkXY = mapZig.getChunkXyForKey(chunkKey);
         for (0..(highestFreeIndex + 1)) |indexHeight| {
@@ -393,39 +399,43 @@ fn tick(state: *ChatSimState) !void {
     try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
 
-    // var maxIndex: usize = 0;
-    // for (0..state.activeChunkSplitIndex.len) |i| {
-    //     state.activeChunkSplitIndex[i] = 0;
-    // }
-    // state.activeChunkAllowedIndex = 0;
-    // var threads: []?std.Thread = try state.allocator.alloc(?std.Thread, state.cpuCount);
-    // defer state.allocator.free(threads);
-    // for (state.activeChunksThreadSplit, 0..) |split, index| {
-    //     threads[index] = try std.Thread.spawn(.{}, tickThreadChunks, .{ index, state });
-    //     if (maxIndex < split.items.len) maxIndex = split.items.len;
-    // }
-    // while (true) {
-    //     var chunksDone = true;
-    //     for (0..state.cpuCount) |index| {
-    //         if (state.activeChunksThreadSplit[index].items.len > state.activeChunkAllowedIndex and state.activeChunkSplitIndex[index] <= state.activeChunkAllowedIndex) {
-    //             chunksDone = false;
-    //             break;
-    //         }
-    //     }
-    //     if (chunksDone) {
-    //         state.activeChunkAllowedIndex += 1;
-    //         if (state.activeChunkAllowedIndex >= maxIndex) break;
-    //     }
-    // }
-    // for (threads) |optThread| {
-    //     if (optThread) |thread| {
-    //         thread.join();
-    //     }
-    // }
+    var maxIndex: usize = 0;
 
-    for (0..state.map.activeChunkKeys.items.len) |i| {
-        const chunkKey = state.map.activeChunkKeys.items[i];
-        try tickSingleChunk(chunkKey, 0, state);
+    var threadsWithDataCount: usize = 0;
+    for (state.activeChunksThreadSplit, 0..) |split, i| {
+        if (maxIndex < split.items.len) maxIndex = split.items.len;
+        if (split.items.len > 0) {
+            threadsWithDataCount += 1;
+            if (state.threadData[i].thread == null) {
+                state.threadData[i].thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
+                std.debug.print("spawned thread {}", .{i});
+            }
+        }
+    }
+    const singleCore = threadsWithDataCount <= 1;
+    if (singleCore) {
+        for (0..state.map.activeChunkKeys.items.len) |i| {
+            const chunkKey = state.map.activeChunkKeys.items[i];
+            try tickSingleChunk(chunkKey, 0, state);
+        }
+    } else {
+        state.activeChunkAllowedIndex = 0;
+        for (0..state.activeChunkSplitIndex.len) |i| {
+            state.activeChunkSplitIndex[i] = 0;
+        }
+        while (true) {
+            var chunksDone = true;
+            for (0..state.cpuCount) |index| {
+                if (state.activeChunksThreadSplit[index].items.len > state.activeChunkAllowedIndex and state.activeChunkSplitIndex[index] <= state.activeChunkAllowedIndex) {
+                    chunksDone = false;
+                    break;
+                }
+            }
+            if (chunksDone) {
+                state.activeChunkAllowedIndex += 1;
+                if (state.activeChunkAllowedIndex >= maxIndex) break;
+            }
+        }
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
@@ -440,14 +450,20 @@ fn tick(state: *ChatSimState) !void {
 }
 
 fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
-    const splitKeys = state.activeChunksThreadSplit[threadNumber];
     while (true) {
+        if (state.gameEnd) return;
+        const splitKeys = state.activeChunksThreadSplit[threadNumber];
         if (state.activeChunkSplitIndex[threadNumber] <= state.activeChunkAllowedIndex) {
-            if (splitKeys.items.len <= state.activeChunkAllowedIndex) break;
+            if (splitKeys.items.len <= state.activeChunkAllowedIndex) {
+                try std.Thread.yield();
+                // std.Thread.sleep(100_000);
+                continue;
+            }
             try tickSingleChunk(splitKeys.items[state.activeChunkAllowedIndex], threadNumber, state);
             state.activeChunkSplitIndex[threadNumber] += 1;
         } else {
-            std.Thread.sleep(1000);
+            try std.Thread.yield();
+            // std.Thread.sleep(100_000);
         }
     }
 }
