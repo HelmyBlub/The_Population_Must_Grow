@@ -1,5 +1,6 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
+
     - check thread active chunks setup to ensure distance between following indexes. With this i can better let threads run and would be blocking less
     - use main thread for ticking or only for syncing?
         - currently do cpuCount -1. Is not affective.
@@ -45,7 +46,8 @@ Some data:
 - FPS: 134, citizens: 30135, gameTime: 328736, end FPS: 105.05234 (multi thread distance 3 + main thread yield)
 - FPS: 149, citizens: 34337, gameTime: 343456, end FPS: 93.454384 (multi thread distance 3 + main thread does work)
 - FPS: 149, citizens: 34328, gameTime: 343424, end FPS: 94.42623 (multi thread distance 2 + main thread does work)
-  
+- FPS: 141, citizens: 36124, gameTime: 336208, end FPS: 82.15755 (test build distnace 15, VALIDATION_CHUNK_DISTANCE = 9m single cpu)
+- FPS: 141, citizens: 36000, gameTime: 335792, end FPS: 80.47307 (distance 15, VALIDATION_CHUNK_DISTANCE = 7 , split: 361, 135)
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
   FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)

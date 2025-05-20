@@ -67,22 +67,16 @@ pub const Citizen: type = struct {
         for (0..chunk.citizens.items.len) |i| {
             if (chunk.citizens.unusedCapacitySlice().len < 16) try chunk.citizens.ensureUnusedCapacity(32);
             const citizen: *Citizen = &chunk.citizens.items[i];
-            try codePerformanceZig.startMeasure("   foodTick", &state.codePerformanceData);
             try foodTick(citizen, state);
-            codePerformanceZig.endMeasure("   foodTick", &state.codePerformanceData);
-            try codePerformanceZig.startMeasure("   thinkTick", &state.codePerformanceData);
             try thinkTick(citizen, threadIndex, state);
-            codePerformanceZig.endMeasure("   thinkTick", &state.codePerformanceData);
         }
     }
 
-    pub fn citizensMoveTick(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
-        try codePerformanceZig.startMeasure("   move", &state.codePerformanceData);
+    pub fn citizensMoveTick(chunk: *mapZig.MapChunk) !void {
         for (0..chunk.citizens.items.len) |i| {
             const citizen: *Citizen = &chunk.citizens.items[i];
             citizenMove(citizen);
         }
-        codePerformanceZig.endMeasure("   move", &state.codePerformanceData);
     }
 
     pub fn moveToPosition(self: *Citizen, target: main.Position, threadIndex: usize, state: *main.ChatSimState) !void {
@@ -92,7 +86,6 @@ pub const Citizen: type = struct {
             // no pathfinding or moving required
             return;
         }
-        try codePerformanceZig.startMeasure("   pathfind", &state.codePerformanceData);
         const goal = mapZig.mapPositionToTileXy(target);
         const foundPath = try main.pathfindingZig.pathfindAStar(goal, self, threadIndex, state);
         if (!foundPath) {
@@ -105,7 +98,6 @@ pub const Citizen: type = struct {
             self.directionY = @sin(direction);
             calculateMoveSpeed(self);
         }
-        codePerformanceZig.endMeasure("   pathfind", &state.codePerformanceData);
     }
 
     pub fn citizenMove(citizen: *Citizen) void {

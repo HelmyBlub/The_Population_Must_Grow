@@ -53,8 +53,9 @@ pub const ChatSimState: type = struct {
 pub const ThreadData = struct {
     pathfindingTempData: pathfindingZig.PathfindingTempData,
     thread: ?std.Thread = null,
+    splitIndexCounter: usize = 0,
     pub const CHUNKKEY_PLACEHOLDER = 0;
-    pub const VALIDATION_CHUNK_DISTANCE = 2;
+    pub const VALIDATION_CHUNK_DISTANCE = 7;
 };
 
 pub const MouseInfo = struct {
@@ -129,6 +130,11 @@ test "temp split active chunks" {
         .random = undefined,
         .cpuCount = cpuCount,
     };
+    state.threadData = try test_allocator.alloc(ThreadData, state.cpuCount);
+    defer test_allocator.free(state.threadData);
+    for (0..state.cpuCount) |i| {
+        state.threadData[i] = .{ .pathfindingTempData = undefined };
+    }
     try splitActiveChunksForThreads(activeChunks, chunkSplits, &state);
 
     for (0..cpuCount) |i| {
@@ -181,13 +187,12 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .random = prng,
         .cpuCount = std.Thread.getCpuCount() catch 1,
     };
-    if (state.cpuCount > 1) state.cpuCount -= 1;
+    state.cpuCount = 2;
     state.activeChunksThreadSplit = try allocator.alloc(std.ArrayList(u64), state.cpuCount);
     state.activeChunkSplitIndex = try allocator.alloc(usize, state.cpuCount);
     state.threadData = try allocator.alloc(ThreadData, state.cpuCount);
     for (0..state.cpuCount) |i| {
-        state.threadData[i].pathfindingTempData = try pathfindingZig.createPathfindingData(allocator);
-        state.threadData[i].thread = null;
+        state.threadData[i] = .{ .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator) };
         state.activeChunksThreadSplit[i] = std.ArrayList(u64).init(allocator);
         state.activeChunkSplitIndex[i] = 1;
     }
@@ -399,13 +404,16 @@ pub fn addActiveChunkForThreads(newActiveChunkKey: u64, activeChunksSplits: []st
                 const splitPtr = &activeChunksSplits[availableSplitIndex.?];
                 if (splitPtr.items.len == indexHeight) {
                     try splitPtr.append(newActiveChunkKey);
+                    state.threadData[availableSplitIndex.?].splitIndexCounter += 1;
                     if (state.activeChunksThreadSplitLongest <= indexHeight) state.activeChunksThreadSplitLongest = indexHeight + 1;
                 } else if (splitPtr.items.len > indexHeight) {
                     splitPtr.items[indexHeight] = newActiveChunkKey;
+                    state.threadData[availableSplitIndex.?].splitIndexCounter += 1;
                 } else {
                     while (splitPtr.items.len < indexHeight) {
                         try splitPtr.append(ThreadData.CHUNKKEY_PLACEHOLDER);
                     }
+                    state.threadData[availableSplitIndex.?].splitIndexCounter += 1;
                     try splitPtr.append(newActiveChunkKey);
                 }
                 return;
@@ -437,7 +445,7 @@ fn tick(state: *ChatSimState) !void {
         if (maxIndex < split.items.len) maxIndex = split.items.len;
         if (split.items.len > 0) {
             if (state.threadData[i].thread == null and i > 0) {
-                nonMainThreadsDataCount += split.items.len;
+                nonMainThreadsDataCount += state.threadData[i].splitIndexCounter;
                 state.threadData[i].thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
                 std.debug.print("spawned thread {}", .{i});
             }
@@ -478,7 +486,7 @@ fn tick(state: *ChatSimState) !void {
                 state.activeChunkAllowedIndex += 1;
                 if (checkDoneIndex >= maxIndex) break;
             }
-            try std.Thread.yield();
+            // try std.Thread.yield();
         }
     }
     const updateTickInterval = 10;
@@ -518,7 +526,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
     try Citizen.citizensTick(chunk, threadIndex, state);
-    try Citizen.citizensMoveTick(chunk, state);
+    try Citizen.citizensMoveTick(chunk);
     codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
@@ -600,6 +608,11 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {
+    for (state.threadData) |threadData| {
+        if (threadData.thread) |thread| {
+            thread.join();
+        }
+    }
     soundMixerZig.destroySoundMixer(state);
     try destroyPaintVulkanAndWindowSdl(state);
     var iterator = state.map.chunks.valueIterator();

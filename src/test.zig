@@ -133,7 +133,7 @@ fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 9 }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
 
     //copy paste entire city block
-    for (1..13) |distance| {
+    for (1..15) |distance| {
         for (0..(distance * 2)) |pos| {
             const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);
             const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));

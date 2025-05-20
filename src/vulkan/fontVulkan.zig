@@ -98,6 +98,11 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             _ = try paintNumber(@intFromFloat(state.gameSpeed), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
+        for (state.threadData) |thread| {
+            const textWidth = paintText("SplitLen ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            _ = try paintNumber(@intCast(thread.splitIndexCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            offsetY += onePixelYInVulkan * performanceFontSize;
+        }
         try codePerformanceZig.paintData(state, offsetY);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
