@@ -67,7 +67,8 @@ pub fn executePerfromanceTest() !void {
         for (state.activeChunksThreadSplit[i].items) |item| {
             if (item != 0) count += 1;
         }
-        std.debug.print("list {}: {any}\n", .{ i, count });
+        std.debug.print("list {}: {d}\n", .{ i, count });
+        std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
     }
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }

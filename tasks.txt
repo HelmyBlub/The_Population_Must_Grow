@@ -1,20 +1,15 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
-    - check out how to set thread to sleep and wake them up
-        - currently thread creating might take a lot of cpu time. Maybe better to create once.
-
     - check thread active chunks setup to ensure distance between following indexes. With this i can better let threads run and would be blocking less
+    - use main thread for ticking or only for syncing?
+        - currently do cpuCount -1. Is not affective.
+    - check how to idle threads, should not use 100% cpu time when idle,
 
     - update code for multi thread 
         - activeChunkKeys
         - citizenCounter: u32 = 0,
         - citizenCounterLastTick: u32 = 0,
         - citizensPerMinuteCounter: f32 = 0,            
-
-    - tick chunks far away from each other, so they can not interfere
-        - continue: got a "unreachable code" error which i don't undestand. Threading still pretty slow
-        - algorithm to split active chunks into multiple arrays for each thread/core
-        - how efficient is thread spawn and join?
 
     - threads gets chunks assigned
     - handle memory access from one chunk to another. Mutex? atomic? something different?
@@ -44,7 +39,13 @@ Some data:
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 143, citizens: 33112, gameTime: 338112, end FPS: 90.19086 (pathfinding code change for multi thread -> graph data)
 - FPS: 143, citizens: 33064, gameTime: 337904, end FPS: 89.50953 (pathfinding -> temp data)
-- FPS: 113, citizens: 24814, gameTime: 309088, end FPS: 90.7173 (multi thread v1)
+- FPS: 121, citizens: 26536, gameTime: 316928, end FPS: 102.67611 (multi thread v1)
+- FPS: 129, citizens: 28759, gameTime: 324768, end FPS: 105.86641 (multi thread distance 2)
+- FPS: 127, citizens: 28328, gameTime: 322384, end FPS: 95.96992 (multi thread distance 3)
+- FPS: 134, citizens: 30135, gameTime: 328736, end FPS: 105.05234 (multi thread distance 3 + main thread yield)
+- FPS: 149, citizens: 34337, gameTime: 343456, end FPS: 93.454384 (multi thread distance 3 + main thread does work)
+- FPS: 149, citizens: 34328, gameTime: 343424, end FPS: 94.42623 (multi thread distance 2 + main thread does work)
+  
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
   FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)
