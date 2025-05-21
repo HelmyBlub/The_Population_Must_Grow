@@ -522,9 +522,9 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
     return true;
 }
 
-pub fn placeCitizen(citizen: main.Citizen, state: *main.ChatSimState) !void {
+pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
-    state.citizenCounter += 1;
+    state.threadData[threadIndex].citizensAddedThisTick += 1;
     try chunk.citizens.append(citizen);
     try addTickPosition(chunk.chunkXY, state);
 }
@@ -598,7 +598,7 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
         var newCitizen = main.Citizen.createCitizen(state.allocator);
         newCitizen.position = building.position;
         newCitizen.homePosition = newCitizen.position;
-        try placeCitizen(newCitizen, state);
+        try placeCitizen(newCitizen, threadIndex, state);
         building.citizensSpawned += 1;
     } else if (building.type == BUILDING_TYPE_BIG_HOUSE) {
         if (building.woodRequired == 0) {
@@ -610,7 +610,7 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
                 var newCitizen = main.Citizen.createCitizen(state.allocator);
                 newCitizen.position = building.position;
                 newCitizen.homePosition = newCitizen.position;
-                try placeCitizen(newCitizen, state);
+                try placeCitizen(newCitizen, threadIndex, state);
                 building.citizensSpawned += 1;
             }
         }

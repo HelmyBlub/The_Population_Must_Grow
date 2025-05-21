@@ -13,6 +13,7 @@ const TestActionType = enum {
     copyPaste,
     changeGameSpeed,
     spawnFinishedHouseWithCitizen,
+    endGame,
 };
 
 const TestActionData = union(TestActionType) {
@@ -24,6 +25,7 @@ const TestActionData = union(TestActionType) {
     copyPaste: CopyPasteData,
     changeGameSpeed: f32,
     spawnFinishedHouseWithCitizen: main.Position,
+    endGame,
 };
 
 const CopyPasteData = struct {
@@ -71,8 +73,10 @@ pub fn executePerfromanceTest() !void {
             if (item != 0) count += 1;
         }
         std.debug.print("list {}: {d}\n", .{ i, count });
-        std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
+        // std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
     }
+    std.debug.print("idleTime {}\n", .{state.threadData[0].averageIdleTicks});
+
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
 
@@ -111,6 +115,9 @@ pub fn tick(state: *main.ChatSimState) !void {
                         if (try mapZig.getBuildingOnPosition(data, state)) |building| {
                             try mapZig.finishBuilding(building, 0, state);
                         }
+                    },
+                    .endGame => {
+                        state.gameEnd = true;
                     },
                 }
                 testData.currenTestInputIndex += 1;
@@ -255,6 +262,7 @@ fn setupTestInputsXAreas(testData: *TestData) !void {
         }
     }
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
+    try testData.testInputs.append(.{ .data = .endGame, .executeTime = 300_000 });
 }
 
 fn tileToPos(tileX: i32, tileY: i32) main.Position {

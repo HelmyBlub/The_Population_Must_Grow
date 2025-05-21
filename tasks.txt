@@ -1,6 +1,8 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
     - problem: multi thread not faster than single cpu, why?
+        - continue: have test case where speed gain matches. Now slowly building up code to work with arbitrary test cases. 
+            -Current active chunk split would crash normal game
     - idea: make test case where 2 citizens start at different locations which and make one thread do one side completly
         - compare single cpu to multi thread. So best case scenario two check what can be achieved. Maybe there is another bottleneck
 
@@ -34,25 +36,32 @@ tasks:
 Some data:
 - FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (16.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 143, citizens: 33112, gameTime: 338112, end FPS: 90.19086 (pathfinding code change for multi thread -> graph data)
-- FPS: 143, citizens: 33064, gameTime: 337904, end FPS: 89.50953 (pathfinding -> temp data)
-- FPS: 121, citizens: 26536, gameTime: 316928, end FPS: 102.67611 (multi thread v1)
-- FPS: 129, citizens: 28759, gameTime: 324768, end FPS: 105.86641 (multi thread distance 2)
-- FPS: 127, citizens: 28328, gameTime: 322384, end FPS: 95.96992 (multi thread distance 3)
-- FPS: 134, citizens: 30135, gameTime: 328736, end FPS: 105.05234 (multi thread distance 3 + main thread yield)
-- FPS: 149, citizens: 34337, gameTime: 343456, end FPS: 93.454384 (multi thread distance 3 + main thread does work)
-- FPS: 149, citizens: 34328, gameTime: 343424, end FPS: 94.42623 (multi thread distance 2 + main thread does work)
 
-- FPS: 141, citizens: 36124, gameTime: 336208, end FPS: 82.15755 (test build distnace 15, VALIDATION_CHUNK_DISTANCE = 9m single cpu)
-- FPS: 125, citizens: 30245, gameTime: 320176, end FPS: 79.98819 (distance 15, VALIDATION_CHUNK_DISTANCE = 5 , split: 420, 120)
-- FPS: 132, citizens: 32875, gameTime: 327440, end FPS: 81.14966 (removed thread.yield, distance 15, VALIDATION_CHUNK_DISTANCE = 5 , split: 420, 120)
-- FPS: 139, citizens: 35314, gameTime: 333552, end FPS: 79.64963 (single core using multithread code)
-- FPS: 135, citizens: 33672, gameTime: 329744, end FPS: 82.06653 (count up earlier when placeholder)
-- FPS: 133, citizens: 33363, gameTime: 328320, end FPS: 84.23951
-- FPS: 135, citizens: 33651, gameTime: 329984, end FPS: 85.55455
+new test case: two areas far apart, stop test on 300_000 ingame time
+- FPS: 133, citizens: 33932, gameTime: 300000, end FPS: 88.795555 (single cpu)
+- FPS: 187, citizens: 33891, gameTime: 300000, end FPS: 141.98601 (multi thread)
+- FPS: 184, citizens: 33894, gameTime: 300000, end FPS: 135.90143  (idle time:  402007)
+    - idle time fps loss: 7
+- FPS: 166, citizens: 33885, gameTime: 300000, end FPS: 127.27491 (main thread waits)    
+- FPS: 126, citizens: 33937, gameTime: 300000, end FPS: 92.18444 (other threads waits)
+- FPS: 140, citizens: 33917, gameTime: 300000, end FPS: 103.089615 (VALIDATION_CHUNK_DISTANCE = 5)
+- FPS: 155, citizens: 33885, gameTime: 300000, end FPS: 115.60401  (VALIDATION_CHUNK_DISTANCE = 20)
+- FPS: 158, citizens: 33965, gameTime: 300000, end FPS: 119.683014 (VALIDATION_CHUNK_DISTANCE = 30)
+- FPS: 161, citizens: 33915, gameTime: 300000, end FPS: 121.9074   (VALIDATION_CHUNK_DISTANCE = 40)
+- FPS: 170, citizens: 33943, gameTime: 300000, end FPS: 130.28503  (VALIDATION_CHUNK_DISTANCE = 50)
+- FPS: 179, citizens: 33879, gameTime: 300000, end FPS: 135.15602  (VALIDATION_CHUNK_DISTANCE = 60) 
+- FPS: 178, citizens: 33932, gameTime: 300000, end FPS: 134.18103  (VALIDATION_CHUNK_DISTANCE = 100)
 
-new test case: two areas far apart
-- FPS: 117, citizens: 37978, gameTime: 312592, end FPS: 88.12497 (current multi thread code)
+- (10*10) rectangle 
+    - keep distance 10x10
+
+- 20x20 = 400
+
+- FPS: 164, citizens: 33963, gameTime: 300000, end FPS: 122.46056  (VALIDATION_CHUNK_DISTANCE = 20, main thread now also considers it)
+- FPS: 139, citizens: 33909, gameTime: 300000, end FPS: 102.88702 (VALIDATION_CHUNK_DISTANCE = 5)
+
+80% of totlal frame is ticking. best case two threads with 40%. 100% - 40% => 60%. time per frame reduced by 40% => fps increase by fps/0.6 => 88 / 0.6 => 147 fps
+1000 / 136 => 7.4 milliSeconds per tick. i lose ~0.4 milli seconds per tick  5.4% => 
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

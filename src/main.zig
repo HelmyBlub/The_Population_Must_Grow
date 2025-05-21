@@ -56,11 +56,12 @@ pub const ThreadData = struct {
     thread: ?std.Thread = null,
     splitIndexCounter: usize = 0,
     tickedCitizenCounter: usize = 0,
-    idleTicks: usize = 0,
-    averageIdleTicks: usize = 0,
+    idleTicks: u64 = 0,
+    averageIdleTicks: u64 = 0,
     finishedTick: bool = true,
+    citizensAddedThisTick: u32 = 0,
     pub const CHUNKKEY_PLACEHOLDER = 0;
-    pub const VALIDATION_CHUNK_DISTANCE = 5;
+    pub const VALIDATION_CHUNK_DISTANCE = 40;
 };
 
 pub const MouseInfo = struct {
@@ -377,6 +378,15 @@ pub fn mainLoop(state: *ChatSimState) !void {
 
 pub fn addActiveChunkForThreads(newActiveChunkKey: u64, activeChunksSplits: []std.ArrayList(u64), state: *ChatSimState) !void {
     const chunkXY = mapZig.getChunkXyForKey(newActiveChunkKey);
+    if (chunkXY.chunkX < 35) {
+        try activeChunksSplits[0].append(newActiveChunkKey);
+        state.threadData[0].splitIndexCounter += 1;
+    } else {
+        try activeChunksSplits[1].append(newActiveChunkKey);
+        state.threadData[1].splitIndexCounter += 1;
+    }
+
+    if (true) return;
     const minDistance = 12;
     for (0..(state.activeChunksThreadSplitLongest + ThreadData.VALIDATION_CHUNK_DISTANCE)) |indexHeight| {
         var availableSplitIndex: ?usize = null;
@@ -462,7 +472,9 @@ fn tick(state: *ChatSimState) !void {
     const singleCore = nonMainThreadsDataCount <= 100;
     state.wasSingleCore = singleCore;
     if (singleCore) {
+        state.citizenCounter += state.threadData[0].citizensAddedThisTick;
         state.threadData[0].tickedCitizenCounter = 0;
+        state.threadData[0].citizensAddedThisTick = 0;
         for (0..state.map.activeChunkKeys.items.len) |i| {
             const chunkKey = state.map.activeChunkKeys.items[i];
             try tickSingleChunk(chunkKey, 0, state);
@@ -473,40 +485,36 @@ fn tick(state: *ChatSimState) !void {
             const threadData = &state.threadData[i];
             try state.activeChunksThreadSplit[i].ensureUnusedCapacity(50);
             threadData.tickedCitizenCounter = 0;
+            state.citizenCounter += threadData.citizensAddedThisTick;
+            threadData.citizensAddedThisTick = 0;
             threadData.averageIdleTicks = @divFloor(threadData.averageIdleTicks * 255 + threadData.idleTicks, 256);
-            threadData.idleTicks = 0;
             state.activeChunkSplitIndex[i] = 0;
             threadData.finishedTick = false;
         }
+        const splitKeys = state.activeChunksThreadSplit[0];
         while (true) {
             if (state.gameEnd) break;
-
-            const splitKeys = state.activeChunksThreadSplit[0];
-            const threadsSplitIndex = state.activeChunkSplitIndex[0];
-            if (threadsSplitIndex <= state.activeChunkAllowedIndex) {
-                if (splitKeys.items.len > threadsSplitIndex) {
-                    try tickSingleChunk(splitKeys.items[threadsSplitIndex], 0, state);
-                    state.activeChunkSplitIndex[0] += 1;
-                } else {
-                    state.threadData[0].finishedTick = true;
-                }
-            } else {
-                state.threadData[0].idleTicks += 1;
+            if (state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1 >= state.activeChunkSplitIndex[0]) {
+                try tickSingleChunk(splitKeys.items[state.activeChunkSplitIndex[0]], 0, state);
+                state.activeChunkSplitIndex[0] += 1;
+                if (state.activeChunkSplitIndex[0] >= splitKeys.items.len) break;
             }
-
-            var chunksDone = true;
-            const checkDoneIndex = state.activeChunkAllowedIndex -| (ThreadData.VALIDATION_CHUNK_DISTANCE - 1);
-            for (0..state.cpuCount) |index| {
-                if (!state.threadData[index].finishedTick and state.activeChunkSplitIndex[index] <= checkDoneIndex) {
-                    chunksDone = false;
-                    break;
+            var minIndex = state.activeChunkSplitIndex[0];
+            for (1..state.cpuCount) |i| {
+                if (state.activeChunkSplitIndex[i] < minIndex and !state.threadData[i].finishedTick) {
+                    minIndex = state.activeChunkSplitIndex[i];
                 }
             }
-            if (chunksDone) {
-                state.activeChunkAllowedIndex += 1;
-                if (checkDoneIndex >= maxIndex) break;
+            state.activeChunkAllowedIndex = minIndex;
+        }
+        const startWaitTime = std.time.nanoTimestamp();
+        for (1..state.cpuCount) |i| {
+            while (!state.threadData[i].finishedTick) {
+                if (state.gameEnd) break;
+                //waiting
             }
         }
+        state.threadData[0].idleTicks = @intCast(std.time.nanoTimestamp() - startWaitTime);
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
@@ -524,26 +532,23 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.gameEnd) return;
         if (!state.threadData[threadNumber].finishedTick) {
-            inner: while (true) {
+            const splitKeys = state.activeChunksThreadSplit[threadNumber];
+            var index: usize = 0;
+            main: while (true) {
                 if (state.gameEnd) return;
-                const splitKeys = state.activeChunksThreadSplit[threadNumber];
-                const threadsSplitIndex = state.activeChunkSplitIndex[threadNumber];
-                if (threadsSplitIndex <= state.activeChunkAllowedIndex) {
-                    if (splitKeys.items.len <= threadsSplitIndex) {
-                        // try std.Thread.yield();
-                        // std.Thread.sleep(100_000);
-                        state.threadData[threadNumber].finishedTick = true;
-                        break :inner;
-                    } else {
-                        try tickSingleChunk(splitKeys.items[threadsSplitIndex], threadNumber, state);
-                        state.activeChunkSplitIndex[threadNumber] += 1;
-                    }
-                } else if (splitKeys.items.len > threadsSplitIndex and splitKeys.items[threadsSplitIndex] == ThreadData.CHUNKKEY_PLACEHOLDER) {
+                var allowedTicks: i32 = @as(i32, @intCast(state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1)) - @as(i32, @intCast(index));
+                while (allowedTicks < 0) {
+                    //wait
+                    allowedTicks = @as(i32, @intCast(state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1)) - @as(i32, @intCast(index));
+                }
+                for (0..@intCast(allowedTicks + 1)) |_| {
                     state.activeChunkSplitIndex[threadNumber] += 1;
-                } else {
-                    state.threadData[threadNumber].idleTicks += 1;
+                    try tickSingleChunk(splitKeys.items[index], threadNumber, state);
+                    index += 1;
+                    if (index >= splitKeys.items.len) break :main;
                 }
             }
+            state.threadData[threadNumber].finishedTick = true;
         }
     }
 }
