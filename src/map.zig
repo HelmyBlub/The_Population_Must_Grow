@@ -587,6 +587,36 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     return true;
 }
 
+pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.ChatSimState) !void {
+    building.constructionStartedTime = null;
+    building.woodRequired -= 1;
+    if (building.type == BUILDING_TYPE_HOUSE) {
+        building.inConstruction = false;
+        building.imageIndex = imageZig.IMAGE_HOUSE;
+        const buildRectangle = get1x1RectangleFromPosition(building.position);
+        try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.blocking, threadIndex, state);
+        var newCitizen = main.Citizen.createCitizen(state.allocator);
+        newCitizen.position = building.position;
+        newCitizen.homePosition = newCitizen.position;
+        try placeCitizen(newCitizen, state);
+        building.citizensSpawned += 1;
+    } else if (building.type == BUILDING_TYPE_BIG_HOUSE) {
+        if (building.woodRequired == 0) {
+            building.inConstruction = false;
+            building.imageIndex = imageZig.IMAGE_BIG_HOUSE;
+            const buildRectangle = getBigBuildingRectangle(building.position);
+            try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.blocking, threadIndex, state);
+            while (building.citizensSpawned < 8) {
+                var newCitizen = main.Citizen.createCitizen(state.allocator);
+                newCitizen.position = building.position;
+                newCitizen.homePosition = newCitizen.position;
+                try placeCitizen(newCitizen, state);
+                building.citizensSpawned += 1;
+            }
+        }
+    }
+}
+
 fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.ChatSimState) !bool {
     var checkCorners = [_]TileXY{
         .{

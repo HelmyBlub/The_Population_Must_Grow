@@ -12,6 +12,7 @@ const TestActionType = enum {
     buildPotatoFarmArea,
     copyPaste,
     changeGameSpeed,
+    spawnFinishedHouseWithCitizen,
 };
 
 const TestActionData = union(TestActionType) {
@@ -22,6 +23,7 @@ const TestActionData = union(TestActionType) {
     buildPotatoFarmArea: mapZig.MapTileRectangle,
     copyPaste: CopyPasteData,
     changeGameSpeed: f32,
+    spawnFinishedHouseWithCitizen: main.Position,
 };
 
 const CopyPasteData = struct {
@@ -55,7 +57,8 @@ pub fn executePerfromanceTest() !void {
     state.gameSpeed = 1;
     testData.testInputs = std.ArrayList(TestInput).init(state.allocator);
     defer testData.testInputs.deinit();
-    try setupTestInputs(testData);
+    // try setupTestInputs(testData);
+    try setupTestInputsXAreas(testData);
 
     const startTime = std.time.microTimestamp();
     try main.mainLoop(&state);
@@ -102,6 +105,12 @@ pub fn tick(state: *main.ChatSimState) !void {
                     },
                     .changeGameSpeed => |data| {
                         state.gameSpeed = data;
+                    },
+                    .spawnFinishedHouseWithCitizen => |data| {
+                        _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, false, true, 0);
+                        if (try mapZig.getBuildingOnPosition(data, state)) |building| {
+                            try mapZig.finishBuilding(building, 0, state);
+                        }
                     },
                 }
                 testData.currenTestInputIndex += 1;
@@ -172,58 +181,80 @@ fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
 }
 
-fn setupTestInputsJustPath(testData: *TestData) !void {
-    //city block
-    for (0..11) |counter| {
-        const x: i32 = @intCast(counter);
-        try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(x, 1) }, .executeTime = 0 });
+fn setupTestInputsXAreas(testData: *TestData) !void {
+    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
+    const centerTileXYs = [_]mapZig.TileXY{
+        .{ .tileX = 0, .tileY = 0 },
+        .{ .tileX = 1000, .tileY = 0 },
+    };
+    for (centerTileXYs, 0..) |tileXY, index| {
+        if (index == 0) continue;
+        try testData.testInputs.append(.{ .data = .{ .spawnFinishedHouseWithCitizen = tileToPos(tileXY.tileX, tileXY.tileY) }, .executeTime = 0 });
     }
-    for (0..13) |counter| {
-        try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
-            .from = .{ .tileX = 0, .tileY = 1 },
-            .to = .{ .tileX = 0, .tileY = @intCast(counter + 2) },
-            .columns = 11,
-            .rows = 1,
-        } }, .executeTime = 0 });
+    //city block
+    for (centerTileXYs) |tileXY| {
+        for (0..10) |counter| {
+            const x: i32 = @intCast(counter);
+            try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(x + tileXY.tileX, 1 + tileXY.tileY) }, .executeTime = 0 });
+            try testData.testInputs.append(.{ .data = .{ .buildHouse = tileToPos(x + tileXY.tileX, 0 + tileXY.tileY) }, .executeTime = 0 });
+        }
+        for (0..13) |counter| {
+            const y: i32 = @as(i32, @intCast(counter)) - 2;
+            try testData.testInputs.append(.{ .data = .{ .buildPath = tileToPos(10 + tileXY.tileX, y + tileXY.tileY) }, .executeTime = 0 });
+        }
+    }
+    for (centerTileXYs) |tileXY| {
+        try testData.testInputs.append(.{ .data = .{ .buildTreeArea = .{ .topLeftTileXY = .{ .tileX = 0 + tileXY.tileX, .tileY = -2 + tileXY.tileY }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 30_000 });
+        try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0 + tileXY.tileX, .tileY = -1 + tileXY.tileY }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 30_000 });
+        try testData.testInputs.append(.{ .data = .{ .buildHouseArea = .{ .topLeftTileXY = .{ .tileX = 0 + tileXY.tileX, .tileY = 2 + tileXY.tileY }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 30_000 });
+        try testData.testInputs.append(.{ .data = .{ .copyPaste = .{ .from = .{ .tileX = 0 + tileXY.tileX, .tileY = 0 + tileXY.tileY }, .to = .{ .tileX = 0 + tileXY.tileX, .tileY = 3 + tileXY.tileY }, .columns = 10, .rows = 3 } }, .executeTime = 30_000 });
+        try testData.testInputs.append(.{ .data = .{ .copyPaste = .{ .from = .{ .tileX = 0 + tileXY.tileX, .tileY = 0 + tileXY.tileY }, .to = .{ .tileX = 0 + tileXY.tileX, .tileY = 6 + tileXY.tileY }, .columns = 10, .rows = 3 } }, .executeTime = 30_000 });
+    }
+    for (centerTileXYs) |tileXY| {
+        try testData.testInputs.append(.{ .data = .{ .buildTreeArea = .{ .topLeftTileXY = .{ .tileX = 0 + tileXY.tileX, .tileY = 10 + tileXY.tileY }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
+        try testData.testInputs.append(.{ .data = .{ .buildPotatoFarmArea = .{ .topLeftTileXY = .{ .tileX = 0 + tileXY.tileX, .tileY = 9 + tileXY.tileY }, .columnCount = 10, .rowCount = 1 } }, .executeTime = 60_000 });
     }
 
     //copy paste entire city block
-    for (1..13) |distance| {
-        for (0..(distance * 2)) |pos| {
-            const executeTime: u32 = @intCast(5_000 + distance * 2_000 + pos * 20);
-            const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));
-            var toOffset2: i32 = -@as(i32, @intCast(distance));
-            //left
-            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
-                .from = .{ .tileX = 0, .tileY = 1 },
-                .to = .{ .tileX = toOffset2 * 11, .tileY = toOffset1 * 13 + 1 },
-                .columns = 11,
-                .rows = 13,
-            } }, .executeTime = executeTime });
-            // top
-            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
-                .from = .{ .tileX = 0, .tileY = 1 },
-                .to = .{ .tileX = (toOffset1 + 1) * 11, .tileY = toOffset2 * 13 + 1 },
-                .columns = 11,
-                .rows = 13,
-            } }, .executeTime = executeTime });
-            //right
-            toOffset2 = -toOffset2;
-            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
-                .from = .{ .tileX = 0, .tileY = 1 },
-                .to = .{ .tileX = toOffset2 * 11, .tileY = (toOffset1 + 1) * 13 + 1 },
-                .columns = 11,
-                .rows = 13,
-            } }, .executeTime = executeTime });
-            //bottom
-            try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
-                .from = .{ .tileX = 0, .tileY = 1 },
-                .to = .{ .tileX = toOffset1 * 11, .tileY = toOffset2 * 13 + 1 },
-                .columns = 11,
-                .rows = 13,
-            } }, .executeTime = executeTime });
+    for (1..10) |distance| {
+        for (centerTileXYs) |tileXY| {
+            for (0..(distance * 2)) |pos| {
+                const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);
+                const toOffset1: i32 = -@as(i32, @intCast(distance)) + @as(i32, @intCast(pos));
+                var toOffset2: i32 = -@as(i32, @intCast(distance));
+                //left
+                try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                    .from = .{ .tileX = 0, .tileY = -2 },
+                    .to = .{ .tileX = toOffset2 * 11 + tileXY.tileX, .tileY = toOffset1 * 13 - 2 + tileXY.tileY },
+                    .columns = 11,
+                    .rows = 13,
+                } }, .executeTime = executeTime });
+                // top
+                try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                    .from = .{ .tileX = 0, .tileY = -2 },
+                    .to = .{ .tileX = (toOffset1 + 1) * 11 + tileXY.tileX, .tileY = toOffset2 * 13 - 2 + tileXY.tileY },
+                    .columns = 11,
+                    .rows = 13,
+                } }, .executeTime = executeTime });
+                //right
+                toOffset2 = -toOffset2;
+                try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                    .from = .{ .tileX = 0, .tileY = -2 },
+                    .to = .{ .tileX = toOffset2 * 11 + tileXY.tileX, .tileY = (toOffset1 + 1) * 13 - 2 + tileXY.tileY },
+                    .columns = 11,
+                    .rows = 13,
+                } }, .executeTime = executeTime });
+                //bottom
+                try testData.testInputs.append(.{ .data = .{ .copyPaste = .{
+                    .from = .{ .tileX = 0, .tileY = -2 },
+                    .to = .{ .tileX = toOffset1 * 11 + tileXY.tileX, .tileY = toOffset2 * 13 - 2 + tileXY.tileY },
+                    .columns = 11,
+                    .rows = 13,
+                } }, .executeTime = executeTime });
+            }
         }
     }
+    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
 }
 
 fn tileToPos(tileX: i32, tileY: i32) main.Position {

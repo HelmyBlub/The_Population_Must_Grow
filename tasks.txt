@@ -30,9 +30,6 @@ tasks:
     - save game progress?
     - put on steam
 
-- lean more vulkan?
-    - go over docu? https://docs.vulkan.org/spec/latest/index.html
-        - this docu somehow hard do understand for me. Unsure in what cases it helps or if i need more knowledge first
   
 Some data:
 - FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (16.05.2025)
@@ -54,8 +51,8 @@ Some data:
 - FPS: 133, citizens: 33363, gameTime: 328320, end FPS: 84.23951
 - FPS: 135, citizens: 33651, gameTime: 329984, end FPS: 85.55455
 
-- fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
-  FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)
+new test case: two areas far apart
+- FPS: 117, citizens: 37978, gameTime: 312592, end FPS: 88.12497 (current multi thread code)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

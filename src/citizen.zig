@@ -364,33 +364,7 @@ fn buildingFinished(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimS
     if (try mapZig.getBuildingOnPosition(citizen.buildingPosition.?, state)) |building| {
         citizen.hasWood = false;
         citizen.buildingPosition = null;
-        building.constructionStartedTime = null;
-        building.woodRequired -= 1;
-        if (building.type == mapZig.BUILDING_TYPE_HOUSE) {
-            building.inConstruction = false;
-            building.imageIndex = imageZig.IMAGE_HOUSE;
-            const buildRectangle = mapZig.get1x1RectangleFromPosition(building.position);
-            try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, threadIndex, state);
-            var newCitizen = main.Citizen.createCitizen(state.allocator);
-            newCitizen.position = building.position;
-            newCitizen.homePosition = newCitizen.position;
-            try mapZig.placeCitizen(newCitizen, state);
-            building.citizensSpawned += 1;
-        } else if (building.type == mapZig.BUILDING_TYPE_BIG_HOUSE) {
-            if (building.woodRequired == 0) {
-                building.inConstruction = false;
-                building.imageIndex = imageZig.IMAGE_BIG_HOUSE;
-                const buildRectangle = mapZig.getBigBuildingRectangle(building.position);
-                try main.pathfindingZig.changePathingDataRectangle(buildRectangle, mapZig.PathingType.blocking, threadIndex, state);
-                while (building.citizensSpawned < 8) {
-                    var newCitizen = main.Citizen.createCitizen(state.allocator);
-                    newCitizen.position = building.position;
-                    newCitizen.homePosition = newCitizen.position;
-                    try mapZig.placeCitizen(newCitizen, state);
-                    building.citizensSpawned += 1;
-                }
-            }
-        }
+        try mapZig.finishBuilding(building, threadIndex, state);
         try nextThinkingAction(citizen, state);
     } else {
         citizen.hasWood = false;
