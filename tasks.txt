@@ -1,9 +1,11 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
+    - problem: multi thread not faster than single cpu, why?
+    - idea: make test case where 2 citizens start at different locations which and make one thread do one side completly
+        - compare single cpu to multi thread. So best case scenario two check what can be achieved. Maybe there is another bottleneck
 
-    - check thread active chunks setup to ensure distance between following indexes. With this i can better let threads run and would be blocking less
-    - use main thread for ticking or only for syncing?
-        - currently do cpuCount -1. Is not affective.
+    - differnt idea: assign chunk rectangle areas to threads
+
     - check how to idle threads, should not use 100% cpu time when idle,
 
     - update code for multi thread 
@@ -11,9 +13,6 @@ tasks:
         - citizenCounter: u32 = 0,
         - citizenCounterLastTick: u32 = 0,
         - citizensPerMinuteCounter: f32 = 0,            
-
-    - threads gets chunks assigned
-    - handle memory access from one chunk to another. Mutex? atomic? something different?
     - vulkan data setup. Can it also be split to multiple cpus?
 
 
@@ -46,8 +45,14 @@ Some data:
 - FPS: 134, citizens: 30135, gameTime: 328736, end FPS: 105.05234 (multi thread distance 3 + main thread yield)
 - FPS: 149, citizens: 34337, gameTime: 343456, end FPS: 93.454384 (multi thread distance 3 + main thread does work)
 - FPS: 149, citizens: 34328, gameTime: 343424, end FPS: 94.42623 (multi thread distance 2 + main thread does work)
+
 - FPS: 141, citizens: 36124, gameTime: 336208, end FPS: 82.15755 (test build distnace 15, VALIDATION_CHUNK_DISTANCE = 9m single cpu)
-- FPS: 141, citizens: 36000, gameTime: 335792, end FPS: 80.47307 (distance 15, VALIDATION_CHUNK_DISTANCE = 7 , split: 361, 135)
+- FPS: 125, citizens: 30245, gameTime: 320176, end FPS: 79.98819 (distance 15, VALIDATION_CHUNK_DISTANCE = 5 , split: 420, 120)
+- FPS: 132, citizens: 32875, gameTime: 327440, end FPS: 81.14966 (removed thread.yield, distance 15, VALIDATION_CHUNK_DISTANCE = 5 , split: 420, 120)
+- FPS: 139, citizens: 35314, gameTime: 333552, end FPS: 79.64963 (single core using multithread code)
+- FPS: 135, citizens: 33672, gameTime: 329744, end FPS: 82.06653 (count up earlier when placeholder)
+- FPS: 133, citizens: 33363, gameTime: 328320, end FPS: 84.23951
+- FPS: 135, citizens: 33651, gameTime: 329984, end FPS: 85.55455
 
 - fps test case: normal test, on 25k citizens -> set speed to 1, show fps, zoom out max
   FPS: 157, citizens: 31177, gameTime: 330736, end FPS: 119.17211 (16.05.2025)

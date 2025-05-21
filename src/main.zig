@@ -48,14 +48,19 @@ pub const ChatSimState: type = struct {
     activeChunkSplitIndex: []usize = undefined,
     activeChunkAllowedIndex: usize = 0,
     activeChunksThreadSplitLongest: usize = 0,
+    wasSingleCore: bool = true,
 };
 
 pub const ThreadData = struct {
     pathfindingTempData: pathfindingZig.PathfindingTempData,
     thread: ?std.Thread = null,
     splitIndexCounter: usize = 0,
+    tickedCitizenCounter: usize = 0,
+    idleTicks: usize = 0,
+    averageIdleTicks: usize = 0,
+    finishedTick: bool = true,
     pub const CHUNKKEY_PLACEHOLDER = 0;
-    pub const VALIDATION_CHUNK_DISTANCE = 7;
+    pub const VALIDATION_CHUNK_DISTANCE = 5;
 };
 
 pub const MouseInfo = struct {
@@ -372,8 +377,8 @@ pub fn mainLoop(state: *ChatSimState) !void {
 
 pub fn addActiveChunkForThreads(newActiveChunkKey: u64, activeChunksSplits: []std.ArrayList(u64), state: *ChatSimState) !void {
     const chunkXY = mapZig.getChunkXyForKey(newActiveChunkKey);
-    const minDistance = 10;
-    for (0..(state.activeChunksThreadSplitLongest + 1)) |indexHeight| {
+    const minDistance = 12;
+    for (0..(state.activeChunksThreadSplitLongest + ThreadData.VALIDATION_CHUNK_DISTANCE)) |indexHeight| {
         var availableSplitIndex: ?usize = null;
         for (activeChunksSplits, 0..) |split, splitIndex| {
             if (split.items.len <= indexHeight or split.items[indexHeight] == ThreadData.CHUNKKEY_PLACEHOLDER) {
@@ -415,11 +420,13 @@ pub fn addActiveChunkForThreads(newActiveChunkKey: u64, activeChunksSplits: []st
                     }
                     state.threadData[availableSplitIndex.?].splitIndexCounter += 1;
                     try splitPtr.append(newActiveChunkKey);
+                    if (state.activeChunksThreadSplitLongest <= indexHeight) state.activeChunksThreadSplitLongest = indexHeight + 1;
                 }
                 return;
             }
         }
     }
+    std.debug.print("should not happen. {}\n", .{newActiveChunkKey});
 }
 
 pub fn splitActiveChunksForThreads(activeChunks: std.ArrayList(u64), activeChunksSplits: []std.ArrayList(u64), state: *ChatSimState) !void {
@@ -444,15 +451,18 @@ fn tick(state: *ChatSimState) !void {
     for (state.activeChunksThreadSplit, 0..) |split, i| {
         if (maxIndex < split.items.len) maxIndex = split.items.len;
         if (split.items.len > 0) {
-            if (state.threadData[i].thread == null and i > 0) {
+            if (i > 0) {
                 nonMainThreadsDataCount += state.threadData[i].splitIndexCounter;
-                state.threadData[i].thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
-                std.debug.print("spawned thread {}", .{i});
+                if (state.threadData[i].thread == null) {
+                    state.threadData[i].thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
+                }
             }
         }
     }
     const singleCore = nonMainThreadsDataCount <= 100;
+    state.wasSingleCore = singleCore;
     if (singleCore) {
+        state.threadData[0].tickedCitizenCounter = 0;
         for (0..state.map.activeChunkKeys.items.len) |i| {
             const chunkKey = state.map.activeChunkKeys.items[i];
             try tickSingleChunk(chunkKey, 0, state);
@@ -460,7 +470,13 @@ fn tick(state: *ChatSimState) !void {
     } else {
         state.activeChunkAllowedIndex = ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
         for (0..state.activeChunkSplitIndex.len) |i| {
+            const threadData = &state.threadData[i];
+            try state.activeChunksThreadSplit[i].ensureUnusedCapacity(50);
+            threadData.tickedCitizenCounter = 0;
+            threadData.averageIdleTicks = @divFloor(threadData.averageIdleTicks * 255 + threadData.idleTicks, 256);
+            threadData.idleTicks = 0;
             state.activeChunkSplitIndex[i] = 0;
+            threadData.finishedTick = false;
         }
         while (true) {
             if (state.gameEnd) break;
@@ -471,13 +487,17 @@ fn tick(state: *ChatSimState) !void {
                 if (splitKeys.items.len > threadsSplitIndex) {
                     try tickSingleChunk(splitKeys.items[threadsSplitIndex], 0, state);
                     state.activeChunkSplitIndex[0] += 1;
+                } else {
+                    state.threadData[0].finishedTick = true;
                 }
+            } else {
+                state.threadData[0].idleTicks += 1;
             }
 
             var chunksDone = true;
             const checkDoneIndex = state.activeChunkAllowedIndex -| (ThreadData.VALIDATION_CHUNK_DISTANCE - 1);
             for (0..state.cpuCount) |index| {
-                if (state.activeChunksThreadSplit[index].items.len > checkDoneIndex and state.activeChunkSplitIndex[index] <= checkDoneIndex) {
+                if (!state.threadData[index].finishedTick and state.activeChunkSplitIndex[index] <= checkDoneIndex) {
                     chunksDone = false;
                     break;
                 }
@@ -486,7 +506,6 @@ fn tick(state: *ChatSimState) !void {
                 state.activeChunkAllowedIndex += 1;
                 if (checkDoneIndex >= maxIndex) break;
             }
-            // try std.Thread.yield();
         }
     }
     const updateTickInterval = 10;
@@ -504,19 +523,27 @@ fn tick(state: *ChatSimState) !void {
 fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.gameEnd) return;
-        const splitKeys = state.activeChunksThreadSplit[threadNumber];
-        const threadsSplitIndex = state.activeChunkSplitIndex[threadNumber];
-        if (threadsSplitIndex <= state.activeChunkAllowedIndex) {
-            if (splitKeys.items.len <= threadsSplitIndex) {
-                try std.Thread.yield();
-                // std.Thread.sleep(100_000);
-                continue;
+        if (!state.threadData[threadNumber].finishedTick) {
+            inner: while (true) {
+                if (state.gameEnd) return;
+                const splitKeys = state.activeChunksThreadSplit[threadNumber];
+                const threadsSplitIndex = state.activeChunkSplitIndex[threadNumber];
+                if (threadsSplitIndex <= state.activeChunkAllowedIndex) {
+                    if (splitKeys.items.len <= threadsSplitIndex) {
+                        // try std.Thread.yield();
+                        // std.Thread.sleep(100_000);
+                        state.threadData[threadNumber].finishedTick = true;
+                        break :inner;
+                    } else {
+                        try tickSingleChunk(splitKeys.items[threadsSplitIndex], threadNumber, state);
+                        state.activeChunkSplitIndex[threadNumber] += 1;
+                    }
+                } else if (splitKeys.items.len > threadsSplitIndex and splitKeys.items[threadsSplitIndex] == ThreadData.CHUNKKEY_PLACEHOLDER) {
+                    state.activeChunkSplitIndex[threadNumber] += 1;
+                } else {
+                    state.threadData[threadNumber].idleTicks += 1;
+                }
             }
-            try tickSingleChunk(splitKeys.items[threadsSplitIndex], threadNumber, state);
-            state.activeChunkSplitIndex[threadNumber] += 1;
-        } else {
-            try std.Thread.yield();
-            // std.Thread.sleep(100_000);
         }
     }
 }
@@ -524,6 +551,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
 fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !void {
     if (chunkKey == ThreadData.CHUNKKEY_PLACEHOLDER) return;
     const chunk = state.map.chunks.getPtr(chunkKey).?;
+    state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
     try Citizen.citizensTick(chunk, threadIndex, state);
     try Citizen.citizensMoveTick(chunk);

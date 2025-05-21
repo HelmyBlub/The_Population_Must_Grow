@@ -99,10 +99,18 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         for (state.threadData) |thread| {
-            const textWidth = paintText("SplitLen ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            _ = try paintNumber(@intCast(thread.splitIndexCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            var textWidth = paintText("SplitLen ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@intCast(thread.splitIndexCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@intCast(thread.averageIdleTicks), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            _ = try paintNumber(@intCast(thread.tickedCitizenCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
+        const string: []const u8 = if (state.wasSingleCore) "singleCore" else "multiCore";
+        _ = paintText(string, .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        offsetY += onePixelYInVulkan * performanceFontSize;
+
         try codePerformanceZig.paintData(state, offsetY);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
