@@ -1,10 +1,9 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
     - problem: multi thread not faster than single cpu, why?
-    - test fast build if has same results.
-        - button to run test on run
-    - idea: make test case where 2 citizens start at different locations which and make one thread do one side completly
-        - compare single cpu to multi thread. So best case scenario two check what can be achieved. Maybe there is another bottleneck
+        - find algorithm that can tick through chunks with allowed distance ~64 without interfering
+            - continue: getNewActiveChunkKeyPosition, current path is VCD is 10. It need to be > 60
+
 
     - differnt idea: assign chunk rectangle areas to threads
 
@@ -38,13 +37,14 @@ Some data:
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
 new test case: two areas far apart, stop test on 300_000 ingame time
-- FPS: 133, citizens: 33932, gameTime: 300000, end FPS: 88.795555 (single cpu)
+- FPS: 134, citizens: 34082, gameTime: 300000, end FPS: 90.64396 (single cpu)
 - FPS: 187, citizens: 33891, gameTime: 300000, end FPS: 141.98601 (multi thread)
 - FPS: 184, citizens: 33894, gameTime: 300000, end FPS: 135.90143  (idle time:  402007)
     - idle time fps loss: 7
 - FPS: 166, citizens: 33885, gameTime: 300000, end FPS: 127.27491 (main thread waits)    
 - FPS: 126, citizens: 33937, gameTime: 300000, end FPS: 92.18444 (other threads waits)
 - FPS: 140, citizens: 33917, gameTime: 300000, end FPS: 103.089615 (VALIDATION_CHUNK_DISTANCE = 5)
+- FPS: 151, citizens: 34105, gameTime: 300000, end FPS: 111.9522   (VALIDATION_CHUNK_DISTANCE = 10)
 - FPS: 155, citizens: 33885, gameTime: 300000, end FPS: 115.60401  (VALIDATION_CHUNK_DISTANCE = 20)
 - FPS: 158, citizens: 33965, gameTime: 300000, end FPS: 119.683014 (VALIDATION_CHUNK_DISTANCE = 30)
 - FPS: 161, citizens: 33915, gameTime: 300000, end FPS: 121.9074   (VALIDATION_CHUNK_DISTANCE = 40)
