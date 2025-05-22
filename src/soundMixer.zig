@@ -15,7 +15,7 @@ pub const SoundMixer = struct {
     addedSoundDataUntilTimeMs: i64 = 0,
     soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
     soundsToPlay: std.ArrayList(SoundToPlay),
-    soundData: SoundData,
+    soundData: SoundData = undefined,
     countTreeFalling: u8 = 0,
     countWoodCut: u8 = 0,
     countHammer: u8 = 0,
@@ -48,14 +48,13 @@ pub const SoundData = struct {
     sounds: []SoundFile,
 };
 
-pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator) !SoundMixer {
-    var soundMixer: SoundMixer = .{
+pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator) !void {
+    state.soundMixer = .{
         .soundsToPlay = std.ArrayList(SoundToPlay).init(allocator),
         .soundsFutureQueue = std.ArrayList(FutureSoundToPlay).init(allocator),
-        .soundData = try initSounds(state, allocator),
     };
-    try soundMixer.soundsToPlay.ensureTotalCapacity(SoundMixer.MAX_SOUNDS_AT_ONCE);
-    return soundMixer;
+    state.soundMixer.soundData = try initSounds(state, allocator);
+    try state.soundMixer.soundsToPlay.ensureTotalCapacity(SoundMixer.MAX_SOUNDS_AT_ONCE);
 }
 
 pub fn destroySoundMixer(state: *main.ChatSimState) void {

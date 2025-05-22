@@ -1,8 +1,8 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
     - problem: multi thread not faster than single cpu, why?
-        - continue: have test case where speed gain matches. Now slowly building up code to work with arbitrary test cases. 
-            -Current active chunk split would crash normal game
+    - test fast build if has same results.
+        - button to run test on run
     - idea: make test case where 2 citizens start at different locations which and make one thread do one side completly
         - compare single cpu to multi thread. So best case scenario two check what can be achieved. Maybe there is another bottleneck
 
@@ -51,6 +51,13 @@ new test case: two areas far apart, stop test on 300_000 ingame time
 - FPS: 170, citizens: 33943, gameTime: 300000, end FPS: 130.28503  (VALIDATION_CHUNK_DISTANCE = 50)
 - FPS: 179, citizens: 33879, gameTime: 300000, end FPS: 135.15602  (VALIDATION_CHUNK_DISTANCE = 60) 
 - FPS: 178, citizens: 33932, gameTime: 300000, end FPS: 134.18103  (VALIDATION_CHUNK_DISTANCE = 100)
+- FPS: 177, citizens: 34129, gameTime: 300000, end FPS: 135.0821 (VALIDATION_CHUNK_DISTANCE = 40 and changed how allowedIndex is calculated)
+
+- FPS: 154, citizens: 90390, gameTime: 380000, end FPS: 63.69922 (change test case single core)
+- FPS: 169, citizens: 90920, gameTime: 380000, end FPS: 76.9345 (VCD 5)
+- FPS: 197, citizens: 90944, gameTime: 380000, end FPS: 87.79077 (VCD 50)
+- FPS: 212, citizens: 90378, gameTime: 380000, end FPS: 93.83144 (VCD 100)
+
 
 - (10*10) rectangle 
     - keep distance 10x10

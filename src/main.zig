@@ -61,7 +61,7 @@ pub const ThreadData = struct {
     finishedTick: bool = true,
     citizensAddedThisTick: u32 = 0,
     pub const CHUNKKEY_PLACEHOLDER = 0;
-    pub const VALIDATION_CHUNK_DISTANCE = 40;
+    pub const VALIDATION_CHUNK_DISTANCE = 50;
 };
 
 pub const MouseInfo = struct {
@@ -206,7 +206,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
-    state.soundMixer = try soundMixerZig.createSoundMixer(state, allocator);
+    try soundMixerZig.createSoundMixer(state, allocator);
     try inputZig.executeAction(inputZig.ActionType.buildPath, state);
 }
 
@@ -470,8 +470,8 @@ fn tick(state: *ChatSimState) !void {
         }
     }
     const singleCore = nonMainThreadsDataCount <= 100;
-    state.wasSingleCore = singleCore;
-    if (singleCore) {
+    if (singleCore or (state.testData != null and state.testData.?.forceSingleCore)) {
+        state.wasSingleCore = true;
         state.citizenCounter += state.threadData[0].citizensAddedThisTick;
         state.threadData[0].tickedCitizenCounter = 0;
         state.threadData[0].citizensAddedThisTick = 0;
@@ -480,6 +480,7 @@ fn tick(state: *ChatSimState) !void {
             try tickSingleChunk(chunkKey, 0, state);
         }
     } else {
+        state.wasSingleCore = false;
         state.activeChunkAllowedIndex = ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
         for (0..state.activeChunkSplitIndex.len) |i| {
             const threadData = &state.threadData[i];
@@ -493,6 +494,7 @@ fn tick(state: *ChatSimState) !void {
         }
         const splitKeys = state.activeChunksThreadSplit[0];
         while (true) {
+            state.threadData[0].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
             if (state.gameEnd) break;
             if (state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1 >= state.activeChunkSplitIndex[0]) {
                 try tickSingleChunk(splitKeys.items[state.activeChunkSplitIndex[0]], 0, state);
@@ -510,8 +512,18 @@ fn tick(state: *ChatSimState) !void {
         const startWaitTime = std.time.nanoTimestamp();
         for (1..state.cpuCount) |i| {
             while (!state.threadData[i].finishedTick) {
+                state.threadData[0].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) break;
                 //waiting
+                var minIndex: ?usize = null;
+                for (1..state.cpuCount) |j| {
+                    if (!state.threadData[j].finishedTick) {
+                        if (minIndex == null or state.activeChunkSplitIndex[j] < minIndex.?) {
+                            minIndex = state.activeChunkSplitIndex[j];
+                        }
+                    }
+                }
+                if (minIndex) |min| state.activeChunkAllowedIndex = min;
             }
         }
         state.threadData[0].idleTicks = @intCast(std.time.nanoTimestamp() - startWaitTime);
@@ -531,14 +543,19 @@ fn tick(state: *ChatSimState) !void {
 fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.gameEnd) return;
+        state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+
         if (!state.threadData[threadNumber].finishedTick) {
             const splitKeys = state.activeChunksThreadSplit[threadNumber];
             var index: usize = 0;
             main: while (true) {
+                state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) return;
                 var allowedTicks: i32 = @as(i32, @intCast(state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1)) - @as(i32, @intCast(index));
                 while (allowedTicks < 0) {
                     //wait
+                    state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+                    if (state.gameEnd) return;
                     allowedTicks = @as(i32, @intCast(state.activeChunkAllowedIndex + ThreadData.VALIDATION_CHUNK_DISTANCE - 1)) - @as(i32, @intCast(index));
                 }
                 for (0..@intCast(allowedTicks + 1)) |_| {
@@ -641,11 +658,13 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {
+    std.debug.print("started destory\n", .{});
     for (state.threadData) |threadData| {
         if (threadData.thread) |thread| {
             thread.join();
         }
     }
+    std.debug.print("threads joined\n", .{});
     soundMixerZig.destroySoundMixer(state);
     try destroyPaintVulkanAndWindowSdl(state);
     var iterator = state.map.chunks.valueIterator();
@@ -669,6 +688,9 @@ pub fn destroyGameState(state: *ChatSimState) void {
 
     for (0..state.cpuCount) |i| {
         pathfindingZig.destoryPathfindingData(&state.threadData[i].pathfindingTempData);
+    }
+    if (state.testData) |testData| {
+        testData.testInputs.deinit();
     }
     inputZig.destory(state);
     codePerformanceZig.destroy(state);

@@ -14,6 +14,7 @@ const TestActionType = enum {
     changeGameSpeed,
     spawnFinishedHouseWithCitizen,
     endGame,
+    restart,
 };
 
 const TestActionData = union(TestActionType) {
@@ -26,6 +27,7 @@ const TestActionData = union(TestActionType) {
     changeGameSpeed: f32,
     spawnFinishedHouseWithCitizen: main.Position,
     endGame,
+    restart,
 };
 
 const CopyPasteData = struct {
@@ -44,6 +46,8 @@ pub const TestData = struct {
     currenTestInputIndex: usize = 0,
     testInputs: std.ArrayList(TestInput) = undefined,
     fpsLimiter: bool = true,
+    testStartTimeMircoSeconds: i64,
+    forceSingleCore: bool = false,
 };
 
 pub fn executePerfromanceTest() !void {
@@ -53,31 +57,21 @@ pub fn executePerfromanceTest() !void {
     var state: main.ChatSimState = undefined;
     try main.createGameState(allocator, &state, 0);
     defer main.destroyGameState(&state);
-    state.testData = .{};
+    state.testData = createTestData(state.allocator);
     const testData = &state.testData.?;
-    testData.fpsLimiter = false;
     state.gameSpeed = 1;
-    testData.testInputs = std.ArrayList(TestInput).init(state.allocator);
-    defer testData.testInputs.deinit();
     // try setupTestInputs(testData);
     try setupTestInputsXAreas(testData);
 
-    const startTime = std.time.microTimestamp();
     try main.mainLoop(&state);
-    const timePassed = std.time.microTimestamp() - startTime;
-    const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
-    codePerformanceZig.printToConsole(&state);
-    for (0..state.cpuCount) |i| {
-        var count: usize = 0;
-        for (state.activeChunksThreadSplit[i].items) |item| {
-            if (item != 0) count += 1;
-        }
-        std.debug.print("list {}: {d}\n", .{ i, count });
-        // std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
-    }
-    std.debug.print("idleTime {}\n", .{state.threadData[0].averageIdleTicks});
+}
 
-    std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
+pub fn createTestData(allocator: std.mem.Allocator) TestData {
+    return .{
+        .testStartTimeMircoSeconds = std.time.microTimestamp(),
+        .fpsLimiter = false,
+        .testInputs = std.ArrayList(TestInput).init(allocator),
+    };
 }
 
 pub fn tick(state: *main.ChatSimState) !void {
@@ -117,7 +111,17 @@ pub fn tick(state: *main.ChatSimState) !void {
                         }
                     },
                     .endGame => {
+                        printTestEndData(state);
                         state.gameEnd = true;
+                    },
+                    .restart => {
+                        //not a real restart yet
+                        const spawnChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, state);
+                        const spawnCitizen = &spawnChunk.citizens.items[0];
+                        spawnCitizen.position.x = 0;
+                        spawnCitizen.position.y = 0;
+                        spawnCitizen.foodLevel = 1;
+                        state.gameTimeMs = 0;
                     },
                 }
                 testData.currenTestInputIndex += 1;
@@ -126,6 +130,23 @@ pub fn tick(state: *main.ChatSimState) !void {
             }
         }
     }
+}
+
+fn printTestEndData(state: *main.ChatSimState) void {
+    const timePassed = std.time.microTimestamp() - state.testData.?.testStartTimeMircoSeconds;
+    const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
+    codePerformanceZig.printToConsole(state);
+    for (0..state.cpuCount) |i| {
+        var count: usize = 0;
+        for (state.activeChunksThreadSplit[i].items) |item| {
+            if (item != 0) count += 1;
+        }
+        std.debug.print("list {}: {d}\n", .{ i, count });
+        // std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
+    }
+    std.debug.print("idleTime {}\n", .{state.threadData[0].averageIdleTicks});
+
+    std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }
 
 fn setupTestInputs(testData: *TestData) !void {
@@ -188,7 +209,8 @@ fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
 }
 
-fn setupTestInputsXAreas(testData: *TestData) !void {
+pub fn setupTestInputsXAreas(testData: *TestData) !void {
+    try testData.testInputs.append(.{ .data = .restart, .executeTime = 0 });
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
     const centerTileXYs = [_]mapZig.TileXY{
         .{ .tileX = 0, .tileY = 0 },

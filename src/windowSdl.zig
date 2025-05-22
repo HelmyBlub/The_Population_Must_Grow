@@ -12,6 +12,7 @@ const mapZig = @import("map.zig");
 const soundMixerZig = @import("soundMixer.zig");
 const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
 const imageZig = @import("image.zig");
+const testZig = @import("test.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -112,6 +113,17 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.keyboardInfo.cameraMoveY = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.keyboardInfo.cameraMoveY = 0;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F8) {
+                if (state.testData == null) {
+                    state.testData = testZig.createTestData(state.allocator);
+                    try testZig.setupTestInputsXAreas(&state.testData.?);
+                }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F9) {
+                if (state.testData == null) {
+                    state.testData = testZig.createTestData(state.allocator);
+                    state.testData.?.forceSingleCore = true;
+                    try testZig.setupTestInputsXAreas(&state.testData.?);
+                }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
                 state.gameSpeed *= 2;
                 if (state.gameSpeed > 64) state.gameSpeed = 64;
