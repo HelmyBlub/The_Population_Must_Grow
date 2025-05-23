@@ -24,6 +24,8 @@ pub const ChatSimState: type = struct {
     paintIntervalMs: u8,
     tickIntervalMs: u8,
     gameTimeMs: u32,
+    tickStartTimeMicroSeconds: i64 = 0,
+    ticksRemainingBeforePaint: f32 = 0,
     gameEnd: bool,
     vkState: paintVulkanZig.Vk_State,
     testData: ?testZig.TestData = null,
@@ -60,6 +62,7 @@ pub const ThreadData = struct {
     citizensAddedThisTick: u32 = 0,
     chunkAreas: std.ArrayList(ChunkArea),
     currentPathIndex: std.atomic.Value(usize),
+    sleeped: bool = true,
     pub const VALIDATION_CHUNK_DISTANCE = 31;
 };
 
@@ -310,18 +313,18 @@ fn startGame(allocator: std.mem.Allocator) !void {
 }
 
 pub fn mainLoop(state: *ChatSimState) !void {
-    var ticksRequired: f32 = 0;
+    state.ticksRemainingBeforePaint = 0;
     const totalStartTime = std.time.microTimestamp();
     var nextCpuPerCentUpdateTimeMs: i64 = 0;
     mainLoop: while (!state.gameEnd) {
         try codePerformanceZig.startMeasure("main loop", &state.codePerformanceData);
-        const startTime = std.time.microTimestamp();
-        ticksRequired += state.gameSpeed;
+        state.tickStartTimeMicroSeconds = std.time.microTimestamp();
+        state.ticksRemainingBeforePaint += state.gameSpeed;
         try windowSdlZig.handleEvents(state);
 
-        while (ticksRequired >= 1) {
+        while (state.ticksRemainingBeforePaint >= 1) {
             try tick(state);
-            ticksRequired -= 1;
+            state.ticksRemainingBeforePaint -= 1;
             const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
             if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
                 if (totalPassedTime > duration) state.gameEnd = true;
@@ -337,7 +340,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
         try codePerformanceZig.startMeasure("draw fram", &state.codePerformanceData);
         try paintVulkanZig.drawFrame(state);
         codePerformanceZig.endMeasure("draw fram", &state.codePerformanceData);
-        const passedTime = @as(u64, @intCast((std.time.microTimestamp() - startTime)));
+        const passedTime = @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds)));
         try codePerformanceZig.startMeasure("main loop end stuff", &state.codePerformanceData);
         if (state.testData == null or state.testData.?.fpsLimiter) {
             const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| passedTime;
@@ -345,9 +348,9 @@ pub fn mainLoop(state: *ChatSimState) !void {
                 state.cpuPerCent = 1.0 - @as(f32, @floatFromInt(sleepTime)) / @as(f32, @floatFromInt(state.paintIntervalMs)) / 1000.0;
                 nextCpuPerCentUpdateTimeMs = std.time.milliTimestamp() + 1000;
             }
-            std.time.sleep(sleepTime * 1_000);
+            std.Thread.sleep(sleepTime * 1_000);
         }
-        const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - startTime))));
+        const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds))));
         state.fpsCounter = state.fpsCounter * 0.99 + @as(f32, @floatFromInt(thisFrameFps)) * 0.01;
 
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
@@ -517,7 +520,7 @@ fn tick(state: *ChatSimState) !void {
         }
     }
 
-    const singleCore = nonMainThreadsDataCount <= 100;
+    const singleCore = nonMainThreadsDataCount <= 40;
     if (singleCore or (state.testData != null and state.testData.?.forceSingleCore)) {
         state.wasSingleCore = true;
         state.citizenCounter += state.threadData[0].citizensAddedThisTick;
@@ -640,6 +643,19 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                 }
             }
             threadData.finishedTick = true;
+            if (state.ticksRemainingBeforePaint < 2) {
+                threadData.sleeped = false;
+            }
+        } else if (state.testData == null or state.testData.?.fpsLimiter) {
+            if (state.wasSingleCore or !state.threadData[threadNumber].sleeped) {
+                var passedTime = (std.time.microTimestamp() - state.tickStartTimeMicroSeconds);
+                if (passedTime < 0) passedTime = 0;
+                const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| @as(u64, @intCast(passedTime));
+                state.threadData[threadNumber].sleeped = true;
+                if (sleepTime > 0) {
+                    std.Thread.sleep(sleepTime * 1000);
+                }
+            }
         }
     }
 }

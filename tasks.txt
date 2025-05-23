@@ -1,10 +1,11 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
-    - problem: on low citizen chunk values, multi cores switches when still inefficient
     - check how to idle threads, should not use 100% cpu time when idle,
+        - continue: thread only went to sleep i if std.debug.printed. If not it somehow did not sleep;
     - check for multi thread improvements
     - vulkan data setup. Can it also be split to multiple cpus?
 
+- make idle chunks to tick when player does not see it
 
 
 - bug: deleting can crash game
