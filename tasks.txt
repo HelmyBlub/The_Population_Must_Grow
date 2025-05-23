@@ -1,19 +1,8 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
-    - problem: multi thread not faster than single cpu, why?
-        - find algorithm that can tick through chunks with allowed distance ~64 without interfering
-            - continue: getNewActiveChunkKeyPosition, current path is VCD is 10. It need to be > 60
-
-
-    - differnt idea: assign chunk rectangle areas to threads
-
+    - problem: on low citizen chunk values, multi cores switches when still inefficient
     - check how to idle threads, should not use 100% cpu time when idle,
-
-    - update code for multi thread 
-        - activeChunkKeys
-        - citizenCounter: u32 = 0,
-        - citizenCounterLastTick: u32 = 0,
-        - citizensPerMinuteCounter: f32 = 0,            
+    - check for multi thread improvements
     - vulkan data setup. Can it also be split to multiple cpus?
 
 

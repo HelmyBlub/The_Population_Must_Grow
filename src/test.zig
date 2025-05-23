@@ -47,7 +47,7 @@ pub const TestData = struct {
     testInputs: std.ArrayList(TestInput) = undefined,
     fpsLimiter: bool = true,
     testStartTimeMircoSeconds: i64,
-    forceSingleCore: bool = true,
+    forceSingleCore: bool = false,
 };
 
 pub fn executePerfromanceTest() !void {
