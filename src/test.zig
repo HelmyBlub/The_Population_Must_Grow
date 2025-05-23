@@ -47,7 +47,7 @@ pub const TestData = struct {
     testInputs: std.ArrayList(TestInput) = undefined,
     fpsLimiter: bool = true,
     testStartTimeMircoSeconds: i64,
-    forceSingleCore: bool = false,
+    forceSingleCore: bool = true,
 };
 
 pub fn executePerfromanceTest() !void {
@@ -61,7 +61,7 @@ pub fn executePerfromanceTest() !void {
     const testData = &state.testData.?;
     state.gameSpeed = 1;
     // try setupTestInputs(testData);
-    try setupTestInputsXAreas(testData);
+    try setupTestInputs(testData);
 
     try main.mainLoop(&state);
 }
@@ -138,11 +138,14 @@ fn printTestEndData(state: *main.ChatSimState) void {
     codePerformanceZig.printToConsole(state);
     for (0..state.cpuCount) |i| {
         var count: usize = 0;
-        for (state.activeChunksThreadSplit[i].items) |item| {
-            if (item != 0) count += 1;
+        for (state.threadData[i].chunkAreas.items) |chunkArea| {
+            count += chunkArea.activeChunkKeys.items.len;
         }
         std.debug.print("list {}: {d}\n", .{ i, count });
-        // std.debug.print("{any}\n", .{state.activeChunksThreadSplit[i].items});
+        // for (state.threadData[i].chunkAreas.items) |chunkArea| {
+        //     std.debug.print("   {} \n", .{chunkArea.areaXY});
+        // std.debug.print("{}: {any}\n", .{ chunkArea.areaXY, chunkArea.activeChunkKeys.items });
+        // }
     }
     std.debug.print("idleTime {}\n", .{state.threadData[0].averageIdleTicks});
 
@@ -207,6 +210,7 @@ fn setupTestInputs(testData: *TestData) !void {
         }
     }
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
+    try testData.testInputs.append(.{ .data = .endGame, .executeTime = 300_000 });
 }
 
 pub fn setupTestInputsXAreas(testData: *TestData) !void {

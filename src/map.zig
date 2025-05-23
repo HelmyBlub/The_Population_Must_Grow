@@ -731,7 +731,7 @@ pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
         if (newKey == key) return;
     }
     try state.map.activeChunkKeys.append(newKey);
-    try main.addActiveChunkForThreads(newKey, state.activeChunksThreadSplit, state);
+    try main.addActiveChunkForThreads(newKey, state);
 }
 
 pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
