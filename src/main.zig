@@ -34,6 +34,7 @@ pub const ChatSimState: type = struct {
     rectangles: [2]?VulkanRectangle = .{ null, null },
     copyAreaRectangle: ?mapZig.MapTileRectangle = null,
     fpsCounter: f32 = 60,
+    tickDurationSmoothed: f32 = 0,
     framesTotalCounter: u32 = 0,
     cpuPerCent: ?f32 = null,
     citizenCounter: u32 = 0,
@@ -47,6 +48,7 @@ pub const ChatSimState: type = struct {
     maxThreadCount: usize,
     usedThreadsCount: usize,
     threadData: []ThreadData = undefined,
+    autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     wasSingleCore: bool = true,
 };
@@ -65,7 +67,9 @@ pub const ThreadData = struct {
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used and this would be the data of the 3rd thread, this would save a fps value for 3 threads fps
-    bestMeasuredFPS: f32 = 0,
+    lastMeasuredTickDuration: u64 = 0,
+    lastMeasureWhenTime: u32 = 0,
+    switchedToThreadCountGameTime: u32 = 0,
     pub const VALIDATION_CHUNK_DISTANCE = 31;
 };
 
@@ -355,7 +359,8 @@ pub fn mainLoop(state: *ChatSimState) !void {
         }
         const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds))));
         state.fpsCounter = state.fpsCounter * 0.99 + @as(f32, @floatFromInt(thisFrameFps)) * 0.01;
-
+        state.tickDurationSmoothed = state.tickDurationSmoothed * 0.99 + @as(f32, @floatFromInt(passedTime)) / state.gameSpeed * 0.01;
+        try autoBalanceThreadCount(state);
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
             if (totalPassedTime > duration) state.gameEnd = true;
@@ -364,6 +369,42 @@ pub fn mainLoop(state: *ChatSimState) !void {
         codePerformanceZig.endMeasure("main loop", &state.codePerformanceData);
     }
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
+}
+
+fn autoBalanceThreadCount(state: *ChatSimState) !void {
+    if (state.maxThreadCount > 1 and state.autoBalanceThreadCount) {
+        const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothed);
+        if (state.wasSingleCore and state.usedThreadsCount > 1) {
+            state.threadData[0].lastMeasuredTickDuration = tickDuration;
+            state.threadData[0].lastMeasureWhenTime = state.gameTimeMs;
+            return;
+        }
+        const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
+        const threadData = &state.threadData[state.usedThreadsCount - 1];
+        const measureTime: u32 = @intFromFloat(2000.0 * state.gameSpeed);
+        if (state.fpsCounter < targetFrameRate * 0.9 or (state.testData != null and !state.testData.?.fpsLimiter)) {
+            if (state.gameTimeMs > threadData.switchedToThreadCountGameTime + measureTime) {
+                threadData.lastMeasuredTickDuration = tickDuration;
+                threadData.lastMeasureWhenTime = state.gameTimeMs;
+                if (state.usedThreadsCount > 1) {
+                    const lowerThreadCountData = &state.threadData[state.usedThreadsCount - 2];
+                    if (lowerThreadCountData.lastMeasuredTickDuration < tickDuration and lowerThreadCountData.lastMeasureWhenTime + measureTime * 3 >= state.gameTimeMs) {
+                        try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                        std.debug.print("auto decrease thread count {}\n", .{state.usedThreadsCount});
+                        return;
+                    }
+                }
+                if (state.usedThreadsCount < state.maxThreadCount) {
+                    const upperThreadCountData = &state.threadData[state.usedThreadsCount];
+                    if (upperThreadCountData.lastMeasureWhenTime + measureTime * 30 < state.gameTimeMs) {
+                        try changeUsedThreadCount(state.usedThreadsCount + 1, state);
+                        std.debug.print("auto increase thread count {}\n", .{state.usedThreadsCount});
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn addActiveChunkForThreads(newActiveChunkKey: u64, state: *ChatSimState) !void {
@@ -471,6 +512,7 @@ pub fn changeUsedThreadCount(newThreadCount: usize, state: *ChatSimState) !void 
         }
     }
     state.usedThreadsCount = newThreadCount;
+    state.threadData[newThreadCount - 1].switchedToThreadCountGameTime = state.gameTimeMs;
 }
 
 fn getTotalChunkAreaCount(threadDatas: []ThreadData) usize {

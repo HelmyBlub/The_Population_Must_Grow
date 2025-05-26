@@ -139,11 +139,13 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F5) {
                 if (state.usedThreadsCount < state.maxThreadCount) {
                     try main.changeUsedThreadCount(state.usedThreadsCount + 1, state);
+                    state.autoBalanceThreadCount = false;
                     std.debug.print("threadCount increased to {d}\n", .{state.usedThreadsCount});
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F6) {
                 if (state.usedThreadsCount > 1) {
                     try main.changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                    state.autoBalanceThreadCount = false;
                     std.debug.print("threadCount decreased to {d}\n", .{state.usedThreadsCount});
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
