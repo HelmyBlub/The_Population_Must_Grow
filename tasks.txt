@@ -1,8 +1,10 @@
 tasks:
 - check code for performance improvement for multiple cpu cores
-    - check how to idle threads, should not use 100% cpu time when idle,
-        - continue: thread only went to sleep i if std.debug.printed. If not it somehow did not sleep;
-    - check for multi thread improvements
+    - correct thread amount usage. Currently only does 2
+        - if fps droping below certain value (60fps in normal play, any fps in no fps limiter), try switching and measure if performance increased
+            - if decreasing assume not worth it (yet?)
+        - currently performance is wore with 3 threads. But also while streaming my cpu is already 40-50% in use, so a 3rd thread can only make it worse
+        - program needs to be smart when swithching thread count. 
     - vulkan data setup. Can it also be split to multiple cpus?
 
 - make idle chunks to tick when player does not see it
@@ -15,54 +17,20 @@ tasks:
 
 - features:
     - performance            
-        - check code for performance improvement for multiple cpu cores
         - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
         - arena allocator (buggy)?
     - save game progress?
+    - performance measure with high citizen counts
     - put on steam
 
   
 Some data:
-- FPS: 147, citizens: 33907, gameTime: 341472, end FPS: 91.29745 (16.05.2025)
+- FPS: 142, citizens: 35528, gameTime: 330000, end FPS: 81.26372, single thread (26.05.2025)
+- FPS: 139, citizens: 35505, gameTime: 330000, end FPS: 85.84402, multi thread (26.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
 
 - FPS: 180, citizens: 22654, gameTime: 300000, end FPS: 115.10956 (single core)
 - FPS: 163, citizens: 21524, gameTime: 300000, end FPS: 110.11585 (multi thread)
-
-new test case: two areas far apart, stop test on 300_000 ingame time
-- FPS: 134, citizens: 34082, gameTime: 300000, end FPS: 90.64396 (single cpu)
-- FPS: 187, citizens: 33891, gameTime: 300000, end FPS: 141.98601 (multi thread)
-- FPS: 184, citizens: 33894, gameTime: 300000, end FPS: 135.90143  (idle time:  402007)
-    - idle time fps loss: 7
-- FPS: 166, citizens: 33885, gameTime: 300000, end FPS: 127.27491 (main thread waits)    
-- FPS: 126, citizens: 33937, gameTime: 300000, end FPS: 92.18444 (other threads waits)
-- FPS: 140, citizens: 33917, gameTime: 300000, end FPS: 103.089615 (VALIDATION_CHUNK_DISTANCE = 5)
-- FPS: 151, citizens: 34105, gameTime: 300000, end FPS: 111.9522   (VALIDATION_CHUNK_DISTANCE = 10)
-- FPS: 155, citizens: 33885, gameTime: 300000, end FPS: 115.60401  (VALIDATION_CHUNK_DISTANCE = 20)
-- FPS: 158, citizens: 33965, gameTime: 300000, end FPS: 119.683014 (VALIDATION_CHUNK_DISTANCE = 30)
-- FPS: 161, citizens: 33915, gameTime: 300000, end FPS: 121.9074   (VALIDATION_CHUNK_DISTANCE = 40)
-- FPS: 170, citizens: 33943, gameTime: 300000, end FPS: 130.28503  (VALIDATION_CHUNK_DISTANCE = 50)
-- FPS: 179, citizens: 33879, gameTime: 300000, end FPS: 135.15602  (VALIDATION_CHUNK_DISTANCE = 60) 
-- FPS: 178, citizens: 33932, gameTime: 300000, end FPS: 134.18103  (VALIDATION_CHUNK_DISTANCE = 100)
-- FPS: 177, citizens: 34129, gameTime: 300000, end FPS: 135.0821 (VALIDATION_CHUNK_DISTANCE = 40 and changed how allowedIndex is calculated)
-
-- FPS: 154, citizens: 90390, gameTime: 380000, end FPS: 63.69922 (change test case single core)
-- FPS: 169, citizens: 90920, gameTime: 380000, end FPS: 76.9345 (VCD 5)
-- FPS: 197, citizens: 90944, gameTime: 380000, end FPS: 87.79077 (VCD 50)
-- FPS: 212, citizens: 90378, gameTime: 380000, end FPS: 93.83144 (VCD 100)
-
-
-- (10*10) rectangle 
-    - keep distance 10x10
-
-- 20x20 = 400
-
-- FPS: 164, citizens: 33963, gameTime: 300000, end FPS: 122.46056  (VALIDATION_CHUNK_DISTANCE = 20, main thread now also considers it)
-- FPS: 139, citizens: 33909, gameTime: 300000, end FPS: 102.88702 (VALIDATION_CHUNK_DISTANCE = 5)
-
-80% of totlal frame is ticking. best case two threads with 40%. 100% - 40% => 60%. time per frame reduced by 40% => fps increase by fps/0.6 => 88 / 0.6 => 147 fps
-1000 / 136 => 7.4 milliSeconds per tick. i lose ~0.4 milli seconds per tick  5.4% => 
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

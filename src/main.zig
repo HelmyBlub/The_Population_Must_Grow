@@ -119,7 +119,7 @@ test "test for memory leaks" {
 }
 
 test "test measure performance" {
-    SIMULATION_MICRO_SECOND_DURATION = 30_000_000;
+    SIMULATION_MICRO_SECOND_DURATION = 35_000_000;
     try testZig.executePerfromanceTest();
 }
 
@@ -421,17 +421,17 @@ fn getNewActiveChunkKeyPosition(newActiveChunkKey: u64) usize {
     };
 
     var result: usize = 0;
-    if (areaXY.x < 10 and areaXY.y < 10) {
-        result = @intCast(areaXY.x + areaXY.y * 10);
-    } else if (areaXY.x < 10 and areaXY.y >= 10) {
+    if (areaXY.x < halved and areaXY.y < halved) {
+        result = @intCast(areaXY.x + areaXY.y * halved);
+    } else if (areaXY.x < halved and areaXY.y >= halved) {
         const diagNumber = diagonalNumbering(areaXY.x, areaXY.y - halved);
-        result = 100 + diagNumber;
-    } else if (areaXY.x >= 10 and areaXY.y >= 10) {
+        result = halved * halved + diagNumber;
+    } else if (areaXY.x >= halved and areaXY.y >= halved) {
         const diagNumber = diagonalNumbering(areaSize - 1 - areaXY.y, areaXY.x - halved);
-        result = 200 + diagNumber;
+        result = halved * halved * 2 + diagNumber;
     } else {
         const diagNumber = diagonalNumbering(areaSize - 1 - areaXY.x, halved - 1 - areaXY.y);
-        result = 300 + diagNumber;
+        result = halved * halved * 3 + diagNumber;
     }
     return result;
 }
@@ -445,7 +445,7 @@ fn diagonalNumbering(x: u32, y: u32) usize {
     const sum = x + y;
     if (sum <= halved) {
         const added = @divExact(sum * (sum + 1), 2);
-        if (!(x == 9 and y == 1)) return added + x;
+        if (!(x == halved - 1 and y == 1)) return added + x;
         return added;
     }
     const firstPart = @divExact(halved * (halved + 1), 2);
@@ -520,13 +520,14 @@ fn tick(state: *ChatSimState) !void {
         }
     }
 
-    const singleCore = nonMainThreadsDataCount <= 40;
+    const singleCore = nonMainThreadsDataCount <= 200 or state.citizenCounter < 10_000;
     if (singleCore or (state.testData != null and state.testData.?.forceSingleCore)) {
         state.wasSingleCore = true;
-        state.citizenCounter += state.threadData[0].citizensAddedThisTick;
-        state.threadData[0].tickedCitizenCounter = 0;
-        state.threadData[0].tickedChunkCounter = 0;
-        state.threadData[0].citizensAddedThisTick = 0;
+        const threadData = &state.threadData[0];
+        state.citizenCounter += threadData.citizensAddedThisTick;
+        threadData.tickedCitizenCounter = 0;
+        threadData.tickedChunkCounter = 0;
+        threadData.citizensAddedThisTick = 0;
         for (0..state.map.activeChunkKeys.items.len) |i| {
             const chunkKey = state.map.activeChunkKeys.items[i];
             try tickSingleChunk(chunkKey, 0, state);
@@ -554,14 +555,16 @@ fn tick(state: *ChatSimState) !void {
                 var highestFinishedPathIndex: usize = ChunkArea.SIZE * ChunkArea.SIZE;
                 for (mainThreadData.chunkAreas.items) |*chunkArea| {
                     var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
-                    while (chunkArea.activeChunkKeys.items.len > chunkKeyIndex and chunkArea.activeChunkKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
-                        const chunkKey = chunkArea.activeChunkKeys.items[chunkKeyIndex].chunkKey;
+                    const areaLen = chunkArea.activeChunkKeys.items.len;
+                    const activeKeys = chunkArea.activeChunkKeys;
+                    while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
+                        const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
                         try tickSingleChunk(chunkKey, 0, state);
                         chunkKeyIndex += 1;
                     }
                     chunkArea.currentChunkKeyIndex = chunkKeyIndex;
-                    if (chunkArea.activeChunkKeys.items.len > chunkKeyIndex) {
-                        const highest = chunkArea.activeChunkKeys.items[chunkKeyIndex].pathIndex -| 1;
+                    if (areaLen > chunkKeyIndex) {
+                        const highest = activeKeys.items[chunkKeyIndex].pathIndex -| 1;
                         if (highest < highestFinishedPathIndex) highestFinishedPathIndex = highest;
                     }
                 }
@@ -626,15 +629,17 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                     var allChunkAreasDone = true;
                     for (threadData.chunkAreas.items) |*chunkArea| {
                         var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
-                        while (chunkArea.activeChunkKeys.items.len > chunkKeyIndex and chunkArea.activeChunkKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
-                            const chunkKey = chunkArea.activeChunkKeys.items[chunkKeyIndex].chunkKey;
+                        const activeKeys = chunkArea.activeChunkKeys;
+                        const areaLen = activeKeys.items.len;
+                        while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
+                            const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
                             try tickSingleChunk(chunkKey, threadNumber, state);
                             chunkKeyIndex += 1;
                         }
                         chunkArea.currentChunkKeyIndex = chunkKeyIndex;
-                        if (chunkArea.activeChunkKeys.items.len > chunkKeyIndex) {
+                        if (areaLen > chunkKeyIndex) {
                             allChunkAreasDone = false;
-                            const highest = chunkArea.activeChunkKeys.items[chunkKeyIndex].pathIndex -| 1;
+                            const highest = activeKeys.items[chunkKeyIndex].pathIndex -| 1;
                             if (highest < highestFinishedPathIndex) highestFinishedPathIndex = highest;
                         }
                     }
