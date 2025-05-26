@@ -1,13 +1,13 @@
 tasks:
-- check code for performance improvement for multiple cpu cores
-    - correct thread amount usage. Currently only does 2
-        - if fps droping below certain value (60fps in normal play, any fps in no fps limiter), try switching and measure if performance increased
-            - if decreasing assume not worth it (yet?)
-        - currently performance is wore with 3 threads. But also while streaming my cpu is already 40-50% in use, so a 3rd thread can only make it worse
-        - program needs to be smart when swithching thread count. 
-    - vulkan data setup. Can it also be split to multiple cpus?
+- make idle chunks not tick when player does not see it
+    - flag chunk as idle when no citizens has open build order and no build order left?
+    - if chunk not visible and idle, do not tick
+    - flag chunk area as idle if every chunk idle
+        - should be removed from thread? for better balance?
 
-- make idle chunks to tick when player does not see it
+- correct thread amount usage
+- improve chunk area assignment based on citizen count?
+
 
 
 - bug: deleting can crash game

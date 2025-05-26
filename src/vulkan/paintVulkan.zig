@@ -233,6 +233,7 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
                 },
                 state,
             );
+            chunk.lastPaintGameTime = state.gameTimeMs;
             entityPaintCountLayer1Citizen += chunk.citizens.items.len;
             entityPaintCountLayer1 += chunk.buildings.items.len;
             entityPaintCountLayer1 += chunk.bigBuildings.items.len;

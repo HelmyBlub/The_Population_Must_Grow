@@ -934,7 +934,7 @@ pub fn pathfindAStar(
             }
             const neighborGraph = &conChunk.pathingData.graphRectangles.items[conData.index];
             const neighborMiddle = mapZig.getTileRectangleMiddlePosition(neighborGraph.tileRectangle);
-            const citizenDistancePos = if (citizen.homePosition) |homePosition| homePosition else citizen.position;
+            const citizenDistancePos = citizen.homePosition;
             if (@abs(neighborMiddle.x - citizenDistancePos.x) < maxSearchDistance and @abs(neighborMiddle.y - citizenDistancePos.y) < maxSearchDistance) {
                 try neighbors.append(neighborGraph);
             }
@@ -986,7 +986,7 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
             currentRectangle = &conChunk.pathingData.graphRectangles.items[randomCon.index];
         }
         const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
-        const homePos: main.Position = if (citizen.homePosition) |homePosition| homePosition else .{ .x = 0, .y = 0 };
+        const homePos: main.Position = citizen.homePosition;
         const distanceHomeRandomPosition = main.calculateDistance(randomReachableGraphTopLeftPos, homePos);
         if (distanceHomeRandomPosition < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5 or main.calculateDistance(homePos, citizen.position) > distanceHomeRandomPosition) {
             const finalRandomPosition = main.Position{

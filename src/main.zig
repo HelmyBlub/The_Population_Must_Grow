@@ -787,8 +787,13 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
     state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
     state.threadData[threadIndex].tickedChunkCounter += 1;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
-    try Citizen.citizensTick(chunk, threadIndex, state);
-    try Citizen.citizensMoveTick(chunk);
+    const gameSpeedVisibleFactor = if (state.gameSpeed <= 1) 1 else state.gameSpeed;
+    const isVisible = chunk.lastPaintGameTime + @as(u32, @intFromFloat(32 * gameSpeedVisibleFactor)) > state.gameTimeMs;
+    if (chunk.workingCitizenCounter > 0 or isVisible) {
+        try Citizen.citizensTick(chunk, threadIndex, state);
+        try Citizen.citizensMoveTick(chunk);
+    }
+
     codePerformanceZig.endMeasure(" citizen", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure(" chunkQueue", &state.codePerformanceData);
@@ -824,13 +829,15 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
             const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
             const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
             if (optMapObject) |mapObject| {
-                if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizen| {
+                if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizenData| {
+                    const freeCitizen = freeCitizenData.citizen;
                     switch (mapObject) {
                         mapZig.MapObject.building => |building| {
                             freeCitizen.buildingPosition = building.position;
                             freeCitizen.nextThinkingAction = .buildingStart;
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
+                            freeCitizenData.chunk.workingCitizenCounter += 1;
                         },
                         mapZig.MapObject.bigBuilding => |building| {
                             freeCitizen.buildingPosition = building.position;
@@ -842,18 +849,21 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !voi
                             } else {
                                 _ = chunk.buildOrders.pop();
                             }
+                            freeCitizenData.chunk.workingCitizenCounter += 1;
                         },
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;
                             freeCitizen.nextThinkingAction = .potatoPlant;
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
+                            freeCitizenData.chunk.workingCitizenCounter += 1;
                         },
                         mapZig.MapObject.tree => |tree| {
                             freeCitizen.treePosition = tree.position;
                             freeCitizen.nextThinkingAction = .treePlant;
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
+                            freeCitizenData.chunk.workingCitizenCounter += 1;
                         },
                         mapZig.MapObject.path => {
                             _ = chunk.buildOrders.pop();

@@ -34,6 +34,8 @@ pub const PathingType = enum {
 
 pub const MapChunk = struct {
     chunkXY: ChunkXY,
+    workingCitizenCounter: u32 = 0,
+    lastPaintGameTime: u32 = 0,
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
     /// buildings bigger than one tile
@@ -213,7 +215,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             if (state.citizenCounter > 1 and building.citizensSpawned > 0) {
                 for (chunk.citizens.items, 0..) |citizen, j| {
-                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                    if (citizen.homePosition.x == building.position.x and citizen.homePosition.y == building.position.y) {
                         citizen.moveTo.deinit();
                         _ = chunk.citizens.swapRemove(j);
                         building.citizensSpawned -= 1;
@@ -250,7 +252,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                     }
                     index -= 1;
                     const citizen = chunk.citizens.items[index];
-                    if (citizen.homePosition != null and citizen.homePosition.?.x == building.position.x and citizen.homePosition.?.y == building.position.y) {
+                    if (citizen.homePosition.x == building.position.x and citizen.homePosition.y == building.position.y) {
                         citizen.moveTo.deinit();
                         _ = chunk.citizens.swapRemove(index);
                         state.citizenCounter -= 1;
@@ -595,9 +597,8 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
         building.imageIndex = imageZig.IMAGE_HOUSE;
         const buildRectangle = get1x1RectangleFromPosition(building.position);
         try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.blocking, threadIndex, state);
-        var newCitizen = main.Citizen.createCitizen(state.allocator);
+        var newCitizen = main.Citizen.createCitizen(building.position, state.allocator);
         newCitizen.position = building.position;
-        newCitizen.homePosition = newCitizen.position;
         try placeCitizen(newCitizen, threadIndex, state);
         building.citizensSpawned += 1;
     } else if (building.type == BUILDING_TYPE_BIG_HOUSE) {
@@ -607,9 +608,8 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
             const buildRectangle = getBigBuildingRectangle(building.position);
             try main.pathfindingZig.changePathingDataRectangle(buildRectangle, PathingType.blocking, threadIndex, state);
             while (building.citizensSpawned < 8) {
-                var newCitizen = main.Citizen.createCitizen(state.allocator);
+                var newCitizen = main.Citizen.createCitizen(building.position, state.allocator);
                 newCitizen.position = building.position;
-                newCitizen.homePosition = newCitizen.position;
                 try placeCitizen(newCitizen, threadIndex, state);
                 building.citizensSpawned += 1;
             }
@@ -708,7 +708,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
             if (building.woodRequired > 1) building.woodRequired -= 1;
             const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, state);
             for (chunk.citizens.items, 0..) |*citizen, i| {
-                if (citizen.homePosition != null and citizen.homePosition.?.x == cornerBuilding.position.x and citizen.homePosition.?.y == cornerBuilding.position.y) {
+                if (citizen.homePosition.x == cornerBuilding.position.x and citizen.homePosition.y == cornerBuilding.position.y) {
                     citizen.homePosition = building.position;
                     building.citizensSpawned += 1;
                     cornerBuilding.citizensSpawned -= 1;
@@ -962,8 +962,7 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .fullyGrown = true });
-    var citizen = main.Citizen.createCitizen(allocator);
-    citizen.homePosition = .{ .x = halveTileSize, .y = halveTileSize };
+    const citizen = main.Citizen.createCitizen(.{ .x = halveTileSize, .y = halveTileSize }, allocator);
     try spawnChunk.citizens.append(citizen);
     state.citizenCounterLastTick = 1;
 
