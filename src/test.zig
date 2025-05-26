@@ -136,7 +136,7 @@ fn printTestEndData(state: *main.ChatSimState) void {
     const timePassed = std.time.microTimestamp() - state.testData.?.testStartTimeMircoSeconds;
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(state);
-    for (0..state.cpuCount) |i| {
+    for (0..state.maxThreadCount) |i| {
         var count: usize = 0;
         for (state.threadData[i].chunkAreas.items) |chunkArea| {
             count += chunkArea.activeChunkKeys.items.len;

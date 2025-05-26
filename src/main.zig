@@ -44,7 +44,8 @@ pub const ChatSimState: type = struct {
     mouseInfo: MouseInfo = .{},
     random: std.Random.Xoshiro256,
     codePerformanceData: codePerformanceZig.CodePerformanceData = undefined,
-    cpuCount: usize,
+    maxThreadCount: usize,
+    usedThreadsCount: usize,
     threadData: []ThreadData = undefined,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     wasSingleCore: bool = true,
@@ -63,6 +64,8 @@ pub const ThreadData = struct {
     chunkAreas: std.ArrayList(ChunkArea),
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
+    /// e.g.: if 3 threads are used and this would be the data of the 3rd thread, this would save a fps value for 3 threads fps
+    bestMeasuredFPS: f32 = 0,
     pub const VALIDATION_CHUNK_DISTANCE = 31;
 };
 
@@ -178,11 +181,11 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .allocator = allocator,
         .soundMixer = undefined,
         .random = prng,
-        .cpuCount = std.Thread.getCpuCount() catch 1,
+        .maxThreadCount = std.Thread.getCpuCount() catch 1,
+        .usedThreadsCount = 1,
     };
-    state.cpuCount = 2;
-    state.threadData = try allocator.alloc(ThreadData, state.cpuCount);
-    for (0..state.cpuCount) |i| {
+    state.threadData = try allocator.alloc(ThreadData, state.maxThreadCount);
+    for (0..state.maxThreadCount) |i| {
         state.threadData[i] = .{
             .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator),
             .chunkAreas = std.ArrayList(ChunkArea).init(allocator),
@@ -381,7 +384,8 @@ pub fn addActiveChunkForThreads(newActiveChunkKey: u64, state: *ChatSimState) !v
     }
     if (optChunkArea == null) {
         var threadWithLeastAreas: ?*ThreadData = null;
-        for (state.threadData) |*threadData| {
+        for (state.threadData, 0..) |*threadData, index| {
+            if (index >= state.usedThreadsCount) break;
             if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreas.items.len > threadData.chunkAreas.items.len) {
                 threadWithLeastAreas = threadData;
             }
@@ -409,6 +413,72 @@ pub fn addActiveChunkForThreads(newActiveChunkKey: u64, state: *ChatSimState) !v
     } else {
         std.debug.print("chunk area == null should not be possible\n", .{});
     }
+}
+
+pub fn changeUsedThreadCount(newThreadCount: usize, state: *ChatSimState) !void {
+    const oldCount = state.usedThreadsCount;
+    if (oldCount == newThreadCount) return;
+    if (newThreadCount > state.maxThreadCount) {
+        std.debug.print("does not make sense to set thread count above max cpu count.\n", .{});
+        return;
+    }
+    const totalChunkAreas = getTotalChunkAreaCount(state.threadData);
+    const minAreasPerThread = @divFloor(totalChunkAreas, newThreadCount);
+    if (oldCount < newThreadCount) {
+        if (minAreasPerThread < 1) {
+            std.debug.print("not enough areas to increase thread count.\n", .{});
+            return;
+        }
+        var moveToThreadIndex = oldCount;
+        var moveToThreadArea = &state.threadData[moveToThreadIndex].chunkAreas;
+        outer: for (0..oldCount) |oldIndex| {
+            const oldThreadData = &state.threadData[oldCount - oldIndex - 1];
+            const oldThreadAreas = &oldThreadData.chunkAreas;
+
+            if (oldThreadAreas.items.len - minAreasPerThread > 0) {
+                const amountToMove = oldThreadAreas.items.len - minAreasPerThread;
+                for (0..amountToMove) |_| {
+                    const toMove = oldThreadAreas.pop().?;
+                    oldThreadData.splitIndexCounter -= toMove.activeChunkKeys.items.len;
+                    try moveToThreadArea.append(toMove);
+                    state.threadData[moveToThreadIndex].splitIndexCounter += toMove.activeChunkKeys.items.len;
+                    if (moveToThreadArea.items.len >= minAreasPerThread) {
+                        moveToThreadIndex += 1;
+                        if (moveToThreadIndex >= newThreadCount) break :outer;
+                        moveToThreadArea = &state.threadData[moveToThreadIndex].chunkAreas;
+                    }
+                }
+            }
+        }
+    } else {
+        for (newThreadCount..oldCount) |threadIndex| {
+            const threadAreas = &state.threadData[threadIndex].chunkAreas;
+            const removeCount = threadAreas.items.len;
+            for (0..removeCount) |_| {
+                const toMoveArea = threadAreas.pop().?;
+                state.threadData[threadIndex].splitIndexCounter -= toMoveArea.activeChunkKeys.items.len;
+                var fewestChunkAreasThreadIndex: usize = 0;
+                var fewestChunkAreasCount = state.threadData[0].chunkAreas.items.len;
+                for (1..newThreadCount) |moveToIndex| {
+                    if (state.threadData[moveToIndex].chunkAreas.items.len < fewestChunkAreasCount) {
+                        fewestChunkAreasCount = state.threadData[moveToIndex].chunkAreas.items.len;
+                        fewestChunkAreasThreadIndex = moveToIndex;
+                    }
+                }
+                try state.threadData[fewestChunkAreasThreadIndex].chunkAreas.append(toMoveArea);
+                state.threadData[fewestChunkAreasThreadIndex].splitIndexCounter += toMoveArea.activeChunkKeys.items.len;
+            }
+        }
+    }
+    state.usedThreadsCount = newThreadCount;
+}
+
+fn getTotalChunkAreaCount(threadDatas: []ThreadData) usize {
+    var result: usize = 0;
+    for (threadDatas) |threadData| {
+        result += threadData.chunkAreas.items.len;
+    }
+    return result;
 }
 
 fn getNewActiveChunkKeyPosition(newActiveChunkKey: u64) usize {
@@ -535,7 +605,7 @@ fn tick(state: *ChatSimState) !void {
     } else {
         state.wasSingleCore = false;
         state.activeChunkAllowedPathIndex.store(ThreadData.VALIDATION_CHUNK_DISTANCE - 1, .unordered);
-        for (0..state.cpuCount) |i| {
+        for (0..state.usedThreadsCount) |i| {
             const threadData = &state.threadData[i];
             threadData.tickedCitizenCounter = 0;
             threadData.tickedChunkCounter = 0;
@@ -573,7 +643,7 @@ fn tick(state: *ChatSimState) !void {
             var minIndex = mainThreadData.currentPathIndex.load(.unordered);
             if (minIndex >= ChunkArea.SIZE * ChunkArea.SIZE) break;
             const initial = state.activeChunkAllowedPathIndex.load(.unordered);
-            for (1..state.cpuCount) |i| {
+            for (1..state.usedThreadsCount) |i| {
                 if (state.threadData[i].currentPathIndex.load(.unordered) < minIndex and !state.threadData[i].finishedTick) {
                     minIndex = state.threadData[i].currentPathIndex.load(.unordered);
                 }
@@ -583,13 +653,13 @@ fn tick(state: *ChatSimState) !void {
             }
         }
         const startWaitTime = std.time.nanoTimestamp();
-        for (1..state.cpuCount) |i| {
+        for (1..state.usedThreadsCount) |i| {
             while (!state.threadData[i].finishedTick) {
                 state.threadData[0].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) break;
                 //waiting
                 var minIndex: ?usize = null;
-                for (1..state.cpuCount) |j| {
+                for (1..state.usedThreadsCount) |j| {
                     if (!state.threadData[j].finishedTick) {
                         if (minIndex == null or state.threadData[j].currentPathIndex.load(.unordered) < minIndex.?) {
                             minIndex = state.threadData[j].currentPathIndex.load(.unordered);
@@ -617,6 +687,10 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.gameEnd) return;
         state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+        if (threadNumber >= state.usedThreadsCount) {
+            std.Thread.sleep(16 * 1000 * 1000);
+            continue;
+        }
 
         if (!state.threadData[threadNumber].finishedTick) {
             const threadData = &state.threadData[threadNumber];
@@ -777,7 +851,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         pathfindingZig.destoryChunkData(&chunk.pathingData);
     }
 
-    for (0..state.cpuCount) |i| {
+    for (0..state.maxThreadCount) |i| {
         const threadData = &state.threadData[i];
         pathfindingZig.destoryPathfindingData(&threadData.pathfindingTempData);
         for (threadData.chunkAreas.items) |item| {
