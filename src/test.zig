@@ -147,7 +147,6 @@ fn printTestEndData(state: *main.ChatSimState) void {
         // std.debug.print("{}: {any}\n", .{ chunkArea.areaXY, chunkArea.activeChunkKeys.items });
         // }
     }
-    std.debug.print("idleTime {}\n", .{state.threadData[0].averageIdleTicks});
 
     std.debug.print("FPS: {d}, citizens: {d}, gameTime: {d}, end FPS: {d}\n", .{ fps, state.citizenCounter, state.gameTimeMs, state.fpsCounter });
 }

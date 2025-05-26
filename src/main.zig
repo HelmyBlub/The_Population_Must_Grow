@@ -59,8 +59,7 @@ pub const ThreadData = struct {
     splitIndexCounter: usize = 0,
     tickedCitizenCounter: usize = 0,
     tickedChunkCounter: usize = 0,
-    idleTicks: u64 = 0,
-    averageIdleTicks: u64 = 0,
+    dummyValue: u64 = 0,
     finishedTick: bool = true,
     citizensAddedThisTick: u32 = 0,
     chunkAreas: std.ArrayList(ChunkArea),
@@ -653,14 +652,13 @@ fn tick(state: *ChatSimState) !void {
             threadData.tickedChunkCounter = 0;
             state.citizenCounter += threadData.citizensAddedThisTick;
             threadData.citizensAddedThisTick = 0;
-            threadData.averageIdleTicks = @divFloor(threadData.averageIdleTicks * 255 + threadData.idleTicks, 256);
-            threadData.idleTicks = 0;
+            threadData.dummyValue = 0;
             threadData.currentPathIndex.store(0, .unordered);
             threadData.finishedTick = false;
         }
         const mainThreadData = &state.threadData[0];
         while (true) {
-            state.threadData[0].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+            state.threadData[0].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
             if (state.gameEnd) break;
             const allowedPathIndex = state.activeChunkAllowedPathIndex.load(.unordered) + ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
             if (allowedPathIndex >= mainThreadData.currentPathIndex.load(.unordered)) {
@@ -694,10 +692,9 @@ fn tick(state: *ChatSimState) !void {
                 state.activeChunkAllowedPathIndex.store(minIndex, .unordered);
             }
         }
-        const startWaitTime = std.time.nanoTimestamp();
         for (1..state.usedThreadsCount) |i| {
             while (!state.threadData[i].finishedTick) {
-                state.threadData[0].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+                state.threadData[0].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) break;
                 //waiting
                 var minIndex: ?usize = null;
@@ -711,7 +708,6 @@ fn tick(state: *ChatSimState) !void {
                 if (minIndex) |min| state.activeChunkAllowedPathIndex.store(min, .unordered);
             }
         }
-        state.threadData[0].idleTicks = @intCast(std.time.nanoTimestamp() - startWaitTime);
     }
     const updateTickInterval = 10;
     if (@mod(state.gameTimeMs, state.tickIntervalMs * updateTickInterval) == 0) {
@@ -728,7 +724,7 @@ fn tick(state: *ChatSimState) !void {
 fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     while (true) {
         if (state.gameEnd) return;
-        state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+        state.threadData[threadNumber].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
         if (threadNumber >= state.usedThreadsCount) {
             std.Thread.sleep(16 * 1000 * 1000);
             continue;
@@ -737,7 +733,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
         if (!state.threadData[threadNumber].finishedTick) {
             const threadData = &state.threadData[threadNumber];
             while (true) {
-                state.threadData[threadNumber].idleTicks += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+                state.threadData[threadNumber].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) return;
                 const allowedPathIndex = state.activeChunkAllowedPathIndex.load(.unordered) + ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
                 if (allowedPathIndex >= threadData.currentPathIndex.load(.unordered)) {
@@ -784,12 +780,12 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
 fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !void {
     // if (state.gameTimeMs == 16 * 60 * 250) std.debug.print("{}:{}\n", .{ chunkKey, threadIndex });
     const chunk = state.map.chunks.getPtr(chunkKey).?;
-    state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
     state.threadData[threadIndex].tickedChunkCounter += 1;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
     const gameSpeedVisibleFactor = if (state.gameSpeed <= 1) 1 else state.gameSpeed;
     const isVisible = chunk.lastPaintGameTime + @as(u32, @intFromFloat(32 * gameSpeedVisibleFactor)) > state.gameTimeMs;
     if (chunk.workingCitizenCounter > 0 or isVisible) {
+        state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
         try Citizen.citizensTick(chunk, threadIndex, state);
         try Citizen.citizensMoveTick(chunk);
     }
