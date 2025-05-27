@@ -510,6 +510,12 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         eatFood(0, citizen, state); // used for setting up some data
         return;
     }
+    if (state.gameTimeMs - citizen.nextFoodTickTimeMs > 5_000) {
+        //assume chunk was idle for some time so reducing foodLevel will be bad as they could not eat in the time
+        citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
+        eatFood(0, citizen, state);
+        return;
+    }
     const timePassed: f32 = @floatFromInt(state.gameTimeMs - citizen.foodLevelLastUpdateTimeMs);
     citizen.foodLevel -= 1.0 / 60.0 / 1000.0 * timePassed;
     citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;

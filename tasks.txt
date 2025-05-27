@@ -1,6 +1,7 @@
 tasks:
 - bug: not ticking idle chunks create starving citizens as they calculate hunger based on time passed
 - bug: copy paste big area crash
+- bug: citizen running perfect right unstopped when no buildorder?
 - make idle chunks not tick when player does not see it
     - flag chunk as idle when no citizens has open build order and no build order left?
     - if chunk not visible and idle, do not tick
