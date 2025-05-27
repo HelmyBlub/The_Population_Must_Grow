@@ -98,8 +98,10 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             _ = try paintNumber(@intFromFloat(state.gameSpeed), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
-        for (state.threadData) |thread| {
-            var textWidth = paintText("SplitLen ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        for (state.threadData, 0..) |thread, threadIndex| {
+            var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@intCast(threadIndex), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
             textWidth += try paintNumber(@intCast(thread.splitIndexCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
             _ = try paintNumber(@intCast(thread.tickedCitizenCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);

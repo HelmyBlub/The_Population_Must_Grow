@@ -574,7 +574,7 @@ fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimStat
 fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadIndex: usize, state: *main.ChatSimState) !void {
     var closestTree: ?*mapZig.MapTree = null;
     var fastestDistance: f32 = 0;
-    var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
+    var topLeftChunk = mapZig.getChunkXyForPosition(citizen.homePosition);
     var iteration: u8 = 0;
     const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
     while (closestTree == null and iteration < maxIterations) {

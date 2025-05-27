@@ -156,6 +156,42 @@ pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     return map;
 }
 
+pub fn getVisibleAndAdjacentChunkRectangle(state: *main.ChatSimState) VisibleChunksData {
+    const camera = state.camera;
+    const mapVisibleTopLeft: main.Position = .{
+        .x = camera.position.x - windowSdlZig.windowData.widthFloat / 2 / camera.zoom - 10,
+        .y = camera.position.y - windowSdlZig.windowData.heightFloat / 2 / camera.zoom - 10,
+    };
+    const chunkXY = getChunkXyForPosition(mapVisibleTopLeft);
+    const increaseBy = 3;
+    return VisibleChunksData{
+        .left = chunkXY.chunkX - increaseBy,
+        .top = chunkXY.chunkY - increaseBy,
+        .columns = @intFromFloat(windowSdlZig.windowData.widthFloat / camera.zoom / GameMap.CHUNK_SIZE + 2 + increaseBy * 2),
+        .rows = @intFromFloat(windowSdlZig.windowData.heightFloat / camera.zoom / GameMap.CHUNK_SIZE + 2 + increaseBy * 2),
+    };
+}
+
+pub fn isChunkAreaInVisibleData(visibleData: VisibleChunksData, areaXY: main.ChunkAreaXY) bool {
+    const rectForOverlapping1: MapTileRectangle = .{
+        .topLeftTileXY = .{
+            .tileX = areaXY.areaX * main.ChunkArea.SIZE,
+            .tileY = areaXY.areaY * main.ChunkArea.SIZE,
+        },
+        .columnCount = main.ChunkArea.SIZE,
+        .rowCount = main.ChunkArea.SIZE,
+    };
+    const rectForOverlapping2: MapTileRectangle = .{
+        .topLeftTileXY = .{
+            .tileX = visibleData.left,
+            .tileY = visibleData.top,
+        },
+        .columnCount = @intCast(visibleData.columns),
+        .rowCount = @intCast(visibleData.rows),
+    };
+    return isRectangleOverlapping(rectForOverlapping1, rectForOverlapping2);
+}
+
 pub fn getTopLeftVisibleChunkXY(state: *main.ChatSimState) VisibleChunksData {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{

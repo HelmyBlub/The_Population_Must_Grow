@@ -113,17 +113,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.keyboardInfo.cameraMoveY = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.keyboardInfo.cameraMoveY = 0;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F8) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    try testZig.setupTestInputsXAreas(&state.testData.?);
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F9) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    state.testData.?.forceSingleCore = true;
-                    try testZig.setupTestInputsXAreas(&state.testData.?);
-                }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F2) {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
@@ -147,6 +136,32 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     try main.changeUsedThreadCount(state.usedThreadsCount - 1, state);
                     state.autoBalanceThreadCount = false;
                     std.debug.print("threadCount decreased to {d}\n", .{state.usedThreadsCount});
+                }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F8) {
+                if (state.testData == null) {
+                    state.testData = testZig.createTestData(state.allocator);
+                    try testZig.setupTestInputsXAreas(&state.testData.?);
+                }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F9) {
+                if (state.testData == null) {
+                    state.testData = testZig.createTestData(state.allocator);
+                    state.testData.?.forceSingleCore = true;
+                    try testZig.setupTestInputsXAreas(&state.testData.?);
+                }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
+                std.debug.print("printChunksNotIndleInfo\n", .{});
+                for (state.threadData) |*threadData| {
+                    for (threadData.chunkAreas.items) |chunkArea| {
+                        std.debug.print(" chunkArea {},{}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
+                        for (chunkArea.activeChunkKeys.items) |chunkKey| {
+                            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(mapZig.getChunkXyForKey(chunkKey.chunkKey), state);
+                            if (chunk.workingCitizenCounter == 0) continue;
+                            for (chunk.citizens.items) |citizen| {
+                                if (citizen.nextThinkingAction == .idle or citizen.nextThinkingAction == .potatoHarvest or citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoEatFinished) continue;
+                                std.debug.print("   {}\n", .{citizen});
+                            }
+                        }
+                    }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
                 state.gameSpeed *= 2;

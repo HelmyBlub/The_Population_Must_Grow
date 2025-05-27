@@ -1,12 +1,19 @@
 tasks:
-- bug: copy paste big area crash
 - make idle chunks not tick when player does not see it
-    - flag chunk as idle when no citizens has open build order and no build order left?
-    - if chunk not visible and idle, do not tick
     - flag chunk area as idle if every chunk idle
         - should be removed from thread? for better balance?
+    - remember to put idle thread back to working if something happens
+    - check single core and area idleing
+
+- bug: thread count mostly changes on speed change, bad for comparisson
+- lost player. scorlling away to far makes it impossible to find back
+- speed UI buttons
+    - limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
+- zoom UI buttons
+- visualize when game might crash based on "out of memory"
 
 - improve chunk area assignment based on citizen count?
+- bug: copy paste big area crash
 
 
 
@@ -16,11 +23,8 @@ tasks:
 
 
 - features:
-    - performance            
-        - performance of hashMap varies a lot. at some points goes below 30 fps and at other cpu is only at 17%
-        - arena allocator (buggy)?
+    - bugfixing/testing
     - save game progress?
-    - performance measure with high citizen counts
     - put on steam
 
   
