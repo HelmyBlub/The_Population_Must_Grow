@@ -5,7 +5,6 @@ const imageZig = @import("image.zig");
 
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
-    activeChunkKeys: std.ArrayList(u64),
     pub const CHUNK_LENGTH: comptime_int = 16;
     pub const TILE_SIZE: comptime_int = 20;
     pub const CHUNK_SIZE: comptime_int = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
@@ -151,7 +150,6 @@ pub const TILE_SIZE_BIG_HOUSE = 2;
 pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     const map: GameMap = .{
         .chunks = std.HashMap(u64, MapChunk, U64HashMapContext, 30).init(allocator),
-        .activeChunkKeys = std.ArrayList(u64).init(allocator),
     };
     return map;
 }
@@ -764,10 +762,6 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
 
 pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
     const newKey = getKeyForChunkXY(chunkXY);
-    for (state.map.activeChunkKeys.items) |key| {
-        if (newKey == key) return;
-    }
-    try state.map.activeChunkKeys.append(newKey);
     try main.addActiveChunkForThreads(newKey, state);
 }
 
@@ -846,6 +840,27 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
     return null;
 }
 
+pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) void {
+    const areaRectangleFromTileRectangle: MapTileRectangle = .{
+        .topLeftTileXY = .{
+            .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE),
+            .tileY = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileY, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE),
+        },
+        .columnCount = @divFloor(@divFloor(mapTileRectangle.columnCount, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE) + 1,
+        .rowCount = @divFloor(@divFloor(mapTileRectangle.rowCount, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE) + 1,
+    };
+    for (0..areaRectangleFromTileRectangle.columnCount) |x| {
+        for (0..areaRectangleFromTileRectangle.rowCount) |y| {
+            for (state.idleChunkAreas.items) |*idleArea| {
+                if (idleArea.areaXY.areaX == x and idleArea.areaXY.areaY == y) {
+                    idleArea.idle = false;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountColumns: u32, tileCountRows: u32, state: *main.ChatSimState) !void {
     const fromTopLeftTileMiddle = mapTileXyToTileMiddlePosition(fromTopLeftTileXY);
     const targetTopLeftTileMiddle = mapTileXyToTileMiddlePosition(toTopLeftTileXY);
@@ -904,6 +919,12 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
             }
         }
     }
+    const tileRectangle: MapTileRectangle = .{
+        .topLeftTileXY = toTopLeftTileXY,
+        .columnCount = tileCountColumns,
+        .rowCount = tileCountRows,
+    };
+    unidleAffectedChunkAreas(tileRectangle, state);
 }
 
 pub fn getKeyForPosition(position: main.Position) !u64 {

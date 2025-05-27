@@ -298,6 +298,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             }
         }
     }
+    mapZig.unidleAffectedChunkAreas(mapTileRectangle, state);
     if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
         try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, 0, state);
     }

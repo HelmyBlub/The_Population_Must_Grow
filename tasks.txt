@@ -1,10 +1,9 @@
 tasks:
 - make idle chunks not tick when player does not see it
-    - flag chunk area as idle if every chunk idle
-        - should be removed from thread? for better balance?
-    - remember to put idle thread back to working if something happens
     - check single core and area idleing
+    - remember to put idle chunkAreas back to working if something happens
 
+- check improve potato and tree search to start at citizen position but only use chunks valid to citizen home distance
 - bug: thread count mostly changes on speed change, bad for comparisson
 - lost player. scorlling away to far makes it impossible to find back
 - speed UI buttons
@@ -31,6 +30,7 @@ tasks:
 Some data:
 - FPS: 150, citizens: 31375, gameTime: 330000, end FPS: 85.37638 (27.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 178, citizens: 23179, gameTime: 330000, end FPS: 108.30976 (changed potato and tree search to start at citizen home position instead of citizen position to prevent lost citizens)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

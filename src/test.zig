@@ -132,6 +132,44 @@ pub fn tick(state: *main.ChatSimState) !void {
     }
 }
 
+pub fn determineValidanChunkDistanceForArea(chunkKeyArray: [main.ChunkArea.SIZE * main.ChunkArea.SIZE]u64) void {
+    const minDistance = 10;
+    const areaSize = main.ChunkArea.SIZE;
+    var validationChunkDistance: usize = areaSize * areaSize;
+    for (0..chunkKeyArray.len) |index1| {
+        const chunkXY1 = mapZig.getChunkXyForKey(chunkKeyArray[index1]);
+        for (index1..chunkKeyArray.len) |index2| {
+            const chunkXY2 = mapZig.getChunkXyForKey(chunkKeyArray[index2]);
+            var isTooClose = false;
+            if (@abs(chunkXY1.chunkX + areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY + areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX - areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY + areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX + areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY - areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX - areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY - areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX - areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX + areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY - areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            } else if (@abs(chunkXY1.chunkX - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY + areaSize - chunkXY2.chunkY) < minDistance) {
+                isTooClose = true;
+            }
+            if (isTooClose) {
+                const distance = index2 - index1;
+                if (distance < validationChunkDistance) {
+                    // std.debug.print("found lower distance {}, {}, {} <-> {}, distance: {}\n", .{ index1, index2, chunkXY1, chunkXY2, distance });
+                    validationChunkDistance = distance;
+                }
+            }
+        }
+    }
+    std.debug.print("lowest validationChunkDistance: {}", .{validationChunkDistance});
+}
+
 fn printTestEndData(state: *main.ChatSimState) void {
     const timePassed = std.time.microTimestamp() - state.testData.?.testStartTimeMircoSeconds;
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
