@@ -1,11 +1,12 @@
 tasks:
+- bug: not ticking idle chunks create starving citizens as they calculate hunger based on time passed
+- bug: copy paste big area crash
 - make idle chunks not tick when player does not see it
     - flag chunk as idle when no citizens has open build order and no build order left?
     - if chunk not visible and idle, do not tick
     - flag chunk area as idle if every chunk idle
         - should be removed from thread? for better balance?
 
-- correct thread amount usage
 - improve chunk area assignment based on citizen count?
 
 
@@ -25,12 +26,8 @@ tasks:
 
   
 Some data:
-- FPS: 142, citizens: 35528, gameTime: 330000, end FPS: 81.26372, single thread (26.05.2025)
-- FPS: 139, citizens: 35505, gameTime: 330000, end FPS: 85.84402, multi thread (26.05.2025)
+- FPS: 150, citizens: 31375, gameTime: 330000, end FPS: 85.37638 (27.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
-- FPS: 180, citizens: 22654, gameTime: 300000, end FPS: 115.10956 (single core)
-- FPS: 163, citizens: 21524, gameTime: 300000, end FPS: 110.11585 (multi thread)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

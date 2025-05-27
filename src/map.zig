@@ -36,6 +36,7 @@ pub const MapChunk = struct {
     chunkXY: ChunkXY,
     workingCitizenCounter: u32 = 0,
     lastPaintGameTime: u32 = 0,
+    noPotatoLeftInChunkProximityGameTtime: u32 = 0,
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
     /// buildings bigger than one tile

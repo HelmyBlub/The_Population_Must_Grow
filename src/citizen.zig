@@ -228,7 +228,7 @@ fn nextThinkingAction(citizen: *Citizen, state: *main.ChatSimState) !void {
 /// returns true if citizen goes to eat
 fn checkHunger(citizen: *Citizen, state: *main.ChatSimState) !bool {
     if (citizen.foodLevel <= 0.5) {
-        if (try findClosestFreePotato(citizen.position, state)) |potato| {
+        if (try findClosestFreePotato(citizen.homePosition, state)) |potato| {
             potato.citizenOnTheWay += 1;
             citizen.potatoPosition = potato.position;
             citizen.nextThinkingAction = .potatoHarvest;
@@ -523,10 +523,12 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     }
 }
 
-pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimState) !?*mapZig.PotatoField {
+fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimState) !?*mapZig.PotatoField {
     var shortestDistance: f32 = 0;
     var resultPotatoField: ?*mapZig.PotatoField = null;
     var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
+    const targetChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(topLeftChunk, state);
+    if (targetChunk.noPotatoLeftInChunkProximityGameTtime == state.gameTimeMs) return null;
     var iteration: u8 = 0;
     const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
     while (resultPotatoField == null and iteration < maxIterations) {
@@ -557,7 +559,9 @@ pub fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSim
         topLeftChunk.chunkX -= 1;
         topLeftChunk.chunkY -= 1;
     }
-
+    if (resultPotatoField == null) {
+        targetChunk.noPotatoLeftInChunkProximityGameTtime = state.gameTimeMs;
+    }
     return resultPotatoField;
 }
 
