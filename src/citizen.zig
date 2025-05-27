@@ -101,13 +101,13 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn citizenMove(citizen: *Citizen) void {
+    fn citizenMove(citizen: *Citizen) void {
         if (citizen.moveTo.items.len > 0) {
             const moveTo = citizen.moveTo.getLast();
             const moveSpeed = citizen.moveSpeed;
             citizen.position.x += citizen.directionX * moveSpeed;
             citizen.position.y += citizen.directionY * moveSpeed;
-            if (@abs(citizen.position.x - moveTo.x) < moveSpeed and @abs(citizen.position.y - moveTo.y) < moveSpeed) {
+            if (@abs(citizen.position.x - moveTo.x) <= moveSpeed * 1.2 and @abs(citizen.position.y - moveTo.y) <= moveSpeed * 1.2) {
                 _ = citizen.moveTo.pop();
                 if (citizen.moveTo.items.len > 0) {
                     const direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
