@@ -532,11 +532,10 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
 fn findClosestFreePotato(citizen: *Citizen, state: *main.ChatSimState) !?*mapZig.PotatoField {
     const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
     const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
-    if (homeChunk.noPotatoLeftInChunkProximityGameTtime == state.gameTimeMs) return null;
+    if (homeChunk.noPotatoLeftInChunkProximityGameTime == state.gameTimeMs) return null;
     var shortestDistance: f32 = 0;
     var resultPotatoField: ?*mapZig.PotatoField = null;
     var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
-    const targetChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(topLeftChunk, state);
     var iteration: u8 = 0;
     const maxChunkDistance = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
     const citizenHomeDistance = @max(@abs(homeChunkXY.chunkX - topLeftChunk.chunkX), @abs(homeChunkXY.chunkY - topLeftChunk.chunkY));
@@ -574,13 +573,18 @@ fn findClosestFreePotato(citizen: *Citizen, state: *main.ChatSimState) !?*mapZig
         topLeftChunk.chunkY -= 1;
     }
     if (resultPotatoField == null) {
-        targetChunk.noPotatoLeftInChunkProximityGameTtime = state.gameTimeMs;
+        homeChunk.noPotatoLeftInChunkProximityGameTime = state.gameTimeMs;
     }
     return resultPotatoField;
 }
 
 fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadIndex: usize, state: *main.ChatSimState) !void {
     const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
+    const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
+    if (homeChunk.noTreeLeftInChunkProximityGameTime == state.gameTimeMs) {
+        try setRandomMoveTo(citizen, threadIndex, state);
+        return;
+    }
     var closestTree: ?*mapZig.MapTree = null;
     var fastestDistance: f32 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
@@ -620,6 +624,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
         citizen.treePosition = closestTree.?.position;
         closestTree.?.citizenOnTheWay = true;
     } else {
+        homeChunk.noTreeLeftInChunkProximityGameTime = state.gameTimeMs;
         try setRandomMoveTo(citizen, threadIndex, state);
     }
 }
