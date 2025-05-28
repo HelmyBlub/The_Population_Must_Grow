@@ -1,15 +1,4 @@
 tasks:
-- bug: thread count mostly changes on speed change, bad for comparisson
-    - data resets when zoom or speed changes?
-    - also needs to check lower thread counts
-
-    - not enough chunks to tick -> check go down
-    - "bad performance" or "no frame limiter try around"
-        - check if recent change in threads in if comparison improved. Else go back
-        - check if up or down data exists. If both directions not tested for longer time  take a guess which might be better, less thread or more
-        - else go direction which was not done long time
-
-
 - try lower min distance for validation chunk distance
 - speed UI buttons
     - limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
