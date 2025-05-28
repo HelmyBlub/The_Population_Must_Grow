@@ -102,7 +102,7 @@ pub fn tick(state: *main.ChatSimState) !void {
                         try mapZig.copyFromTo(data.from, data.to, data.columns, data.rows, state);
                     },
                     .changeGameSpeed => |data| {
-                        state.gameSpeed = data;
+                        main.setGameSpeed(data, state);
                     },
                     .spawnFinishedHouseWithCitizen => |data| {
                         _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, false, true, 0);

@@ -430,8 +430,8 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
 
         const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothed);
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
-        const measureTime = 3000;
-        const remeasureInterval = measureTime * 30;
+        const measureTime = 3_000;
+        const remeasureInterval = 30_000;
         if (state.fpsCounter < targetFrameRate * 0.9 or (state.testData != null and !state.testData.?.fpsLimiter)) {
             if (state.gameTimeMs > threadData.switchedToThreadCountGameTime + measureTime) {
                 threadData.lastMeasuredTickDuration = tickDuration;
@@ -442,13 +442,15 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
                     if (lowerThread.lastMeasureWhenTime + measureTime * 2 > state.gameTimeMs and lowerThread.lastMeasuredTickDuration != null and lowerThread.lastMeasuredTickDuration.? < tickDuration) {
                         try changeUsedThreadCount(state.usedThreadsCount - 1, state);
                         std.debug.print("auto decrease thread count as less performance measured {}\n", .{state.usedThreadsCount});
+                        return;
                     }
                 }
                 if (state.usedThreadsCount < state.maxThreadCount) {
                     const higherThread = state.threadData[state.usedThreadsCount];
-                    if (higherThread.lastMeasureWhenTime + measureTime * 2 > state.gameTimeMs and higherThread.lastMeasuredTickDuration != null and higherThread.lastMeasuredTickDuration.? < tickDuration) {
+                    if (higherThread.lastMeasureWhenTime + measureTime * 2 > state.gameTimeMs and higherThread.lastMeasuredTickDuration != null and higherThread.lastMeasuredTickDuration.? < @divFloor(tickDuration * 9, 10)) {
                         try changeUsedThreadCount(state.usedThreadsCount + 1, state);
                         std.debug.print("auto increase thread count as less performance measured {}\n", .{state.usedThreadsCount});
+                        return;
                     }
                 }
                 const doesLowerThreadCountNeedsCheck = state.usedThreadsCount > 1 and state.threadData[state.usedThreadsCount - 2].lastMeasureWhenTime + remeasureInterval < state.gameTimeMs;
