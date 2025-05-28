@@ -73,24 +73,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 state.camera.position.y -= event.motion.yrel / state.camera.zoom;
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
-            const translateX = (state.mouseInfo.currentPos.x - windowData.widthFloat / 2.0) / state.camera.zoom * 0.2;
-            const translateY = (state.mouseInfo.currentPos.y - windowData.heightFloat / 2.0) / state.camera.zoom * 0.2;
             if (event.wheel.y > 0) {
-                state.camera.zoom /= 0.8;
-                if (state.camera.zoom > 10) {
-                    state.camera.zoom = 10;
-                } else {
-                    state.camera.position.x += translateX;
-                    state.camera.position.y += translateY;
-                }
+                main.setZoom(state.camera.zoom / 0.8, state);
             } else {
-                state.camera.zoom /= 1.2;
-                if (state.camera.zoom < 0.1) {
-                    state.camera.zoom = 0.1;
-                } else {
-                    state.camera.position.x -= translateX;
-                    state.camera.position.y -= translateY;
-                }
+                main.setZoom(state.camera.zoom / 1.2, state);
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
             if (event.button.button == 1) {
@@ -164,11 +150,9 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
-                state.gameSpeed *= 2;
-                if (state.gameSpeed > 64) state.gameSpeed = 64;
+                main.setGameSpeed(state.gameSpeed * 2, state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_MINUS) {
-                state.gameSpeed /= 2;
-                if (state.gameSpeed < 0.0625) state.gameSpeed = 0.0625;
+                main.setGameSpeed(state.gameSpeed / 2, state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else {

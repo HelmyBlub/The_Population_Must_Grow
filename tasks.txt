@@ -1,13 +1,20 @@
 tasks:
-- bug: unfinished buildings still happen. Example citizen:
-    -  citizen.Citizen{ .position = main.Position{ .x = 1.1363267e3, .y = -1.1440079e2 }, .moveTo = array_list.ArrayListAligned(main.Position,null){ .items = { main.Position{ ... } }, .capacity = 40, .allocator = mem.Allocator{ .ptr = anyopaque@e2f23fd840, .vtable = mem.Allocator.VTable{ ... } } }, .imageIndex = 12, .moveSpeed = 3.75e-1, .directionX = 7.3629963e-1, .directionY = 6.7665565e-1, .buildingPosition = main.Position{ .x = -1.859e4, .y = -1.825e4 }, .treePosition = null, .farmPosition = null, .potatoPosition = null, .hasWood = true, .hasPotato = false, .homePosition = main.Position{ .x = -1.793e4, .y = -1.771e4 }, .foodLevel = -1.931201e1, .foodLevelLastUpdateTimeMs = 2567888, .nextFoodTickTimeMs = 2582888, .nextThinkingTickTimeMs = 1377968, .nextThinkingAction = citizen.CitizenThinkAction.buildingBuild }
-    - citizen position very far away from home, but why?
-
-- put chunks and areas to idle if no citizen how can work in it
 - bug: thread count mostly changes on speed change, bad for comparisson
-- lost player. scorlling away to far makes it impossible to find back
+    - data resets when zoom or speed changes?
+    - also needs to check lower thread counts
+
+    - not enough chunks to tick -> check go down
+    - "bad performance" or "no frame limiter try around"
+        - check if recent change in threads in if comparison improved. Else go back
+        - check if up or down data exists. If both directions not tested for longer time  take a guess which might be better, less thread or more
+        - else go direction which was not done long time
+
+
+- try lower min distance for validation chunk distance
 - speed UI buttons
     - limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
+- put chunks and areas to idle if no citizen how can work in it
+- lost player. scorlling away to far makes it impossible to find back
 - zoom UI buttons
 - visualize when game might crash based on "out of memory"
 

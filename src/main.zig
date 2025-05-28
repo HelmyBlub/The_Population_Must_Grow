@@ -67,7 +67,7 @@ pub const ThreadData = struct {
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used and this would be the data of the 3rd thread, this would save a fps value for 3 threads fps
-    lastMeasuredTickDuration: u64 = 0,
+    lastMeasuredTickDuration: ?u64 = null,
     lastMeasureWhenTime: u32 = 0,
     switchedToThreadCountGameTime: u32 = 0,
     pub const VALIDATION_CHUNK_DISTANCE = 31;
@@ -374,34 +374,109 @@ pub fn mainLoop(state: *ChatSimState) !void {
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
+pub fn setZoom(zoom: f32, state: *ChatSimState) void {
+    var limitedZoom = zoom;
+    if (limitedZoom > 10) {
+        limitedZoom = 10;
+    } else if (limitedZoom < 0.1) {
+        limitedZoom = 0.1;
+    }
+    if (limitedZoom == state.camera.zoom) return;
+    const changePerCent = @abs(state.camera.zoom - limitedZoom) / limitedZoom;
+    const translateX = (state.mouseInfo.currentPos.x - windowSdlZig.windowData.widthFloat / 2.0) / state.camera.zoom * changePerCent;
+    const translateY = (state.mouseInfo.currentPos.y - windowSdlZig.windowData.heightFloat / 2.0) / state.camera.zoom * changePerCent;
+    const zoomUp: bool = limitedZoom - state.camera.zoom > 0;
+    state.camera.zoom = limitedZoom;
+    if (zoomUp) {
+        state.camera.position.x += translateX;
+        state.camera.position.y += translateY;
+    } else {
+        state.camera.position.x -= translateX;
+        state.camera.position.y -= translateY;
+    }
+    resetThreadPerfromanceMeasureData(state);
+}
+
+pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
+    state.gameSpeed = speed;
+    if (state.gameSpeed > 64) {
+        state.gameSpeed = 64;
+    } else if (state.gameSpeed < 0.0625) {
+        state.gameSpeed = 0.0625;
+    }
+    resetThreadPerfromanceMeasureData(state);
+}
+
+pub fn resetThreadPerfromanceMeasureData(state: *ChatSimState) void {
+    for (state.threadData, 0..) |*threadData, index| {
+        if (index + 1 == state.usedThreadsCount) {
+            threadData.switchedToThreadCountGameTime = state.gameTimeMs + 2000;
+        } else {
+            threadData.lastMeasureWhenTime = state.gameTimeMs;
+        }
+    }
+}
+
 fn autoBalanceThreadCount(state: *ChatSimState) !void {
     if (state.maxThreadCount > 1 and state.autoBalanceThreadCount) {
         if (state.citizenCounter < 10000 and state.usedThreadsCount == 1) return;
+        const threadData = &state.threadData[state.usedThreadsCount - 1];
+        if (state.usedThreadsCount > 1 and threadData.splitIndexCounter < 50) {
+            threadData.lastMeasuredTickDuration = null;
+            threadData.lastMeasureWhenTime = state.gameTimeMs;
+            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+            std.debug.print("auto decrease thread count because of no chunkAreas {}\n", .{state.usedThreadsCount});
+        }
+
         const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothed);
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
-        const threadData = &state.threadData[state.usedThreadsCount - 1];
-        const measureTime: u32 = @intFromFloat(2000.0 * state.gameSpeed);
+        const measureTime = 3000;
+        const remeasureInterval = measureTime * 30;
         if (state.fpsCounter < targetFrameRate * 0.9 or (state.testData != null and !state.testData.?.fpsLimiter)) {
             if (state.gameTimeMs > threadData.switchedToThreadCountGameTime + measureTime) {
                 threadData.lastMeasuredTickDuration = tickDuration;
                 threadData.lastMeasureWhenTime = state.gameTimeMs;
+
                 if (state.usedThreadsCount > 1) {
-                    const lowerThreadCountData = &state.threadData[state.usedThreadsCount - 2];
-                    if (lowerThreadCountData.lastMeasuredTickDuration < tickDuration and lowerThreadCountData.lastMeasureWhenTime + measureTime * 3 >= state.gameTimeMs) {
+                    const lowerThread = state.threadData[state.usedThreadsCount - 2];
+                    if (lowerThread.lastMeasureWhenTime + measureTime * 2 > state.gameTimeMs and lowerThread.lastMeasuredTickDuration != null and lowerThread.lastMeasuredTickDuration.? < tickDuration) {
                         try changeUsedThreadCount(state.usedThreadsCount - 1, state);
-                        std.debug.print("auto decrease thread count {}\n", .{state.usedThreadsCount});
-                        return;
+                        std.debug.print("auto decrease thread count as less performance measured {}\n", .{state.usedThreadsCount});
                     }
                 }
                 if (state.usedThreadsCount < state.maxThreadCount) {
-                    const upperThreadCountData = &state.threadData[state.usedThreadsCount];
-                    if (upperThreadCountData.lastMeasureWhenTime + measureTime * 30 < state.gameTimeMs) {
+                    const higherThread = state.threadData[state.usedThreadsCount];
+                    if (higherThread.lastMeasureWhenTime + measureTime * 2 > state.gameTimeMs and higherThread.lastMeasuredTickDuration != null and higherThread.lastMeasuredTickDuration.? < tickDuration) {
                         try changeUsedThreadCount(state.usedThreadsCount + 1, state);
-                        std.debug.print("auto increase thread count {}\n", .{state.usedThreadsCount});
-                        return;
+                        std.debug.print("auto increase thread count as less performance measured {}\n", .{state.usedThreadsCount});
                     }
                 }
+                const doesLowerThreadCountNeedsCheck = state.usedThreadsCount > 1 and state.threadData[state.usedThreadsCount - 2].lastMeasureWhenTime + remeasureInterval < state.gameTimeMs;
+                const doesHigherThreadCountNeedsCheck = state.usedThreadsCount < state.maxThreadCount and state.threadData[state.usedThreadsCount].lastMeasureWhenTime + remeasureInterval < state.gameTimeMs;
+                if (!doesHigherThreadCountNeedsCheck and !doesLowerThreadCountNeedsCheck) {
+                    return;
+                }
+                var checkLower = true;
+                if (doesHigherThreadCountNeedsCheck and doesLowerThreadCountNeedsCheck) {
+                    if (threadData.splitIndexCounter > 400) {
+                        checkLower = false;
+                    }
+                } else if (doesHigherThreadCountNeedsCheck) {
+                    checkLower = false;
+                }
+
+                if (checkLower) {
+                    try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                    std.debug.print("auto decrease thread count to try {}\n", .{state.usedThreadsCount});
+                    return;
+                } else {
+                    try changeUsedThreadCount(state.usedThreadsCount + 1, state);
+                    std.debug.print("auto increase thread count to try {}\n", .{state.usedThreadsCount});
+                    return;
+                }
             }
+        } else {
+            //maybe to many thread used, check and lower TODO
         }
     }
 }
