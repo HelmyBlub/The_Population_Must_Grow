@@ -17,6 +17,8 @@ pub const ActionType = enum {
     copyPaste,
     buildPath,
     remove,
+    speedUp,
+    speedDown,
 };
 
 pub const KeyboardInfo = struct {
@@ -32,7 +34,7 @@ pub const KeyBinding = struct {
 };
 
 pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
-    state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 8);
+    state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 10);
     state.keyboardInfo.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
     state.keyboardInfo.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
     state.keyboardInfo.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildTreeArea };
@@ -41,6 +43,8 @@ pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
     state.keyboardInfo.keybindings[5] = .{ .sdlScanCode = sdl.SDL_SCANCODE_6, .displayChar = '6', .action = ActionType.copyPaste };
     state.keyboardInfo.keybindings[6] = .{ .sdlScanCode = sdl.SDL_SCANCODE_7, .displayChar = '7', .action = ActionType.buildBigHouseArea };
     state.keyboardInfo.keybindings[7] = .{ .sdlScanCode = sdl.SDL_SCANCODE_9, .displayChar = '9', .action = ActionType.remove };
+    state.keyboardInfo.keybindings[8] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_PLUS, .displayChar = '+', .action = ActionType.speedUp };
+    state.keyboardInfo.keybindings[9] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_MINUS, .displayChar = '-', .action = ActionType.speedDown };
 }
 
 pub fn destory(state: *main.ChatSimState) void {
@@ -59,7 +63,6 @@ pub fn tick(state: *main.ChatSimState) void {
 
 pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
     var buildModeChanged = false;
-    try buildOptionsUxVulkanZig.setSelectedButtonIndex(actionType, state);
     switch (actionType) {
         ActionType.buildHouse => {
             state.currentBuildType = mapZig.BUILD_TYPE_HOUSE;
@@ -101,8 +104,15 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
             state.buildMode = mapZig.BUILD_MODE_DRAG_RECTANGLE;
             buildModeChanged = true;
         },
+        .speedUp => {
+            main.setGameSpeed(state.gameSpeed * 2, state);
+        },
+        .speedDown => {
+            main.setGameSpeed(state.gameSpeed / 2, state);
+        },
     }
     if (buildModeChanged) {
+        try buildOptionsUxVulkanZig.setSelectedButtonIndex(actionType, state);
         state.copyAreaRectangle = null;
         state.mouseInfo.mapDown = null;
         state.rectangles[0] = null;

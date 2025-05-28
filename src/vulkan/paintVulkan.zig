@@ -1195,8 +1195,8 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     vk.vkCmdNextSubpass(commandBuffer, vk.VK_SUBPASS_CONTENTS_INLINE);
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     try citizenPopulationCounterUxVulkanZig.recordCommandBuffer(commandBuffer, state);
-    try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     try buildOptionsUxVulkanZig.recordCommandBuffer(commandBuffer, state);
+    try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
 }

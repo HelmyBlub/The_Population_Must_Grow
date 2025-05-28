@@ -149,10 +149,6 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                         }
                     }
                 }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_PLUS) {
-                main.setGameSpeed(state.gameSpeed * 2, state);
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_KP_MINUS) {
-                main.setGameSpeed(state.gameSpeed / 2, state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else {

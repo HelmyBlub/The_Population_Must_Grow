@@ -401,8 +401,8 @@ pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
     state.gameSpeed = speed;
     if (state.gameSpeed > 64) {
         state.gameSpeed = 64;
-    } else if (state.gameSpeed < 0.0625) {
-        state.gameSpeed = 0.0625;
+    } else if (state.gameSpeed < 0.25) {
+        state.gameSpeed = 0.25;
     }
     resetThreadPerfromanceMeasureData(state);
 }

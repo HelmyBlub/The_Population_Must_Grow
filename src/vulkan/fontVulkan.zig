@@ -84,35 +84,32 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         const performanceFontSize = 20.0;
         var offsetY: f32 = -0.99;
         const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        _ = try paintNumber(@intFromFloat(state.fpsCounter), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
         offsetY += onePixelYInVulkan * performanceFontSize;
 
         if (state.cpuPerCent) |cpuPerCent| {
             var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            cpuTextWidth += try paintNumber(@intFromFloat(cpuPerCent * 100), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
             _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
-            offsetY += onePixelYInVulkan * performanceFontSize;
-        }
-        if (state.gameSpeed != 1) {
-            const textWidth = paintText("Speed: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            _ = try paintNumber(@intFromFloat(state.gameSpeed), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         for (0..state.usedThreadsCount) |threadIndex| {
             const thread = state.threadData[threadIndex];
             var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@intCast(threadIndex), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@intCast(thread.splitIndexCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.splitIndexCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            _ = try paintNumber(@intCast(thread.tickedCitizenCounter), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
-        const string: []const u8 = if (state.wasSingleCore) "singleCore" else "multiCore";
-        _ = paintText(string, .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        offsetY += onePixelYInVulkan * performanceFontSize;
-
         try codePerformanceZig.paintData(state, offsetY);
+    }
+    if (state.vkState.buildOptionsUx.uiButtons.len > 10) {
+        const textOntoButton = state.vkState.buildOptionsUx.uiButtons[10];
+        const speedFontSize = 30;
+        const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+        _ = try paintNumber(state.gameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
 }
@@ -151,10 +148,10 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSiz
     };
 }
 
-pub fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
+pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
-    const numberAsString = try std.fmt.bufPrint(&buf, "{}", .{number});
+    const numberAsString = try std.fmt.bufPrint(&buf, "{d}", .{number});
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     var xOffset: f32 = 0;
@@ -229,7 +226,7 @@ pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.C
 
 pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
     const fontImageWidth = 1600.0;
-    const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1282, 1302 };
+    const imageCharSeperatePixels = [_]f32{ 0, 50, 88, 117, 142, 170, 198, 232, 262, 277, 307, 338, 365, 413, 445, 481, 508, 541, 569, 603, 638, 674, 711, 760, 801, 837, 873, 902, 931, 968, 1000, 1037, 1072, 1104, 1142, 1175, 1205, 1238, 1282, 1302, 1322, 1367, 1410 };
     var index: usize = 0;
     switch (char) {
         'a', 'A' => {
@@ -348,6 +345,15 @@ pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
         },
         ' ' => {
             index = 38;
+        },
+        '.' => {
+            index = 39;
+        },
+        '+' => {
+            index = 40;
+        },
+        '-' => {
+            index = 41;
         },
         else => {
             texX.* = 0;

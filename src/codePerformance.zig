@@ -66,7 +66,7 @@ pub fn paintData(state: *main.ChatSimState, startY: f32) !void {
     var yOffset: f32 = 0.0;
     while (iterator.next()) |entry| {
         const textWidth = fontVulkanZig.paintText(entry.key_ptr.*, .{ .x = -0.99, .y = startY + yOffset }, performanceFontSize, state) + onePixelXInVulkan * 5;
-        _ = try fontVulkanZig.paintNumber(@intCast(entry.value_ptr.lastMeasurement), .{ .x = -0.99 + textWidth, .y = startY + yOffset }, performanceFontSize, state);
+        _ = try fontVulkanZig.paintNumber(@as(u32, @intCast(entry.value_ptr.lastMeasurement)), .{ .x = -0.99 + textWidth, .y = startY + yOffset }, performanceFontSize, state);
         yOffset += onePixelYInVulkan * performanceFontSize;
     }
 }
