@@ -1,5 +1,4 @@
 tasks:
-- try lower min distance for validation chunk distance
 - speed UI buttons
     - limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
 - put chunks and areas to idle if no citizen how can work in it
@@ -26,6 +25,10 @@ tasks:
 Some data:
 - FPS: 144, citizens: 32183, gameTime: 330000, end FPS: 88.02314 (28.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+
+
+- FPS: 90, citizens: 71574, gameTime: 400000, end FPS: 66.83762 (bigger test case)
+- FPS: 92, citizens: 71671, gameTime: 400000, end FPS: 67.82236 (min distance reduced to 9)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

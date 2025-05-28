@@ -133,7 +133,7 @@ pub fn tick(state: *main.ChatSimState) !void {
 }
 
 pub fn determineValidanChunkDistanceForArea(chunkKeyArray: [main.ChunkArea.SIZE * main.ChunkArea.SIZE]u64) void {
-    const minDistance = 10;
+    const minDistance = 9;
     const areaSize = main.ChunkArea.SIZE;
     var validationChunkDistance: usize = areaSize * areaSize;
     for (0..chunkKeyArray.len) |index1| {

@@ -70,7 +70,7 @@ pub const ThreadData = struct {
     lastMeasuredTickDuration: ?u64 = null,
     lastMeasureWhenTime: u32 = 0,
     switchedToThreadCountGameTime: u32 = 0,
-    pub const VALIDATION_CHUNK_DISTANCE = 31;
+    pub const VALIDATION_CHUNK_DISTANCE = 37;
 };
 
 pub const MouseInfo = struct {
