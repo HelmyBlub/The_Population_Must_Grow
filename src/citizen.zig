@@ -228,7 +228,7 @@ fn nextThinkingAction(citizen: *Citizen, state: *main.ChatSimState) !void {
 /// returns true if citizen goes to eat
 fn checkHunger(citizen: *Citizen, state: *main.ChatSimState) !bool {
     if (citizen.foodLevel <= 0.5) {
-        if (try findClosestFreePotato(citizen.homePosition, state)) |potato| {
+        if (try findClosestFreePotato(citizen, state)) |potato| {
             potato.citizenOnTheWay += 1;
             citizen.potatoPosition = potato.position;
             citizen.nextThinkingAction = .potatoHarvest;
@@ -529,14 +529,18 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     }
 }
 
-fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimState) !?*mapZig.PotatoField {
+fn findClosestFreePotato(citizen: *Citizen, state: *main.ChatSimState) !?*mapZig.PotatoField {
+    const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
+    const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
+    if (homeChunk.noPotatoLeftInChunkProximityGameTtime == state.gameTimeMs) return null;
     var shortestDistance: f32 = 0;
     var resultPotatoField: ?*mapZig.PotatoField = null;
-    var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
+    var topLeftChunk = mapZig.getChunkXyForPosition(citizen.position);
     const targetChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(topLeftChunk, state);
-    if (targetChunk.noPotatoLeftInChunkProximityGameTtime == state.gameTimeMs) return null;
     var iteration: u8 = 0;
-    const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
+    const maxChunkDistance = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
+    const citizenHomeDistance = @max(@abs(homeChunkXY.chunkX - topLeftChunk.chunkX), @abs(homeChunkXY.chunkY - topLeftChunk.chunkY));
+    const maxIterations = maxChunkDistance + citizenHomeDistance;
     while (resultPotatoField == null and iteration < maxIterations) {
         const loops = iteration * 2 + 1;
         for (0..loops) |x| {
@@ -546,11 +550,15 @@ fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimStat
                     .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
                     .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
                 };
+                const toFarX = @abs(chunkXY.chunkX - homeChunkXY.chunkX) >= maxChunkDistance;
+                const toFarY = @abs(chunkXY.chunkY - homeChunkXY.chunkY) >= maxChunkDistance;
+                if (toFarX or toFarY) continue;
+
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.potatoFields.items) |*potatoField| {
                     if ((!potatoField.fullyGrown and potatoField.growStartTimeMs == null) or potatoField.citizenOnTheWay >= 2) continue;
                     if (potatoField.citizenOnTheWay > 0 and potatoField.growStartTimeMs != null) continue;
-                    var tempDistance: f32 = main.calculateDistance(targetPosition, potatoField.position) + @as(f32, @floatFromInt(potatoField.citizenOnTheWay)) * 40.0;
+                    var tempDistance: f32 = main.calculateDistance(citizen.position, potatoField.position) + @as(f32, @floatFromInt(potatoField.citizenOnTheWay)) * 40.0;
                     if (potatoField.growStartTimeMs) |time| {
                         tempDistance += 40 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 250;
                     }
@@ -572,11 +580,14 @@ fn findClosestFreePotato(targetPosition: main.Position, state: *main.ChatSimStat
 }
 
 fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadIndex: usize, state: *main.ChatSimState) !void {
+    const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
     var closestTree: ?*mapZig.MapTree = null;
     var fastestDistance: f32 = 0;
-    var topLeftChunk = mapZig.getChunkXyForPosition(citizen.homePosition);
+    var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
     var iteration: u8 = 0;
-    const maxIterations: u8 = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
+    const maxChunkDistance = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
+    const citizenHomeDistance = @max(@abs(homeChunkXY.chunkX - topLeftChunk.chunkX), @abs(homeChunkXY.chunkY - topLeftChunk.chunkY));
+    const maxIterations = maxChunkDistance + citizenHomeDistance;
     while (closestTree == null and iteration < maxIterations) {
         const loops = iteration * 2 + 1;
         for (0..loops) |x| {
@@ -586,6 +597,10 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
                     .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
                     .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
                 };
+                const toFarX = @abs(chunkXY.chunkX - homeChunkXY.chunkX) >= maxChunkDistance;
+                const toFarY = @abs(chunkXY.chunkY - homeChunkXY.chunkY) >= maxChunkDistance;
+                if (toFarX or toFarY) continue;
+
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.trees.items) |*tree| {
                     if (!tree.fullyGrown or tree.citizenOnTheWay) continue;

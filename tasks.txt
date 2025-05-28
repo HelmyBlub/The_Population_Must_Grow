@@ -1,9 +1,12 @@
 tasks:
-- make idle chunks not tick when player does not see it
-    - check single core and area idleing
-    - remember to put idle chunkAreas back to working if something happens
-
 - check improve potato and tree search to start at citizen position but only use chunks valid to citizen home distance
+
+- bug: unfinished buildings still happen. Example citizen:
+    -  citizen.Citizen{ .position = main.Position{ .x = 1.1363267e3, .y = -1.1440079e2 }, .moveTo = array_list.ArrayListAligned(main.Position,null){ .items = { main.Position{ ... } }, .capacity = 40, .allocator = mem.Allocator{ .ptr = anyopaque@e2f23fd840, .vtable = mem.Allocator.VTable{ ... } } }, .imageIndex = 12, .moveSpeed = 3.75e-1, .directionX = 7.3629963e-1, .directionY = 6.7665565e-1, .buildingPosition = main.Position{ .x = -1.859e4, .y = -1.825e4 }, .treePosition = null, .farmPosition = null, .potatoPosition = null, .hasWood = true, .hasPotato = false, .homePosition = main.Position{ .x = -1.793e4, .y = -1.771e4 }, .foodLevel = -1.931201e1, .foodLevelLastUpdateTimeMs = 2567888, .nextFoodTickTimeMs = 2582888, .nextThinkingTickTimeMs = 1377968, .nextThinkingAction = citizen.CitizenThinkAction.buildingBuild }
+    - citizen position very far away from home, but why?
+
+- check if useful to value also for trees noPotatoLeftInChunkProximityGameTtime
+- put chunks and areas to idle if no citizen how can work in it
 - bug: thread count mostly changes on speed change, bad for comparisson
 - lost player. scorlling away to far makes it impossible to find back
 - speed UI buttons
@@ -31,6 +34,9 @@ Some data:
 - FPS: 150, citizens: 31375, gameTime: 330000, end FPS: 85.37638 (27.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 178, citizens: 23179, gameTime: 330000, end FPS: 108.30976 (changed potato and tree search to start at citizen home position instead of citizen position to prevent lost citizens)
+- FPS: 171, citizens: 24769, gameTime: 330000, end FPS: 104.49553 (potato search start at citizen position)
+- FPS: 142, citizens: 29432, gameTime: 330000, end FPS: 86.65275 (tree search start at citizen position)
+- FPS: 144, citizens: 32183, gameTime: 330000, end FPS: 89.02314 (fixed bug)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
