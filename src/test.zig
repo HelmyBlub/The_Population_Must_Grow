@@ -59,7 +59,7 @@ pub fn executePerfromanceTest() !void {
     defer main.destroyGameState(&state);
     state.testData = createTestData(state.allocator);
     const testData = &state.testData.?;
-    state.gameSpeed = 1;
+    state.desiredGameSpeed = 1;
     // try setupTestInputs(testData);
     try setupTestInputs(testData);
 

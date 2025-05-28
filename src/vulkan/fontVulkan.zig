@@ -107,9 +107,17 @@ fn dataUpdate(state: *main.ChatSimState) !void {
     }
     if (state.vkState.buildOptionsUx.uiButtons.len > 10) {
         const textOntoButton = state.vkState.buildOptionsUx.uiButtons[10];
-        const speedFontSize = 30;
-        const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
-        _ = try paintNumber(state.gameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+        if (state.actualGameSpeed == state.desiredGameSpeed) {
+            const speedFontSize = 30;
+            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+            _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+        } else {
+            const speedFontSize = 16;
+            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, state);
+            _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+            const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
+            _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
+        }
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
 }

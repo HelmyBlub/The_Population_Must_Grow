@@ -20,7 +20,9 @@ pub const ChatSimState: type = struct {
     map: mapZig.GameMap,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
-    gameSpeed: f32,
+    desiredGameSpeed: f32,
+    actualGameSpeed: f32,
+    lastAutoGameSpeedChangeTime: u32 = 0,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
     gameTimeMs: u32,
@@ -173,7 +175,8 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     const map: mapZig.GameMap = try mapZig.createMap(allocator);
     state.* = ChatSimState{
         .map = map,
-        .gameSpeed = 1,
+        .desiredGameSpeed = 1,
+        .actualGameSpeed = 1,
         .paintIntervalMs = 16,
         .tickIntervalMs = 16,
         .gameTimeMs = 0,
@@ -329,7 +332,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
     mainLoop: while (!state.gameEnd) {
         try codePerformanceZig.startMeasure("main loop", &state.codePerformanceData);
         state.tickStartTimeMicroSeconds = std.time.microTimestamp();
-        state.ticksRemainingBeforePaint += state.gameSpeed;
+        state.ticksRemainingBeforePaint += state.actualGameSpeed;
         try windowSdlZig.handleEvents(state);
         try optimizeChunkAreaAssignments(state);
         while (state.ticksRemainingBeforePaint >= 1) {
@@ -362,7 +365,8 @@ pub fn mainLoop(state: *ChatSimState) !void {
         }
         const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds))));
         state.fpsCounter = state.fpsCounter * 0.99 + @as(f32, @floatFromInt(thisFrameFps)) * 0.01;
-        state.tickDurationSmoothed = state.tickDurationSmoothed * 0.99 + @as(f32, @floatFromInt(passedTime)) / state.gameSpeed * 0.01;
+        state.tickDurationSmoothed = state.tickDurationSmoothed * 0.99 + @as(f32, @floatFromInt(passedTime)) / state.desiredGameSpeed * 0.01;
+        autoAdjustActualGameSpeed(state);
         try autoBalanceThreadCount(state);
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
@@ -372,6 +376,23 @@ pub fn mainLoop(state: *ChatSimState) !void {
         codePerformanceZig.endMeasure("main loop", &state.codePerformanceData);
     }
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
+}
+
+fn autoAdjustActualGameSpeed(state: *ChatSimState) void {
+    if (state.desiredGameSpeed > 1 and state.gameTimeMs - state.lastAutoGameSpeedChangeTime > @as(u32, @intFromFloat(1000 * state.actualGameSpeed))) {
+        const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
+        if (targetFrameRate * 0.9 > state.fpsCounter) {
+            const nextSpeedDecreaseDifference: f32 = (state.actualGameSpeed - 1) / state.actualGameSpeed;
+            const frameDifference = state.fpsCounter / targetFrameRate;
+            if (state.actualGameSpeed > 1 and nextSpeedDecreaseDifference > frameDifference) {
+                state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
+                state.actualGameSpeed -= 1;
+            }
+        } else if (state.desiredGameSpeed > state.actualGameSpeed) {
+            state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
+            state.actualGameSpeed += 1;
+        }
+    }
 }
 
 pub fn setZoom(zoom: f32, state: *ChatSimState) void {
@@ -398,12 +419,16 @@ pub fn setZoom(zoom: f32, state: *ChatSimState) void {
 }
 
 pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
-    state.gameSpeed = speed;
-    if (state.gameSpeed > 64) {
-        state.gameSpeed = 64;
-    } else if (state.gameSpeed < 0.25) {
-        state.gameSpeed = 0.25;
+    var limitedSpeed = speed;
+    if (limitedSpeed > 64) {
+        limitedSpeed = 64;
+    } else if (limitedSpeed < 0.25) {
+        limitedSpeed = 0.25;
     }
+    if (state.desiredGameSpeed == state.actualGameSpeed) {
+        state.actualGameSpeed = limitedSpeed;
+    }
+    state.desiredGameSpeed = limitedSpeed;
     resetThreadPerfromanceMeasureData(state);
 }
 
@@ -875,7 +900,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !boo
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     state.threadData[threadIndex].tickedChunkCounter += 1;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
-    const gameSpeedVisibleFactor = if (state.gameSpeed <= 1) 1 else state.gameSpeed;
+    const gameSpeedVisibleFactor = if (state.desiredGameSpeed <= 1) 1 else state.desiredGameSpeed;
     const isVisible = chunk.lastPaintGameTime + @as(u32, @intFromFloat(32 * gameSpeedVisibleFactor)) > state.gameTimeMs;
     if (chunk.workingCitizenCounter > 0 or isVisible) {
         state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;

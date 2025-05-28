@@ -1,11 +1,11 @@
 tasks:
-- speed UI buttons
-    - limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
+- limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
 - put chunks and areas to idle if no citizen how can work in it
 - lost player. scorlling away to far makes it impossible to find back
 - zoom UI buttons
 - visualize when game might crash based on "out of memory"
 
+- limit citizen hunger, currently infite negative
 - improve chunk area assignment based on citizen count?
 - bug: copy paste big area crash
 

@@ -105,10 +105,10 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
             buildModeChanged = true;
         },
         .speedUp => {
-            main.setGameSpeed(state.gameSpeed * 2, state);
+            main.setGameSpeed(state.desiredGameSpeed * 2, state);
         },
         .speedDown => {
-            main.setGameSpeed(state.gameSpeed / 2, state);
+            main.setGameSpeed(state.desiredGameSpeed / 2, state);
         },
     }
     if (buildModeChanged) {
