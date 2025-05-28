@@ -810,7 +810,7 @@ fn tick(state: *ChatSimState) !void {
         }
         for (1..state.usedThreadsCount) |i| {
             while (!state.threadData[i].finishedTick) {
-                state.threadData[0].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+                state.threadData[i].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) break;
                 //waiting
                 var minIndex: ?usize = null;
