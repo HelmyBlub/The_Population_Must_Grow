@@ -1,7 +1,5 @@
 tasks:
 
-- lost player. scorlling away to far makes it impossible to find back
-    - ui button to set camera back to spawn
 - copy/paste left click change when moving not unselecting
 - put chunks and areas to idle if no citizen how can work in it
 - visualize when game might crash based on "out of memory"

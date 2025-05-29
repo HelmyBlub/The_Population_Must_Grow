@@ -181,7 +181,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
 
     if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
         if (event.button.button != 1) {
-            if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 150) {
+            if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 100) {
                 state.mouseInfo.mapDown = null;
                 state.copyAreaRectangle = null;
                 state.rectangles[0] = null;
