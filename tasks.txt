@@ -1,6 +1,4 @@
 tasks:
-- limit speed to keep fps high enough. No real gain if losing fps for no higher real speed
-    - continue: currenlty does not work gread when a lot of speed up. Calculate better new value
 - auto balance thread seems still bad. maybe because of speed changes
 
 - bug: resize speed buttons

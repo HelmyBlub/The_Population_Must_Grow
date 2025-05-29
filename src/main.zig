@@ -393,6 +393,14 @@ fn autoBalanceActualGameSpeed(state: *ChatSimState) void {
                 changeAmount = state.actualGameSpeed - 2;
             }
             if (state.actualGameSpeed > 1) {
+                if (state.actualGameSpeed < 5) {
+                    // allow lower frame rates for higher game speed
+                    const changeAmountPerCent = (state.actualGameSpeed - changeAmount) / state.actualGameSpeed;
+                    if (targetFrameRate * changeAmountPerCent < state.fpsCounter) {
+                        state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
+                        return;
+                    }
+                }
                 state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
                 state.actualGameSpeed -= changeAmount;
                 if (state.actualGameSpeed < 1) {
