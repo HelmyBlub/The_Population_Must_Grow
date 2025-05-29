@@ -1,10 +1,9 @@
 tasks:
-- auto balance thread seems still bad. 
-    - because of speed changes. Both try to adjust to destired frame rate
 
-- put chunks and areas to idle if no citizen how can work in it
 - lost player. scorlling away to far makes it impossible to find back
+    - ui button to set camera back to spawn
 - copy/paste left click change when moving not unselecting
+- put chunks and areas to idle if no citizen how can work in it
 - visualize when game might crash based on "out of memory"
     - or check out save game progress as i could save idle chunks and clean up from memory
 

@@ -108,8 +108,8 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         }
         try codePerformanceZig.paintData(state, offsetY);
     }
-    if (state.vkState.buildOptionsUx.uiButtons.len > 13) {
-        const textOntoButton = state.vkState.buildOptionsUx.uiButtons[10];
+    if (state.vkState.buildOptionsUx.uiButtons.len > 14) {
+        const textOntoButton = state.vkState.buildOptionsUx.uiButtons[11];
         if (state.actualGameSpeed == state.desiredGameSpeed) {
             const speedFontSize = 30;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
@@ -130,7 +130,7 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
         }
 
-        const textOntoZoomButton = state.vkState.buildOptionsUx.uiButtons[13];
+        const textOntoZoomButton = state.vkState.buildOptionsUx.uiButtons[14];
         const zoomFontSize = 30;
         const textWidth = paintText("Zoom: ", .{ .x = textOntoZoomButton.pos.x, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, state);
         _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, state);

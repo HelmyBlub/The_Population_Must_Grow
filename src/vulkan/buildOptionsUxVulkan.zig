@@ -146,7 +146,7 @@ pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
 }
 
 fn initUiButtons(state: *main.ChatSimState) !void {
-    const buttonCountMax = 14;
+    const buttonCountMax = 15;
     state.vkState.buildOptionsUx.uiButtons = try state.allocator.alloc(UiButton, buttonCountMax);
     var buttonCounter: usize = 0;
 
@@ -243,6 +243,15 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
         .type = .{ .action = inputZig.ActionType.remove },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_DELETE },
+        .tooltip = tooltip,
+    };
+    buttonCounter += 1;
+
+    tooltip = try state.allocator.alloc([]const u8, 1);
+    tooltip[0] = "Move back to world spawn";
+    state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
+        .type = .{ .action = inputZig.ActionType.cameraToWorldCenter },
+        .fill = .{ .imageIndex = imageZig.IMAGE_CITIZEN_PUPIL1 },
         .tooltip = tooltip,
     };
     buttonCounter += 1;

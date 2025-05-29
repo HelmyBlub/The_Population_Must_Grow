@@ -21,6 +21,7 @@ pub const ActionType = enum {
     speedDown,
     zoomIn,
     zoomOut,
+    cameraToWorldCenter,
 };
 
 pub const KeyboardInfo = struct {
@@ -119,6 +120,9 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
         },
         .zoomOut => {
             main.setZoom(state.camera.zoom * 0.8, state, false);
+        },
+        .cameraToWorldCenter => {
+            state.camera.position = .{ .x = 0, .y = 0 };
         },
     }
     if (buildModeChanged) {
