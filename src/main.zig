@@ -485,7 +485,7 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
 
         const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothedMircoSeconds);
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
-        const measureTime = 3_000;
+        const measureTime = 5_000;
         const remeasureInterval = 30_000;
         if (state.fpsCounter < targetFrameRate * 0.9 or (state.testData != null and !state.testData.?.fpsLimiter)) {
             if (state.gameTimeMs > threadData.switchedToThreadCountGameTime + measureTime) {

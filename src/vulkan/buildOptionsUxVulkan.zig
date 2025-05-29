@@ -60,15 +60,19 @@ const UiButtonFillData = union(UiButtonFill) {
 };
 
 const UiButton = struct {
-    pos: main.Position,
-    width: f32,
-    height: f32,
+    pos: main.Position = .{ .x = 0, .y = 0 },
+    width: f32 = 0,
+    height: f32 = 0,
     fill: UiButtonFillData,
     actionType: ?inputZig.ActionType,
     tooltip: [][]const u8,
 };
 
 pub fn onWindowResize(vkState: *paintVulkanZig.Vk_State) void {
+    setupUiButtonLocations(vkState);
+}
+
+pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
     const sizePixels = 80.0;
     const spacingPixels = 5.0;
     const vulkanWidth = sizePixels / windowSdlZig.windowData.widthFloat;
@@ -78,22 +82,35 @@ pub fn onWindowResize(vkState: *paintVulkanZig.Vk_State) void {
     const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(vkState.buildOptionsUx.uiButtons.len)) / 2.0;
 
     for (vkState.buildOptionsUx.uiButtons, 0..) |*uiButton, index| {
-        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index)), .y = posY };
-        uiButton.width = vulkanWidth;
-        uiButton.height = vulkanHeight;
+        if (uiButton.actionType) |actionType| {
+            switch (actionType) {
+                .speedDown => {
+                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY + vulkanHeight / 2 };
+                    uiButton.width = vulkanWidth;
+                    uiButton.height = vulkanHeight / 2;
+                },
+                .speedUp => {
+                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 2)), .y = posY };
+                    uiButton.width = vulkanWidth;
+                    uiButton.height = vulkanHeight / 2;
+                },
+                else => {
+                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index)), .y = posY };
+                    uiButton.width = vulkanWidth;
+                    uiButton.height = vulkanHeight;
+                },
+            }
+        } else {
+            uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY };
+            uiButton.width = vulkanWidth * 5;
+            uiButton.height = vulkanHeight;
+        }
     }
 }
 
 fn initUiButtons(state: *main.ChatSimState) !void {
     const buttonCountMax = 11;
     state.vkState.buildOptionsUx.uiButtons = try state.allocator.alloc(UiButton, buttonCountMax);
-    const sizePixels = 80.0;
-    const spacingPixels = 5.0;
-    const vulkanWidth = sizePixels / windowSdlZig.windowData.widthFloat;
-    const vulkanHeight = sizePixels / windowSdlZig.windowData.heightFloat;
-    const vulkanSpacing = spacingPixels / windowSdlZig.windowData.widthFloat;
-    const posY = 0.99 - vulkanHeight;
-    const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(buttonCountMax)) / 2.0;
     var buttonCounter: usize = 0;
 
     var tooltip = try state.allocator.alloc([]const u8, 3);
@@ -101,9 +118,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[1] = "Hold Mouse to paint a Path";
     tooltip[2] = "Path required for Houses";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildPath,
         .fill = .{ .imageIndex = imageZig.IMAGE_PATH },
         .tooltip = tooltip,
@@ -117,9 +131,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[3] = "Requires 1 Tree";
     tooltip[4] = "Produces 1 Citizen";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildHouse,
         .fill = .{ .imageIndex = imageZig.IMAGE_HOUSE },
         .tooltip = tooltip,
@@ -131,9 +142,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[1] = "Drag Area with Mouse for Tree planting";
     tooltip[2] = "Each Tree fully grows in 10 seconds";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildTreeArea,
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_TREE_AREA },
         .tooltip = tooltip,
@@ -146,9 +154,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Each House requires 1 Tree";
     tooltip[3] = "Each House produces 1 Citizen";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildHouseArea,
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_HOUSE_AREA },
         .tooltip = tooltip,
@@ -161,9 +166,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Each Potato Field Produces a Potato every 10 seconds";
     tooltip[3] = "Each Citizen wants to eat a Potato every 30 seconds";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildPotatoFarmArea,
         .fill = .{ .imageIndex = imageZig.IMAGE_POTATO },
         .tooltip = tooltip,
@@ -176,9 +178,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Second select Area to Paste to";
     tooltip[3] = "Right Mouse Button: Reset Area";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.copyPaste,
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_COPY_PASTE },
         .tooltip = tooltip,
@@ -193,9 +192,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[4] = "Size: 2x2";
     tooltip[5] = "Can be placed over Houses to replace them";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.buildBigHouseArea,
         .fill = .{ .imageIndex = imageZig.IMAGE_BIG_HOUSE },
         .tooltip = tooltip,
@@ -208,9 +204,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Deletes instantly";
     tooltip[3] = "Will not delete when only 1 citizen left";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight,
         .actionType = inputZig.ActionType.remove,
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_DELETE },
         .tooltip = tooltip,
@@ -220,9 +213,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 1);
     tooltip[0] = "Speed x2";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter + 2)), .y = posY },
-        .width = vulkanWidth,
-        .height = vulkanHeight / 2,
         .actionType = inputZig.ActionType.speedUp,
         .fill = .empty,
         .tooltip = tooltip,
@@ -232,9 +222,6 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 1);
     tooltip[0] = "Speed Halved";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter + 1)), .y = posY + vulkanHeight / 2 },
-        .width = vulkanWidth,
-        .height = vulkanHeight / 2,
         .actionType = inputZig.ActionType.speedDown,
         .fill = .empty,
         .tooltip = tooltip,
@@ -244,14 +231,12 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 1);
     tooltip[0] = "Current Speed";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(buttonCounter + 1)), .y = posY },
-        .width = vulkanWidth * 5,
-        .height = vulkanHeight,
         .fill = .empty,
         .tooltip = tooltip,
         .actionType = null,
     };
     buttonCounter += 1;
+    setupUiButtonLocations(&state.vkState);
 }
 
 pub fn mouseMove(state: *main.ChatSimState) !void {

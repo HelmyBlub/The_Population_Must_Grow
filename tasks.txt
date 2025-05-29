@@ -1,7 +1,9 @@
 tasks:
-- auto balance thread seems still bad. maybe because of speed changes
+- bug: resize window -> speed buttons 
 
-- bug: resize speed buttons
+- auto balance thread seems still bad. 
+    - because of speed changes. Both try to adjust to destired frame rate
+
 - put chunks and areas to idle if no citizen how can work in it
 - lost player. scorlling away to far makes it impossible to find back
 - zoom UI buttons
