@@ -423,7 +423,7 @@ fn autoBalanceActualGameSpeed(state: *ChatSimState) void {
     }
 }
 
-pub fn setZoom(zoom: f32, state: *ChatSimState) void {
+pub fn setZoom(zoom: f32, state: *ChatSimState, toMouse: bool) void {
     var limitedZoom = zoom;
     if (limitedZoom > 10) {
         limitedZoom = 10;
@@ -432,8 +432,8 @@ pub fn setZoom(zoom: f32, state: *ChatSimState) void {
     }
     if (limitedZoom == state.camera.zoom) return;
     const changePerCent = @abs(state.camera.zoom - limitedZoom) / limitedZoom;
-    const translateX = (state.mouseInfo.currentPos.x - windowSdlZig.windowData.widthFloat / 2.0) / state.camera.zoom * changePerCent;
-    const translateY = (state.mouseInfo.currentPos.y - windowSdlZig.windowData.heightFloat / 2.0) / state.camera.zoom * changePerCent;
+    const translateX = if (toMouse) (state.mouseInfo.currentPos.x - windowSdlZig.windowData.widthFloat / 2.0) / state.camera.zoom * changePerCent else 0;
+    const translateY = if (toMouse) (state.mouseInfo.currentPos.y - windowSdlZig.windowData.heightFloat / 2.0) / state.camera.zoom * changePerCent else 0;
     const zoomUp: bool = limitedZoom - state.camera.zoom > 0;
     state.camera.zoom = limitedZoom;
     if (zoomUp) {

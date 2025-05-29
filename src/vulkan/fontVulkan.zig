@@ -113,13 +113,17 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         if (state.actualGameSpeed == state.desiredGameSpeed) {
             const speedFontSize = 30;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
-            _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+            if (1 > state.desiredGameSpeed) {
+                _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+            } else {
+                _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+            }
         } else {
             const speedFontSize = 16;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, state);
             _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
             const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
-            _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
+            _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
         }
 
         const textOntoZoomButton = state.vkState.buildOptionsUx.uiButtons[13];
@@ -167,7 +171,13 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSiz
 pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
-    const numberAsString = try std.fmt.bufPrint(&buf, "{d}", .{number});
+    var numberAsString: []u8 = undefined;
+    if (@TypeOf(number) == f32) {
+        numberAsString = try std.fmt.bufPrint(&buf, "{d:.1}", .{number});
+    } else {
+        numberAsString = try std.fmt.bufPrint(&buf, "{d}", .{number});
+    }
+
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     var xOffset: f32 = 0;

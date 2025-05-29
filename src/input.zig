@@ -115,10 +115,10 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
             main.setGameSpeed(state.desiredGameSpeed / 2, state);
         },
         .zoomIn => {
-            main.setZoom(state.camera.zoom * 1.2, state);
+            main.setZoom(state.camera.zoom * 1.2, state, false);
         },
         .zoomOut => {
-            main.setZoom(state.camera.zoom * 0.8, state);
+            main.setZoom(state.camera.zoom * 0.8, state, false);
         },
     }
     if (buildModeChanged) {

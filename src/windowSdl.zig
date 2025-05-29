@@ -74,9 +74,9 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
-                main.setZoom(state.camera.zoom / 0.8, state);
+                main.setZoom(state.camera.zoom / 0.8, state, true);
             } else {
-                main.setZoom(state.camera.zoom / 1.2, state);
+                main.setZoom(state.camera.zoom / 1.2, state, true);
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
             if (event.button.button == 1) {
