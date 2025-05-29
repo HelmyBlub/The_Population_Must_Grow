@@ -1,5 +1,4 @@
 tasks:
-- zoom UI buttons
 - auto balance thread seems still bad. 
     - because of speed changes. Both try to adjust to destired frame rate
 

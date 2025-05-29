@@ -121,7 +121,11 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         } else {
             const speedFontSize = 16;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, state);
-            _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+            if (1 > state.desiredGameSpeed) {
+                _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+            } else {
+                _ = try paintNumber(@as(u32, @intFromFloat(state.desiredGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+            }
             const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
             _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
         }
