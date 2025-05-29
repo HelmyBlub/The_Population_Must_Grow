@@ -39,7 +39,7 @@ pub const VkBuildOptionsUx = struct {
     selectedButtonIndex: usize = 0,
     mouseHoverButtonIndex: ?usize = null,
     uiButtons: []UiButton = undefined,
-    const UX_RECTANGLES = 13;
+    const UX_RECTANGLES = 16;
     const MAX_FONT_TOOLTIP = 200;
     pub const MAX_VERTICES_TRIANGLES = 6 * UX_RECTANGLES;
     pub const MAX_VERTICES_LINES = 8 * UX_RECTANGLES;
@@ -59,12 +59,27 @@ const UiButtonFillData = union(UiButtonFill) {
     text: []const u8,
 };
 
+const UiButtonType = enum {
+    action,
+    display,
+};
+
+const UiButtonDisplay = enum {
+    speed,
+    zoom,
+};
+
+const UiButtonTypeData = union(UiButtonType) {
+    action: inputZig.ActionType,
+    display: UiButtonDisplay,
+};
+
 const UiButton = struct {
     pos: main.Position = .{ .x = 0, .y = 0 },
     width: f32 = 0,
     height: f32 = 0,
     fill: UiButtonFillData,
-    actionType: ?inputZig.ActionType,
+    type: UiButtonTypeData,
     tooltip: [][]const u8,
 };
 
@@ -82,34 +97,56 @@ pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
     const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(vkState.buildOptionsUx.uiButtons.len)) / 2.0;
 
     for (vkState.buildOptionsUx.uiButtons, 0..) |*uiButton, index| {
-        if (uiButton.actionType) |actionType| {
-            switch (actionType) {
-                .speedDown => {
-                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY + vulkanHeight / 2 };
-                    uiButton.width = vulkanWidth;
-                    uiButton.height = vulkanHeight / 2;
-                },
-                .speedUp => {
-                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 2)), .y = posY };
-                    uiButton.width = vulkanWidth;
-                    uiButton.height = vulkanHeight / 2;
-                },
-                else => {
-                    uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index)), .y = posY };
-                    uiButton.width = vulkanWidth;
-                    uiButton.height = vulkanHeight;
-                },
-            }
-        } else {
-            uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY };
-            uiButton.width = vulkanWidth * 5;
-            uiButton.height = vulkanHeight;
+        switch (uiButton.type) {
+            .action => |actionType| {
+                switch (actionType) {
+                    .speedDown => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY + vulkanHeight / 2 };
+                        uiButton.width = vulkanWidth;
+                        uiButton.height = vulkanHeight / 2;
+                    },
+                    .speedUp => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 2)), .y = posY };
+                        uiButton.width = vulkanWidth;
+                        uiButton.height = vulkanHeight / 2;
+                    },
+                    .zoomIn => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * -7, .y = posY + vulkanHeight / 2 };
+                        uiButton.width = vulkanWidth;
+                        uiButton.height = vulkanHeight / 2;
+                    },
+                    .zoomOut => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * -7, .y = posY };
+                        uiButton.width = vulkanWidth;
+                        uiButton.height = vulkanHeight / 2;
+                    },
+                    else => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index)), .y = posY };
+                        uiButton.width = vulkanWidth;
+                        uiButton.height = vulkanHeight;
+                    },
+                }
+            },
+            .display => |display| {
+                switch (display) {
+                    .speed => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * @as(f32, @floatFromInt(index + 1)), .y = posY };
+                        uiButton.width = vulkanWidth * 5;
+                        uiButton.height = vulkanHeight;
+                    },
+                    .zoom => {
+                        uiButton.pos = .{ .x = posX + (vulkanWidth + vulkanSpacing) * -6, .y = posY };
+                        uiButton.width = vulkanWidth * 5;
+                        uiButton.height = vulkanHeight;
+                    },
+                }
+            },
         }
     }
 }
 
 fn initUiButtons(state: *main.ChatSimState) !void {
-    const buttonCountMax = 11;
+    const buttonCountMax = 14;
     state.vkState.buildOptionsUx.uiButtons = try state.allocator.alloc(UiButton, buttonCountMax);
     var buttonCounter: usize = 0;
 
@@ -118,7 +155,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[1] = "Hold Mouse to paint a Path";
     tooltip[2] = "Path required for Houses";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildPath,
+        .type = .{ .action = inputZig.ActionType.buildPath },
         .fill = .{ .imageIndex = imageZig.IMAGE_PATH },
         .tooltip = tooltip,
     };
@@ -131,7 +168,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[3] = "Requires 1 Tree";
     tooltip[4] = "Produces 1 Citizen";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildHouse,
+        .type = .{ .action = inputZig.ActionType.buildHouse },
         .fill = .{ .imageIndex = imageZig.IMAGE_HOUSE },
         .tooltip = tooltip,
     };
@@ -142,7 +179,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[1] = "Drag Area with Mouse for Tree planting";
     tooltip[2] = "Each Tree fully grows in 10 seconds";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildTreeArea,
+        .type = .{ .action = inputZig.ActionType.buildTreeArea },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_TREE_AREA },
         .tooltip = tooltip,
     };
@@ -154,7 +191,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Each House requires 1 Tree";
     tooltip[3] = "Each House produces 1 Citizen";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildHouseArea,
+        .type = .{ .action = inputZig.ActionType.buildHouseArea },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_HOUSE_AREA },
         .tooltip = tooltip,
     };
@@ -166,7 +203,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Each Potato Field Produces a Potato every 10 seconds";
     tooltip[3] = "Each Citizen wants to eat a Potato every 30 seconds";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildPotatoFarmArea,
+        .type = .{ .action = inputZig.ActionType.buildPotatoFarmArea },
         .fill = .{ .imageIndex = imageZig.IMAGE_POTATO },
         .tooltip = tooltip,
     };
@@ -178,7 +215,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Second select Area to Paste to";
     tooltip[3] = "Right Mouse Button: Reset Area";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.copyPaste,
+        .type = .{ .action = inputZig.ActionType.copyPaste },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_COPY_PASTE },
         .tooltip = tooltip,
     };
@@ -192,7 +229,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[4] = "Size: 2x2";
     tooltip[5] = "Can be placed over Houses to replace them";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.buildBigHouseArea,
+        .type = .{ .action = inputZig.ActionType.buildBigHouseArea },
         .fill = .{ .imageIndex = imageZig.IMAGE_BIG_HOUSE },
         .tooltip = tooltip,
     };
@@ -204,7 +241,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip[2] = "Deletes instantly";
     tooltip[3] = "Will not delete when only 1 citizen left";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.remove,
+        .type = .{ .action = inputZig.ActionType.remove },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_DELETE },
         .tooltip = tooltip,
     };
@@ -213,7 +250,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 1);
     tooltip[0] = "Speed x2";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.speedUp,
+        .type = .{ .action = inputZig.ActionType.speedUp },
         .fill = .empty,
         .tooltip = tooltip,
     };
@@ -222,7 +259,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     tooltip = try state.allocator.alloc([]const u8, 1);
     tooltip[0] = "Speed Halved";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
-        .actionType = inputZig.ActionType.speedDown,
+        .type = .{ .action = inputZig.ActionType.speedDown },
         .fill = .empty,
         .tooltip = tooltip,
     };
@@ -233,9 +270,37 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
         .fill = .empty,
         .tooltip = tooltip,
-        .actionType = null,
+        .type = .{ .display = .speed },
     };
     buttonCounter += 1;
+
+    tooltip = try state.allocator.alloc([]const u8, 1);
+    tooltip[0] = "Zoom In";
+    state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
+        .type = .{ .action = inputZig.ActionType.zoomIn },
+        .fill = .empty,
+        .tooltip = tooltip,
+    };
+    buttonCounter += 1;
+
+    tooltip = try state.allocator.alloc([]const u8, 1);
+    tooltip[0] = "Zoom Out";
+    state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
+        .type = .{ .action = inputZig.ActionType.zoomOut },
+        .fill = .empty,
+        .tooltip = tooltip,
+    };
+    buttonCounter += 1;
+
+    tooltip = try state.allocator.alloc([]const u8, 1);
+    tooltip[0] = "Current Zoom";
+    state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
+        .fill = .empty,
+        .tooltip = tooltip,
+        .type = .{ .display = .zoom },
+    };
+    buttonCounter += 1;
+
     setupUiButtonLocations(&state.vkState);
 }
 
@@ -261,9 +326,9 @@ pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.Position)
         if (uiButton.pos.x <= vulkanMousePos.x and uiButton.pos.x + uiButton.width >= vulkanMousePos.x and
             uiButton.pos.y <= vulkanMousePos.y and uiButton.pos.y + uiButton.height >= vulkanMousePos.y)
         {
-            if (uiButton.actionType) |actionType| {
+            if (uiButton.type == .action) {
                 try setupVertices(state);
-                try inputZig.executeAction(actionType, state);
+                try inputZig.executeAction(uiButton.type.action, state);
             }
             return true;
         }
@@ -339,7 +404,7 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
 
 pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.ChatSimState) !void {
     for (state.vkState.buildOptionsUx.uiButtons, 0..) |uiButton, uiButtonIndex| {
-        if (uiButton.actionType == actionType) {
+        if (uiButton.type == .action and uiButton.type.action == actionType) {
             state.vkState.buildOptionsUx.selectedButtonIndex = uiButtonIndex;
             try setupVertices(state);
             break;
@@ -366,7 +431,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
     for (state.vkState.buildOptionsUx.uiButtons, 0..) |uiButton, uiButtonIndex| {
         var optKeyBindChar: ?u8 = null;
         for (state.keyboardInfo.keybindings) |keybind| {
-            if (keybind.action == uiButton.actionType) {
+            if (uiButton.type == .action and keybind.action == uiButton.type.action) {
                 optKeyBindChar = keybind.displayChar;
                 break;
             }

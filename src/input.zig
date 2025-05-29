@@ -19,6 +19,8 @@ pub const ActionType = enum {
     remove,
     speedUp,
     speedDown,
+    zoomIn,
+    zoomOut,
 };
 
 pub const KeyboardInfo = struct {
@@ -34,7 +36,7 @@ pub const KeyBinding = struct {
 };
 
 pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
-    state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 10);
+    state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 12);
     state.keyboardInfo.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
     state.keyboardInfo.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
     state.keyboardInfo.keybindings[2] = .{ .sdlScanCode = sdl.SDL_SCANCODE_3, .displayChar = '3', .action = ActionType.buildTreeArea };
@@ -45,6 +47,8 @@ pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
     state.keyboardInfo.keybindings[7] = .{ .sdlScanCode = sdl.SDL_SCANCODE_9, .displayChar = '9', .action = ActionType.remove };
     state.keyboardInfo.keybindings[8] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_PLUS, .displayChar = '+', .action = ActionType.speedUp };
     state.keyboardInfo.keybindings[9] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_MINUS, .displayChar = '-', .action = ActionType.speedDown };
+    state.keyboardInfo.keybindings[10] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_0, .displayChar = '+', .action = ActionType.zoomIn };
+    state.keyboardInfo.keybindings[11] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_1, .displayChar = '-', .action = ActionType.zoomOut };
 }
 
 pub fn destory(state: *main.ChatSimState) void {
@@ -109,6 +113,12 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
         },
         .speedDown => {
             main.setGameSpeed(state.desiredGameSpeed / 2, state);
+        },
+        .zoomIn => {
+            main.setZoom(state.camera.zoom * 1.2, state);
+        },
+        .zoomOut => {
+            main.setZoom(state.camera.zoom * 0.8, state);
         },
     }
     if (buildModeChanged) {
