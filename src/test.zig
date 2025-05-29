@@ -252,10 +252,10 @@ fn setupTestInputs(testData: *TestData) !void {
 
 pub fn setupTestInputsXAreas(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .restart, .executeTime = 0 });
-    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
+    // try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
     const centerTileXYs = [_]mapZig.TileXY{
         .{ .tileX = 0, .tileY = 0 },
-        .{ .tileX = 1000, .tileY = 0 },
+        // .{ .tileX = 1000, .tileY = 0 },
     };
     for (centerTileXYs, 0..) |tileXY, index| {
         if (index == 0) continue;
@@ -286,7 +286,7 @@ pub fn setupTestInputsXAreas(testData: *TestData) !void {
     }
 
     //copy paste entire city block
-    for (1..10) |distance| {
+    for (1..2) |distance| {
         for (centerTileXYs) |tileXY| {
             for (0..(distance * 2)) |pos| {
                 const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);
@@ -324,8 +324,8 @@ pub fn setupTestInputsXAreas(testData: *TestData) !void {
             }
         }
     }
-    try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
-    try testData.testInputs.append(.{ .data = .endGame, .executeTime = 300_000 });
+    // try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 2 }, .executeTime = 250_000 });
+    // try testData.testInputs.append(.{ .data = .endGame, .executeTime = 300_000 });
 }
 
 fn tileToPos(tileX: i32, tileY: i32) main.Position {

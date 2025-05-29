@@ -126,12 +126,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F8) {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
-                    try testZig.setupTestInputsXAreas(&state.testData.?);
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F9) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    state.testData.?.forceSingleCore = true;
+                    state.testData.?.fpsLimiter = true;
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {

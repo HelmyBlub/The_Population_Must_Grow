@@ -86,6 +86,9 @@ fn dataUpdate(state: *main.ChatSimState) !void {
         const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
         _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
         offsetY += onePixelYInVulkan * performanceFontSize;
+        const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, state);
+        offsetY += onePixelYInVulkan * performanceFontSize;
 
         if (state.cpuPerCent) |cpuPerCent| {
             var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);

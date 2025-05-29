@@ -36,7 +36,7 @@ pub const ChatSimState: type = struct {
     rectangles: [2]?VulkanRectangle = .{ null, null },
     copyAreaRectangle: ?mapZig.MapTileRectangle = null,
     fpsCounter: f32 = 60,
-    tickDurationSmoothed: f32 = 0,
+    tickDurationSmoothedMircoSeconds: f32 = 1,
     framesTotalCounter: u32 = 0,
     cpuPerCent: ?f32 = null,
     citizenCounter: u64 = 0,
@@ -344,6 +344,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
+        const passedTickTime = @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds)));
         try codePerformanceZig.startMeasure("input tick", &state.codePerformanceData);
         inputZig.tick(state);
         codePerformanceZig.endMeasure("input tick", &state.codePerformanceData);
@@ -365,8 +366,10 @@ pub fn mainLoop(state: *ChatSimState) !void {
         }
         const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds))));
         state.fpsCounter = state.fpsCounter * 0.99 + @as(f32, @floatFromInt(thisFrameFps)) * 0.01;
-        state.tickDurationSmoothed = state.tickDurationSmoothed * 0.99 + @as(f32, @floatFromInt(passedTime)) / state.desiredGameSpeed * 0.01;
-        autoAdjustActualGameSpeed(state);
+        const passedTimePerTick = @as(f32, @floatFromInt(passedTickTime)) / state.actualGameSpeed;
+        const perCentGameSpeed = state.actualGameSpeed * 0.01;
+        state.tickDurationSmoothedMircoSeconds = state.tickDurationSmoothedMircoSeconds * (1 - perCentGameSpeed) + passedTimePerTick * perCentGameSpeed;
+        autoBalanceActualGameSpeed(state);
         try autoBalanceThreadCount(state);
         const totalPassedTime: i64 = std.time.microTimestamp() - totalStartTime;
         if (SIMULATION_MICRO_SECOND_DURATION) |duration| {
@@ -378,19 +381,36 @@ pub fn mainLoop(state: *ChatSimState) !void {
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
-fn autoAdjustActualGameSpeed(state: *ChatSimState) void {
-    if (state.desiredGameSpeed > 1 and state.gameTimeMs - state.lastAutoGameSpeedChangeTime > @as(u32, @intFromFloat(1000 * state.actualGameSpeed))) {
+fn autoBalanceActualGameSpeed(state: *ChatSimState) void {
+    if (state.desiredGameSpeed > 1 and state.gameTimeMs - state.lastAutoGameSpeedChangeTime > @as(u32, @intFromFloat(500 * state.actualGameSpeed))) {
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
         if (targetFrameRate * 0.9 > state.fpsCounter) {
-            const nextSpeedDecreaseDifference: f32 = (state.actualGameSpeed - 1) / state.actualGameSpeed;
-            const frameDifference = state.fpsCounter / targetFrameRate;
-            if (state.actualGameSpeed > 1 and nextSpeedDecreaseDifference > frameDifference) {
-                state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
-                state.actualGameSpeed -= 1;
+            const estimate = @as(f32, @floatFromInt(state.paintIntervalMs)) * 1000 / state.tickDurationSmoothedMircoSeconds;
+            var changeAmount = @round(state.actualGameSpeed - estimate);
+            if (changeAmount < 2) {
+                changeAmount = 1;
+            } else if (state.actualGameSpeed - changeAmount < 2) {
+                changeAmount = state.actualGameSpeed - 2;
             }
-        } else if (state.desiredGameSpeed > state.actualGameSpeed) {
+            if (state.actualGameSpeed > 1) {
+                state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
+                state.actualGameSpeed -= changeAmount;
+                if (state.actualGameSpeed < 1) {
+                    std.debug.print("should not happen, auto game speed below 1?\n", .{});
+                    state.actualGameSpeed = 1;
+                }
+            }
+        } else if (state.desiredGameSpeed > state.actualGameSpeed and targetFrameRate * 0.98 < state.fpsCounter) {
+            const estimate = @as(f32, @floatFromInt(state.paintIntervalMs)) * 1000 / state.tickDurationSmoothedMircoSeconds;
+            var changeAmount = @divFloor(estimate - state.actualGameSpeed, 4);
+            if (changeAmount < 2) {
+                changeAmount = 1;
+            }
             state.lastAutoGameSpeedChangeTime = state.gameTimeMs;
-            state.actualGameSpeed += 1;
+            state.actualGameSpeed += changeAmount;
+            if (state.actualGameSpeed > state.desiredGameSpeed) {
+                state.actualGameSpeed = state.desiredGameSpeed;
+            }
         }
     }
 }
@@ -425,7 +445,9 @@ pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
     } else if (limitedSpeed < 0.25) {
         limitedSpeed = 0.25;
     }
-    if (state.desiredGameSpeed == state.actualGameSpeed) {
+    if (limitedSpeed > state.desiredGameSpeed and state.desiredGameSpeed <= state.actualGameSpeed) {
+        state.actualGameSpeed = limitedSpeed;
+    } else if (limitedSpeed < state.desiredGameSpeed and limitedSpeed <= state.actualGameSpeed) {
         state.actualGameSpeed = limitedSpeed;
     }
     state.desiredGameSpeed = limitedSpeed;
@@ -453,7 +475,7 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
             std.debug.print("auto decrease thread count because of no chunkAreas {}\n", .{state.usedThreadsCount});
         }
 
-        const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothed);
+        const tickDuration: u64 = @intFromFloat(state.tickDurationSmoothedMircoSeconds);
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
         const measureTime = 3_000;
         const remeasureInterval = 30_000;
@@ -900,7 +922,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !boo
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     state.threadData[threadIndex].tickedChunkCounter += 1;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
-    const gameSpeedVisibleFactor = if (state.desiredGameSpeed <= 1) 1 else state.desiredGameSpeed;
+    const gameSpeedVisibleFactor = if (state.actualGameSpeed <= 1) 1 else state.actualGameSpeed;
     const isVisible = chunk.lastPaintGameTime + @as(u32, @intFromFloat(32 * gameSpeedVisibleFactor)) > state.gameTimeMs;
     if (chunk.workingCitizenCounter > 0 or isVisible) {
         state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
