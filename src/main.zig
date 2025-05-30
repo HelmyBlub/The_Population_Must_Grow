@@ -71,9 +71,10 @@ pub const ThreadData = struct {
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
     measureData: struct {
         lastTickDuration: ?u64 = null,
-        lastTickedCitizenCount: u64 = 0,
+        lastTickedCitizenCount: u32 = 0,
         lastWhenTime: u32 = 0,
         switchedToThreadCountGameTime: u32 = 0,
+        bestDurationPerCitizenWithAlotCitizens: ?f32 = null,
     },
     pub const VALIDATION_CHUNK_DISTANCE = 37;
 };
@@ -495,12 +496,16 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
         const measureTime = 5_000;
         const remeasureInterval = 30_000;
+        const aLotOfCitizens = 50_000;
         if (state.fpsCounter < targetFrameRate * 0.9 or (state.testData != null and !state.testData.?.fpsLimiter)) {
             if (state.gameTimeMs > threadData.measureData.switchedToThreadCountGameTime + measureTime) {
-                threadData.measureData.lastTickedCitizenCount = totalTickedCitizens;
+                threadData.measureData.lastTickedCitizenCount = @intCast(totalTickedCitizens);
                 threadData.measureData.lastTickDuration = tickDuration;
                 threadData.measureData.lastWhenTime = state.gameTimeMs;
                 const currentPerformancePerCitizen = @as(f32, @floatFromInt(tickDuration)) / @as(f32, @floatFromInt(totalTickedCitizens));
+                if (totalTickedCitizens > aLotOfCitizens and (threadData.measureData.bestDurationPerCitizenWithAlotCitizens == null or threadData.measureData.bestDurationPerCitizenWithAlotCitizens.? > currentPerformancePerCitizen)) {
+                    threadData.measureData.bestDurationPerCitizenWithAlotCitizens = currentPerformancePerCitizen;
+                }
 
                 if (state.usedThreadsCount > 1) {
                     const lowerThread = state.threadData[state.usedThreadsCount - 2];
@@ -524,7 +529,20 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
                         }
                     }
                 }
-                const doesLowerThreadCountNeedsCheck = state.usedThreadsCount > 1 and state.threadData[state.usedThreadsCount - 2].measureData.lastWhenTime + remeasureInterval < state.gameTimeMs;
+                if (state.gameTimeMs < threadData.measureData.switchedToThreadCountGameTime + measureTime * 2) {
+                    // wait for measurments before going up or down again
+                    return;
+                }
+                var doesLowerThreadCountNeedsCheck = state.usedThreadsCount > 1 and state.threadData[state.usedThreadsCount - 2].measureData.lastWhenTime + remeasureInterval < state.gameTimeMs;
+                if (doesLowerThreadCountNeedsCheck) {
+                    const lowerThreadMeasureData = state.threadData[state.usedThreadsCount - 2].measureData;
+                    if (lowerThreadMeasureData.bestDurationPerCitizenWithAlotCitizens != null and aLotOfCitizens < totalTickedCitizens) {
+                        if (lowerThreadMeasureData.bestDurationPerCitizenWithAlotCitizens.? > currentPerformancePerCitizen) {
+                            doesLowerThreadCountNeedsCheck = false;
+                        }
+                    }
+                }
+
                 const doesHigherThreadCountNeedsCheck = state.usedThreadsCount < state.maxThreadCount and state.threadData[state.usedThreadsCount].measureData.lastWhenTime + remeasureInterval < state.gameTimeMs;
                 if (!doesHigherThreadCountNeedsCheck and !doesLowerThreadCountNeedsCheck) {
                     return;

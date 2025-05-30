@@ -1,11 +1,27 @@
 tasks:
+- bug: lost citizen (change made, verify case does not happen anymore)
+    - assumption when double slowed they can miss their target point. Try giving minimal distance requirement
 - auto thread balance still feels bad.
     - from 2 to 1 is bad if actually a lot is happening. Can cause big performance loss.
     - sometime he switched from 2 to 4 fast and i lost a lot of frames feeling very bad
         - measure longer when performance better before changing up again
     - consider to switch far less if results where a lot worse before
-- bug: lost citizen
-    - assumption when double slowed they can miss their target point. Try giving minimal distance requirement
+- new auto balance thread logic?
+    - currently already complex and still not feeling great. Is there a simpler better way
+    - lagging behind performance data can cause incorrect changes
+    - idea1: determine citizen count for changing to specific thread counts. more citizens more threads more likely better
+        - at some point a thread increase might be bad as other stuff on computer limits it. But this can change over time
+
+        - code logic
+            - have starting citizens count thread changes. e.g. -> from 1 to 2 thread at 30_000 citizens first time
+                - if new performance is worse, go back to 1 thread and increase citizens limit to e.g. 40_000
+            - also remember best performance(have to be carefull with lagging behind) and last performance. 
+                - if current performance if worse than performance with lower thread -> asume other application running and use less threads, try again other time?
+
+
+
+
+
 - put chunks and areas to idle if no citizen how can work in it
     - problem: if having a lot of build orders when no citizens around for longer time it will reduce performance. Especially with lots of build orders
 - visualize when game might crash based on "out of memory"

@@ -274,8 +274,9 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     };
     buttonCounter += 1;
 
-    tooltip = try state.allocator.alloc([]const u8, 1);
+    tooltip = try state.allocator.alloc([]const u8, 2);
     tooltip[0] = "Current Speed";
+    tooltip[1] = "Can Limit Speed if FPS low.";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
         .fill = .empty,
         .tooltip = tooltip,
