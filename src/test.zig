@@ -286,7 +286,7 @@ pub fn setupTestInputsXAreas(testData: *TestData) !void {
     }
 
     //copy paste entire city block
-    for (1..3) |distance| {
+    for (1..10) |distance| {
         for (centerTileXYs) |tileXY| {
             for (0..(distance * 2)) |pos| {
                 const executeTime: u32 = @intCast(60_000 + distance * 10_000 + pos * 100);

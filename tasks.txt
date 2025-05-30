@@ -1,22 +1,16 @@
 tasks:
-- bug: lost citizen (change made, verify case does not happen anymore)
-    - assumption when double slowed they can miss their target point. Try giving minimal distance requirement
-- auto thread balance still feels bad.
-    - from 2 to 1 is bad if actually a lot is happening. Can cause big performance loss.
-    - sometime he switched from 2 to 4 fast and i lost a lot of frames feeling very bad
-        - measure longer when performance better before changing up again
-    - consider to switch far less if results where a lot worse before
 - new auto balance thread logic?
-    - currently already complex and still not feeling great. Is there a simpler better way
-    - lagging behind performance data can cause incorrect changes
-    - idea1: determine citizen count for changing to specific thread counts. more citizens more threads more likely better
-        - at some point a thread increase might be bad as other stuff on computer limits it. But this can change over time
+    - auto thread balance still feels bad.
+    - on bad citizen split it thinks more thread are bad
+    - there is some case where it switches rapidly in thread counts, (waiting for measure time, scale down, scale up directly)
+    - next idea:
+        - measure differnce between 1 and 2 thread and take it as base for any other thread count. if not matched on higher thread counts -> believe it is because of other apps
 
-        - code logic
-            - have starting citizens count thread changes. e.g. -> from 1 to 2 thread at 30_000 citizens first time
-                - if new performance is worse, go back to 1 thread and increase citizens limit to e.g. 40_000
-            - also remember best performance(have to be carefull with lagging behind) and last performance. 
-                - if current performance if worse than performance with lower thread -> asume other application running and use less threads, try again other time?
+- bug: lost citizen 
+    - assumption when position values high -> f32 precision not good enough. Change to f64?
+
+- improve chunk area assignment based on citizen count?
+
 
 
 
@@ -28,7 +22,6 @@ tasks:
     - or check out save game progress as i could save idle chunks and clean up from memory
 
 - limit citizen hunger, currently infite negative
-- improve chunk area assignment based on citizen count?
 - bug: copy paste big area crash
 - bug: moving around crash on 1.6 million citizens while zoomed out max on releaseFast build
 
