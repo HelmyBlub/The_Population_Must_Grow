@@ -50,6 +50,7 @@ pub const ChatSimState: type = struct {
     codePerformanceData: codePerformanceZig.CodePerformanceData = undefined,
     maxThreadCount: usize,
     usedThreadsCount: usize,
+    minCitizenPerThread: u32 = 15000,
     threadData: []ThreadData = undefined,
     autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
@@ -71,11 +72,9 @@ pub const ThreadData = struct {
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
     measureData: struct {
-        citizenSwitchCount: u32,
         lastMeasureTime: u32 = 0,
         switchedToThreadCountGameTime: u32 = 0,
         performancePerTickedCitizens: ?f32 = null,
-        bestPerformancePerTickedCitizens: ?f32 = null,
     },
     pub const VALIDATION_CHUNK_DISTANCE = 37;
 };
@@ -206,7 +205,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
             .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator),
             .chunkAreas = std.ArrayList(ChunkArea).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
-            .measureData = .{ .citizenSwitchCount = @intCast(30_000 * i) },
+            .measureData = .{},
         };
     }
     try codePerformanceZig.init(state);
@@ -487,70 +486,77 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
         for (0..state.usedThreadsCount) |countThreadDataIndex| {
             totalTickedCitizens += state.threadData[countThreadDataIndex].tickedCitizenCounter;
         }
-        const currentThread = &state.threadData[state.usedThreadsCount - 1];
-        if (currentThread.measureData.citizenSwitchCount > totalTickedCitizens) {
-            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
-            std.debug.print("decrease thread count based on citizen count for thread {}\n", .{state.usedThreadsCount});
-            return;
-        }
-        if (state.usedThreadsCount > 1) {
-            // try to save only stable data
-            const measureTime = 5_000;
-            if (currentThread.measureData.switchedToThreadCountGameTime + measureTime < state.gameTimeMs and
-                @abs(@as(i32, @intCast(state.totalTickedCitizensSmoothed)) - @as(i32, @intCast(totalTickedCitizens))) < @divFloor(totalTickedCitizens, 20))
-            {
-                currentThread.measureData.lastMeasureTime = state.gameTimeMs;
-                currentThread.measureData.performancePerTickedCitizens = getStablePerformancePerTickedCitizenValue(state);
-                if (currentThread.measureData.bestPerformancePerTickedCitizens == null or currentThread.measureData.bestPerformancePerTickedCitizens.? > currentThread.measureData.performancePerTickedCitizens.?) {
-                    currentThread.measureData.bestPerformancePerTickedCitizens = currentThread.measureData.performancePerTickedCitizens;
+        if (state.usedThreadsCount == 1) {
+            if (totalTickedCitizens > state.minCitizenPerThread * 2) {
+                const optPerformance = getStablePerformancePerTickedCitizenValue(state, totalTickedCitizens);
+                const currentThread = &state.threadData[state.usedThreadsCount - 1];
+                if (optPerformance) |performance| {
+                    currentThread.measureData.lastMeasureTime = state.gameTimeMs;
+                    currentThread.measureData.performancePerTickedCitizens = performance;
                 }
-                if (currentThread.measureData.performancePerTickedCitizens) |perfPerCitizen| {
-                    const lowerThread = &state.threadData[state.usedThreadsCount - 2];
-                    if (lowerThread.measureData.bestPerformancePerTickedCitizens.? < perfPerCitizen * minimalPerCentDiffernceReq) {
-                        if (lowerThread.measureData.bestPerformancePerTickedCitizens.? < currentThread.measureData.bestPerformancePerTickedCitizens.? * minimalPerCentDiffernceReq) {
-                            if (state.usedThreadsCount == 2) lowerThread.measureData.bestPerformancePerTickedCitizens = null;
-                            for (state.usedThreadsCount - 1..state.maxThreadCount) |i| {
-                                state.threadData[i].measureData.citizenSwitchCount += 10_000;
+                if (currentThread.measureData.performancePerTickedCitizens != null) {
+                    try changeUsedThreadCount(state.usedThreadsCount + 1, state);
+                    std.debug.print("increase thread count {}\n", .{state.usedThreadsCount});
+                }
+            }
+        } else {
+            const minMeasureWaitTime = 1000;
+            const stableMeasureWaitTime = 5000;
+            const currentThread = &state.threadData[state.usedThreadsCount - 1];
+            const lowerThread = &state.threadData[state.usedThreadsCount - 2];
+            // check reduce thread count based on performance
+            if (currentThread.measureData.switchedToThreadCountGameTime + minMeasureWaitTime < state.gameTimeMs) {
+                const optPerformance = getStablePerformancePerTickedCitizenValue(state, totalTickedCitizens);
+                if (optPerformance) |performance| {
+                    currentThread.measureData.lastMeasureTime = state.gameTimeMs;
+                    currentThread.measureData.performancePerTickedCitizens = performance;
+                    if (currentThread.measureData.switchedToThreadCountGameTime + stableMeasureWaitTime < state.gameTimeMs) {
+                        if (performance * minimalPerCentDiffernceReq > lowerThread.measureData.performancePerTickedCitizens.?) {
+                            if (state.usedThreadsCount == 2 and state.minCitizenPerThread * 2 < totalTickedCitizens and totalTickedCitizens < state.minCitizenPerThread * 2 + 10_000) {
+                                state.minCitizenPerThread += 5_000;
                             }
-                            std.debug.print("moved citizen count up required for thread {}: {}\n", .{ state.usedThreadsCount, currentThread.measureData.citizenSwitchCount });
+                            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                            std.debug.print("decrease thread count as performance worse {}\n", .{state.usedThreadsCount});
+                            return;
                         }
-                        try changeUsedThreadCount(state.usedThreadsCount - 1, state);
-                        std.debug.print("decrease thread count based on better performance of lower count {} , {} < {}\n", .{ state.usedThreadsCount, lowerThread.measureData.performancePerTickedCitizens.?, perfPerCitizen });
-                        return;
+                    } else {
+                        if (performance * 0.95 > lowerThread.measureData.performancePerTickedCitizens.?) {
+                            if (state.usedThreadsCount == 2 and state.minCitizenPerThread * 2 < totalTickedCitizens and totalTickedCitizens < state.minCitizenPerThread * 2 + 10_000) {
+                                state.minCitizenPerThread += 5_000;
+                            }
+                            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                            std.debug.print("decrease thread count as performance way worse {}\n", .{state.usedThreadsCount});
+                            return;
+                        }
                     }
                 }
             }
-        }
-        if (state.usedThreadsCount < state.maxThreadCount) {
-            const higherThread = state.threadData[state.usedThreadsCount];
-            if (higherThread.measureData.citizenSwitchCount < totalTickedCitizens) {
-                // try to save only stable data
-                if (@abs(@as(i32, @intCast(state.totalTickedCitizensSmoothed)) - @as(i32, @intCast(totalTickedCitizens))) < @divFloor(totalTickedCitizens, 20)) {
-                    currentThread.measureData.lastMeasureTime = state.gameTimeMs;
-                    currentThread.measureData.performancePerTickedCitizens = getStablePerformancePerTickedCitizenValue(state);
-                    if (currentThread.measureData.bestPerformancePerTickedCitizens == null or currentThread.measureData.bestPerformancePerTickedCitizens.? > currentThread.measureData.performancePerTickedCitizens.?) {
-                        currentThread.measureData.bestPerformancePerTickedCitizens = currentThread.measureData.performancePerTickedCitizens;
-                    }
-                }
-                // don't increase without any data
-                if (currentThread.measureData.performancePerTickedCitizens == null) return;
-                // don't increase if last time was bad and recent
-                if (higherThread.measureData.performancePerTickedCitizens != null and higherThread.measureData.performancePerTickedCitizens.? * minimalPerCentDiffernceReq > currentThread.measureData.performancePerTickedCitizens.?) {
-                    const diff = higherThread.measureData.performancePerTickedCitizens.? * minimalPerCentDiffernceReq - currentThread.measureData.performancePerTickedCitizens.?;
-                    const waitTime = (diff * 10 + 1) * 60_000;
-                    if (higherThread.measureData.lastMeasureTime + @as(u32, @intFromFloat(waitTime)) > state.gameTimeMs) {
+            // check change thread count based on ticked citizens
+            const estimateThreadCount = @min(@max(1, @divFloor(totalTickedCitizens, state.minCitizenPerThread)), state.maxThreadCount);
+            if (estimateThreadCount < state.usedThreadsCount) {
+                try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                std.debug.print("decrease thread count based on ticked citizens {}\n", .{state.usedThreadsCount});
+                return;
+            } else if (estimateThreadCount > state.usedThreadsCount) {
+                const higherThread = &state.threadData[state.usedThreadsCount];
+                if (higherThread.measureData.performancePerTickedCitizens != null) {
+                    if (currentThread.measureData.performancePerTickedCitizens == null) return;
+                    if (higherThread.measureData.performancePerTickedCitizens.? > currentThread.measureData.performancePerTickedCitizens.?) {
                         return;
                     }
                 }
                 try changeUsedThreadCount(state.usedThreadsCount + 1, state);
-                std.debug.print("increase thread count {}\n", .{state.usedThreadsCount});
-                return;
+                std.debug.print("increase thread count based on ticked citizens {}\n", .{state.usedThreadsCount});
             }
         }
     }
 }
 
-fn getStablePerformancePerTickedCitizenValue(state: *ChatSimState) f32 {
+fn getStablePerformancePerTickedCitizenValue(state: *ChatSimState, totalTickedCitizensCounter: usize) ?f32 {
+    if (@abs(@as(i32, @intCast(totalTickedCitizensCounter)) - @as(i32, @intCast(state.totalTickedCitizensSmoothed))) > @divFloor(totalTickedCitizensCounter, 20)) {
+        // check if citizens count changed too much. Than consider it not stable
+        return null;
+    }
     return state.tickDurationSmoothedMircoSeconds / @as(f32, @floatFromInt(state.totalTickedCitizensSmoothed));
 }
 

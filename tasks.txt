@@ -1,17 +1,19 @@
 tasks:
 - new auto balance thread logic?
     - auto thread balance still feels bad.
-    - on bad citizen split it thinks more thread are bad
-    - there is some case where it switches rapidly in thread counts, (waiting for measure time, scale down, scale up directly)
     - next idea:
-        - measure differnce between 1 and 2 thread and take it as base for any other thread count. if not matched on higher thread counts -> believe it is because of other apps
+        - measure differnce between 1 and 2 thread
+        - find good value for required citizen count per thread to change between 1 to 2 thread. Use this value for every other thread count
+            - if performance does not improve assume other apps take cpu cores. Not usefull to use more. Try again some other time
+        - code logic:
+            - try first change from 1 thread to 2 threads on 30_000 citizens. Assume 100_000 or more per thread is always good enough
+                - if performance better. Assume x citizens per thread required for performance gain
+                - if performance worse and ticked citizens amount close to 30_000 increase citizens by 10_000
+                - when 
+
 
 - bug: lost citizen 
     - assumption when position values high -> f32 precision not good enough. Change to f64?
-
-- improve chunk area assignment based on citizen count?
-
-
 
 
 
