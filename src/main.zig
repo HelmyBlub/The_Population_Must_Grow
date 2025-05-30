@@ -111,6 +111,7 @@ pub const ChunkArea: type = struct {
     areaXY: ChunkAreaXY,
     currentChunkKeyIndex: usize,
     activeChunkKeys: std.ArrayList(ChunkAreaActiveKey),
+    tickedCitizenCounter: usize = 0,
     idle: bool = false,
     wasDoingSomethingCurrentTick: bool = true,
     pub const SIZE = 20;
@@ -727,6 +728,7 @@ fn diagonalNumbering(x: u32, y: u32) usize {
 
 fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
     const visibleAndTickRectangle = mapZig.getVisibleAndAdjacentChunkRectangle(state);
+    // handle idle chunkAreas
     for (state.threadData) |*threadData| {
         var currendIndex: usize = 0;
         while (currendIndex < threadData.chunkAreas.items.len) {
@@ -741,6 +743,7 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
             }
         }
     }
+    // move active chunkAreas out of idle
     {
         var currendIndex: usize = 0;
         const separateDistance = 1000;
@@ -767,6 +770,59 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
             }
         }
     }
+    if (state.usedThreadsCount > 1) {
+        // check balance
+        var highestAmountOfWorkThread: ?*ThreadData = null;
+        var highestAmountOfWork: usize = 0;
+        var lowestAmountOfWorkThread: ?*ThreadData = null;
+        var lowestAmountOfWork: usize = 0;
+        for (state.threadData) |*threadData| {
+            if (threadData.chunkAreas.items.len < 2) continue;
+            const tempAmountOfWork = threadData.tickedCitizenCounter + threadData.splitIndexCounter;
+            if (highestAmountOfWorkThread == null or highestAmountOfWork < tempAmountOfWork) {
+                highestAmountOfWorkThread = threadData;
+                highestAmountOfWork = tempAmountOfWork;
+            }
+            if (lowestAmountOfWorkThread == null or lowestAmountOfWork > tempAmountOfWork) {
+                lowestAmountOfWorkThread = threadData;
+                lowestAmountOfWork = tempAmountOfWork;
+            }
+        }
+        if (highestAmountOfWork - lowestAmountOfWork > @divFloor(highestAmountOfWork, 2)) {
+            const bestSwapWorkAmount = @divFloor(highestAmountOfWork - lowestAmountOfWork, 2);
+            var closestMatchAreaLowerIndex: usize = 0;
+            var closestMatchAreaHigherIndex: usize = 0;
+            var closestMatchWorkAmountDiffToBest: usize = bestSwapWorkAmount;
+            var closestMatchWorkAmountChange: usize = 0;
+            for (lowestAmountOfWorkThread.?.chunkAreas.items, 0..) |chunkAreaLower, indexLower| {
+                const lowerThreadAreaWorkAmount = chunkAreaLower.tickedCitizenCounter + chunkAreaLower.activeChunkKeys.items.len;
+                for (highestAmountOfWorkThread.?.chunkAreas.items, 0..) |chunkAreaHigher, indexHigher| {
+                    const higherThreadAreaWorkAmount = chunkAreaHigher.tickedCitizenCounter + chunkAreaHigher.activeChunkKeys.items.len;
+                    if (lowerThreadAreaWorkAmount < higherThreadAreaWorkAmount) {
+                        const diff: usize = @abs(@as(i32, @intCast(higherThreadAreaWorkAmount - lowerThreadAreaWorkAmount)) - @as(i32, @intCast(bestSwapWorkAmount)));
+                        if (diff < closestMatchWorkAmountDiffToBest) {
+                            closestMatchWorkAmountDiffToBest = diff;
+                            closestMatchWorkAmountChange = higherThreadAreaWorkAmount - lowerThreadAreaWorkAmount;
+                            closestMatchAreaHigherIndex = indexHigher;
+                            closestMatchAreaLowerIndex = indexLower;
+                        }
+                    }
+                }
+            }
+            if (0 < closestMatchWorkAmountChange and closestMatchWorkAmountChange < @divFloor(bestSwapWorkAmount * 3, 2)) {
+                const removedLowerArea = lowestAmountOfWorkThread.?.chunkAreas.swapRemove(closestMatchAreaLowerIndex);
+                lowestAmountOfWorkThread.?.splitIndexCounter -= removedLowerArea.activeChunkKeys.items.len;
+                const removedHigherArea = highestAmountOfWorkThread.?.chunkAreas.swapRemove(closestMatchAreaHigherIndex);
+                highestAmountOfWorkThread.?.splitIndexCounter -= removedHigherArea.activeChunkKeys.items.len;
+
+                try lowestAmountOfWorkThread.?.chunkAreas.append(removedHigherArea);
+                lowestAmountOfWorkThread.?.splitIndexCounter += removedHigherArea.activeChunkKeys.items.len;
+                try highestAmountOfWorkThread.?.chunkAreas.append(removedLowerArea);
+                highestAmountOfWorkThread.?.splitIndexCounter += removedLowerArea.activeChunkKeys.items.len;
+                std.debug.print("autoBalance change: {d}, h:{d} ,l:{d}\n", .{ closestMatchWorkAmountChange, highestAmountOfWork, lowestAmountOfWork });
+            }
+        }
+    }
 }
 
 fn tick(state: *ChatSimState) !void {
@@ -780,6 +836,7 @@ fn tick(state: *ChatSimState) !void {
         for (threadData.chunkAreas.items) |*chunkArea| {
             if (chunkArea.activeChunkKeys.items.len > 0) {
                 chunkArea.currentChunkKeyIndex = 0;
+                chunkArea.tickedCitizenCounter = 0;
                 chunkArea.wasDoingSomethingCurrentTick = false;
                 if (i == 0) continue; // don't count main thread
                 nonMainThreadsDataCount += chunkArea.activeChunkKeys.items.len;
@@ -799,7 +856,7 @@ fn tick(state: *ChatSimState) !void {
         threadData.citizensAddedThisTick = 0;
         for (threadData.chunkAreas.items) |*chunkArea| {
             for (chunkArea.activeChunkKeys.items) |activeKey| {
-                const tickedSomething = try tickSingleChunk(activeKey.chunkKey, 0, state);
+                const tickedSomething = try tickSingleChunk(activeKey.chunkKey, 0, chunkArea, state);
                 chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
             }
         }
@@ -829,7 +886,7 @@ fn tick(state: *ChatSimState) !void {
                     const activeKeys = chunkArea.activeChunkKeys;
                     while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
                         const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
-                        const tickedSomething = try tickSingleChunk(chunkKey, 0, state);
+                        const tickedSomething = try tickSingleChunk(chunkKey, 0, chunkArea, state);
                         chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
                         chunkKeyIndex += 1;
                     }
@@ -913,7 +970,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                         const areaLen = activeKeys.items.len;
                         while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
                             const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
-                            const tickedSomething = try tickSingleChunk(chunkKey, threadNumber, state);
+                            const tickedSomething = try tickSingleChunk(chunkKey, threadNumber, chunkArea, state);
                             chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
                             chunkKeyIndex += 1;
                         }
@@ -947,7 +1004,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
 }
 
 ///returns false if chunk is idle
-fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !bool {
+fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, state: *ChatSimState) !bool {
     // if (state.gameTimeMs == 16 * 60 * 250) std.debug.print("{}:{}\n", .{ chunkKey, threadIndex });
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     state.threadData[threadIndex].tickedChunkCounter += 1;
@@ -956,6 +1013,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, state: *ChatSimState) !boo
     const isVisible = chunk.lastPaintGameTime + @as(u32, @intFromFloat(32 * gameSpeedVisibleFactor)) > state.gameTimeMs;
     if (chunk.workingCitizenCounter > 0 or isVisible) {
         state.threadData[threadIndex].tickedCitizenCounter += chunk.citizens.items.len;
+        chunkArea.tickedCitizenCounter += chunk.citizens.items.len;
         try Citizen.citizensTick(chunk, threadIndex, state);
         try Citizen.citizensMoveTick(chunk);
     }
