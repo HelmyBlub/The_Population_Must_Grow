@@ -107,7 +107,8 @@ pub const Citizen: type = struct {
             const moveSpeed = citizen.moveSpeed;
             citizen.position.x += citizen.directionX * moveSpeed;
             citizen.position.y += citizen.directionY * moveSpeed;
-            if (@abs(citizen.position.x - moveTo.x) <= moveSpeed * 1.2 and @abs(citizen.position.y - moveTo.y) <= moveSpeed * 1.2) {
+            const distance = @min(2, moveSpeed * 1.2);
+            if (@abs(citizen.position.x - moveTo.x) <= moveSpeed * 1.2 and @abs(citizen.position.y - moveTo.y) <= distance) {
                 _ = citizen.moveTo.pop();
                 if (citizen.moveTo.items.len > 0) {
                     const direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
