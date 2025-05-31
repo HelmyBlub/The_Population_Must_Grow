@@ -1,11 +1,11 @@
 #version 450
 
 layout(binding = 0) uniform UniformBufferObject {
+    dvec2 translate;
     mat4 transformation;
-    vec2 translate;
 } ubo;
 
-layout(location = 0) in vec2 inPosition;
+layout(location = 0) in dvec2 inPosition;
 
 layout(location = 0) out vec2 scale;
 layout(location = 1) out uint spriteIndex;

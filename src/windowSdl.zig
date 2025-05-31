@@ -283,8 +283,8 @@ pub fn mouseWindowPositionToGameMapPoisition(x: f32, y: f32, camera: main.Camera
     var width: u32 = 0;
     var height: u32 = 0;
     getWindowSize(&width, &height);
-    const widthFloat = @as(f32, @floatFromInt(width));
-    const heightFloat = @as(f32, @floatFromInt(height));
+    const widthFloat = @as(f64, @floatFromInt(width));
+    const heightFloat = @as(f64, @floatFromInt(height));
 
     return main.Position{
         .x = (x - widthFloat / 2) / camera.zoom + camera.position.x,
@@ -296,8 +296,8 @@ pub fn mouseWindowPositionToVulkanSurfacePoisition(x: f32, y: f32) main.Position
     var width: u32 = 0;
     var height: u32 = 0;
     getWindowSize(&width, &height);
-    const widthFloat = @as(f32, @floatFromInt(width));
-    const heightFloat = @as(f32, @floatFromInt(height));
+    const widthFloat = @as(f64, @floatFromInt(width));
+    const heightFloat = @as(f64, @floatFromInt(height));
 
     return main.Position{
         .x = x / widthFloat * 2 - 1,

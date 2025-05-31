@@ -22,7 +22,7 @@ pub const VkCitizen = struct {
 };
 
 const CitizenVertex = struct {
-    pos: [2]f32,
+    pos: [2]f64,
     imageIndex: u8,
     animationTimer: u32,
     moveSpeed: f32,
@@ -43,7 +43,7 @@ const CitizenVertex = struct {
         var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(CitizenVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;

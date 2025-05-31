@@ -132,9 +132,9 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
             var i: usize = 0;
             while (i < sampleCount and sound.dataIndex < state.soundMixer.soundData.sounds[sound.soundIndex].len) {
                 const data: [*]Sample = @ptrCast(@alignCast(state.soundMixer.soundData.sounds[sound.soundIndex].data));
-                const distance: f32 = main.calculateDistance(sound.mapPosition, state.camera.position) + cameraZoomDistanceBonus;
-                const volume: f32 = @max(1 - (distance / 1000.0), 0);
-                buffer[i] +|= @intFromFloat(@as(f32, @floatFromInt(data[@divFloor(sound.dataIndex, 2)])) * volume);
+                const distance: f64 = main.calculateDistance(sound.mapPosition, state.camera.position) + cameraZoomDistanceBonus;
+                const volume: f64 = @max(1 - (distance / 1000.0), 0);
+                buffer[i] +|= @intFromFloat(@as(f64, @floatFromInt(data[@divFloor(sound.dataIndex, 2)])) * volume);
                 i += 1;
                 sound.dataIndex += 2;
             }

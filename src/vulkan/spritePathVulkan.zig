@@ -22,7 +22,7 @@ pub const VkPathVertices = struct {
 };
 
 pub const SpritePathVertex = struct {
-    pos: [2]f32,
+    pos: [2]f64,
 
     pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -38,7 +38,7 @@ pub const SpritePathVertex = struct {
         var attributeDescriptions: [1]vk.VkVertexInputAttributeDescription = .{undefined};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpritePathVertex, "pos");
         return attributeDescriptions;
     }

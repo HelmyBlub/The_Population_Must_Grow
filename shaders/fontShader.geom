@@ -1,8 +1,8 @@
 #version 450
 
 layout(binding = 0) uniform UniformBufferObject {
+    dvec2 translate;
     mat4 transformation;
-    vec2 translate;
 } ubo;
 
 layout(points) in;

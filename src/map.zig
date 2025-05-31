@@ -319,8 +319,8 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
 
 pub fn getTileRectangleMiddlePosition(tileRectangle: MapTileRectangle) main.Position {
     return .{
-        .x = @as(f32, @floatFromInt(tileRectangle.topLeftTileXY.tileX * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.columnCount * GameMap.TILE_SIZE, 2))))),
-        .y = @as(f32, @floatFromInt(tileRectangle.topLeftTileXY.tileY * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.rowCount * GameMap.TILE_SIZE, 2))))),
+        .x = @as(f64, @floatFromInt(tileRectangle.topLeftTileXY.tileX * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.columnCount * GameMap.TILE_SIZE, 2))))),
+        .y = @as(f64, @floatFromInt(tileRectangle.topLeftTileXY.tileY * GameMap.TILE_SIZE + @as(i32, @intCast(@divFloor(tileRectangle.rowCount * GameMap.TILE_SIZE, 2))))),
     };
 }
 
@@ -536,7 +536,7 @@ pub fn mapPositionToTileXyBottomRight(position: main.Position) TileXY {
     };
 }
 
-pub fn mapPositionToVulkanSurfacePoisition(x: f32, y: f32, camera: main.Camera) main.Position {
+pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) main.Position {
     var width: u32 = 0;
     var height: u32 = 0;
     windowSdlZig.getWindowSize(&width, &height);
@@ -710,8 +710,8 @@ fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.Chat
     }
     const rectMapTopLeft = mapTileXyToTilePosition(buildRectangle.topLeftTileXY);
     const rectMapBottomRight: main.Position = .{
-        .x = rectMapTopLeft.x + @as(f32, @floatFromInt(buildRectangle.columnCount * GameMap.TILE_SIZE)),
-        .y = rectMapTopLeft.y + @as(f32, @floatFromInt(buildRectangle.rowCount * GameMap.TILE_SIZE)),
+        .x = rectMapTopLeft.x + @as(f64, @floatFromInt(buildRectangle.columnCount * GameMap.TILE_SIZE)),
+        .y = rectMapTopLeft.y + @as(f64, @floatFromInt(buildRectangle.rowCount * GameMap.TILE_SIZE)),
     };
     for (0..chunksMaxIndex) |chunkIndex| {
         const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?, state);
@@ -868,13 +868,13 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
     for (0..tileCountColumns) |x| {
         nextTile: for (0..tileCountRows) |y| {
             const sourcePosition: main.Position = .{
-                .x = fromTopLeftTileMiddle.x + @as(f32, @floatFromInt(x * GameMap.TILE_SIZE)),
-                .y = fromTopLeftTileMiddle.y + @as(f32, @floatFromInt(y * GameMap.TILE_SIZE)),
+                .x = fromTopLeftTileMiddle.x + @as(f64, @floatFromInt(x * GameMap.TILE_SIZE)),
+                .y = fromTopLeftTileMiddle.y + @as(f64, @floatFromInt(y * GameMap.TILE_SIZE)),
             };
             const chunk = try getChunkAndCreateIfNotExistsForPosition(sourcePosition, state);
             const targetPosition: main.Position = .{
-                .x = targetTopLeftTileMiddle.x + @as(f32, @floatFromInt(x * GameMap.TILE_SIZE)),
-                .y = targetTopLeftTileMiddle.y + @as(f32, @floatFromInt(y * GameMap.TILE_SIZE)),
+                .x = targetTopLeftTileMiddle.x + @as(f64, @floatFromInt(x * GameMap.TILE_SIZE)),
+                .y = targetTopLeftTileMiddle.y + @as(f64, @floatFromInt(y * GameMap.TILE_SIZE)),
             };
             for (chunk.buildings.items) |building| {
                 if (main.calculateDistance(sourcePosition, building.position) < GameMap.TILE_SIZE) {
@@ -985,8 +985,8 @@ fn createChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator, state: *main.Chat
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
             const random = fixedRandom(
-                @as(f32, @floatFromInt(x)) + @as(f32, @floatFromInt(chunkXY.chunkX * GameMap.CHUNK_LENGTH)),
-                @as(f32, @floatFromInt(y)) + @as(f32, @floatFromInt(chunkXY.chunkY * GameMap.CHUNK_LENGTH)),
+                @as(f64, @floatFromInt(x)) + @as(f64, @floatFromInt(chunkXY.chunkX * GameMap.CHUNK_LENGTH)),
+                @as(f64, @floatFromInt(y)) + @as(f64, @floatFromInt(chunkXY.chunkY * GameMap.CHUNK_LENGTH)),
                 0.0,
             );
             if (random < 0.1) {
@@ -1030,6 +1030,6 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
     try addTickPosition(spawnChunk.chunkXY, state);
 }
 
-fn fixedRandom(x: f32, y: f32, seed: f32) f32 {
+fn fixedRandom(x: f64, y: f64, seed: f64) f64 {
     return @mod((@sin((x * 112.01716 + y * 718.233 + seed * 1234.1234) * 437057.545323) * 1000000.0), 256) / 256.0;
 }

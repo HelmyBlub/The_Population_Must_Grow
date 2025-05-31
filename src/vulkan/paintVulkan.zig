@@ -86,8 +86,8 @@ pub const Vk_State = struct {
 };
 
 const VkCameraData = struct {
+    translate: [2]f64,
     transform: [4][4]f32,
-    translate: [2]f32,
 };
 
 const SwapChainSupportDetails = struct {
@@ -97,7 +97,7 @@ const SwapChainSupportDetails = struct {
 };
 
 const SpriteWithGlobalTransformVertex = struct {
-    pos: [2]f32,
+    pos: [2]f64,
     imageIndex: u8,
     size: u8,
     rotate: f32,
@@ -118,7 +118,7 @@ const SpriteWithGlobalTransformVertex = struct {
         var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpriteWithGlobalTransformVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -141,7 +141,7 @@ const SpriteWithGlobalTransformVertex = struct {
 };
 
 pub const SpriteVertex = struct {
-    pos: [2]f32,
+    pos: [2]f64,
     imageIndex: u8,
     width: f32,
     height: f32,
@@ -160,7 +160,7 @@ pub const SpriteVertex = struct {
         var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpriteVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -179,7 +179,7 @@ pub const SpriteVertex = struct {
 };
 
 pub const ColoredVertex = struct {
-    pos: [2]f32,
+    pos: [2]f64,
     color: [3]f32,
 
     pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -196,7 +196,7 @@ pub const ColoredVertex = struct {
         var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(ColoredVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -1639,6 +1639,7 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
         .samplerAnisotropy = vk.VK_TRUE,
         .geometryShader = vk.VK_TRUE,
         .fillModeNonSolid = vk.VK_TRUE,
+        .shaderFloat64 = vk.VK_TRUE,
     };
     var vk12Features = vk.VkPhysicalDeviceVulkan12Features{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,

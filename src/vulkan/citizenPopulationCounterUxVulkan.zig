@@ -209,10 +209,10 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
 }
 
 /// returns vulkan surface width of text
-fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f32 {
+fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f64 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
-    var xOffset: f32 = 0;
+    var xOffset: f64 = 0;
     for (chars) |char| {
         if (state.vkState.citizenPopulationCounterUx.font.verticeCount >= VkCitizenPopulationCounterUx.MAX_VERTICES_FONT) break;
         fontVulkanZig.charToTexCoords(char, &texX, &texWidth);

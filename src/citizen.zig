@@ -81,8 +81,6 @@ pub const Citizen: type = struct {
     }
 
     pub fn moveToPosition(self: *Citizen, target: main.Position, threadIndex: usize, state: *main.ChatSimState) !void {
-        // _ = state;
-        // try self.moveTo.append(target);
         if (main.calculateDistance(self.position, target) < 0.01) {
             // no pathfinding or moving required
             return;
@@ -587,7 +585,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
         return;
     }
     var closestTree: ?*mapZig.MapTree = null;
-    var fastestDistance: f32 = 0;
+    var fastestDistance: f64 = 0;
     var topLeftChunk = mapZig.getChunkXyForPosition(targetPosition);
     var iteration: u8 = 0;
     const maxChunkDistance = @divFloor(Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE, mapZig.GameMap.CHUNK_LENGTH);
@@ -609,7 +607,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
                 for (chunk.trees.items) |*tree| {
                     if (!tree.fullyGrown or tree.citizenOnTheWay) continue;
-                    const tempDistance: f32 = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
+                    const tempDistance = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
                     if (closestTree == null or fastestDistance > tempDistance) {
                         closestTree = tree;
                         fastestDistance = tempDistance;

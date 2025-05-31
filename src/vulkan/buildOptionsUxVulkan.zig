@@ -330,7 +330,7 @@ pub fn mouseMove(state: *main.ChatSimState) !void {
 }
 
 /// returns true if a button was clicked
-pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.Position) !bool {
+pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.PositionF32) !bool {
     const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(mouseWindowPosition.x, mouseWindowPosition.y);
     for (state.vkState.buildOptionsUx.uiButtons) |uiButton| {
         if (uiButton.pos.x <= vulkanMousePos.x and uiButton.pos.x + uiButton.width >= vulkanMousePos.x and

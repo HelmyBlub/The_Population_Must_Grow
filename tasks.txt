@@ -1,19 +1,13 @@
 tasks:
-- new auto balance thread logic?
-    - auto thread balance still feels bad.
-    - next idea:
-        - measure differnce between 1 and 2 thread
-        - find good value for required citizen count per thread to change between 1 to 2 thread. Use this value for every other thread count
-            - if performance does not improve assume other apps take cpu cores. Not usefull to use more. Try again some other time
-        - code logic:
-            - try first change from 1 thread to 2 threads on 30_000 citizens. Assume 100_000 or more per thread is always good enough
-                - if performance better. Assume x citizens per thread required for performance gain
-                - if performance worse and ticked citizens amount close to 30_000 increase citizens by 10_000
-                - when 
-
 
 - bug: lost citizen 
     - assumption when position values high -> f32 precision not good enough. Change to f64?
+
+- new auto balance thread logic?
+    - auto thread balance still feels bad.
+    - std.debug when citizen count per thread increased. validate it can not happen to go to infinite
+    - test if after some time to try higher thread count again
+
 
 
 
@@ -44,6 +38,9 @@ Some data:
 - FPS: 144, citizens: 32183, gameTime: 330000, end FPS: 88.02314 (30.05.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
+
+- FPS: 158, citizens: 32069, gameTime: 330000, end FPS: 97.12999 (no stream)
+- FPS: 145, citizens: 34755, gameTime: 330000, end FPS: 90.637505 (no stream f64 change). Why more citizens?
 
 
 Goal:

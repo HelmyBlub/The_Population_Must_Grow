@@ -81,7 +81,7 @@ pub const ThreadData = struct {
 
 pub const MouseInfo = struct {
     mapDown: ?Position = null,
-    currentPos: Position = .{ .x = 0, .y = 0 },
+    currentPos: PositionF32 = .{ .x = 0, .y = 0 },
     leftButtonPressedTimeMs: ?i64 = null,
     rightButtonPressedTimeMs: ?i64 = null,
 };
@@ -97,6 +97,11 @@ pub const Camera: type = struct {
 };
 
 pub const Position: type = struct {
+    x: f64,
+    y: f64,
+};
+
+pub const PositionF32: type = struct {
     x: f32,
     y: f32,
 };
@@ -165,7 +170,7 @@ pub fn main() !void {
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     const diffX = pos1.x - pos2.x;
     const diffY = pos1.y - pos2.y;
-    return @sqrt(diffX * diffX + diffY * diffY);
+    return @floatCast(@sqrt(diffX * diffX + diffY * diffY));
 }
 
 pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, randomSeed: ?u64) !void {
@@ -245,8 +250,8 @@ pub fn setupRectangleData(state: *ChatSimState) void {
             };
             const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
             const vulkanBottomRight: Position = mapZig.mapPositionToVulkanSurfacePoisition(
-                mapTopLeftTile.x + @as(f32, @floatFromInt(copyAreaRectangle.columnCount * mapZig.GameMap.TILE_SIZE)),
-                mapTopLeftTile.y + @as(f32, @floatFromInt(copyAreaRectangle.rowCount * mapZig.GameMap.TILE_SIZE)),
+                mapTopLeftTile.x + @as(f64, @floatFromInt(copyAreaRectangle.columnCount * mapZig.GameMap.TILE_SIZE)),
+                mapTopLeftTile.y + @as(f64, @floatFromInt(copyAreaRectangle.rowCount * mapZig.GameMap.TILE_SIZE)),
                 state.camera,
             );
             state.rectangles[0] = .{
@@ -286,14 +291,14 @@ pub fn setupRectangleData(state: *ChatSimState) void {
                     const adjustColumns = @mod(columns, rectangleTileColumns);
                     const adjustRows = @mod(rows, rectangleTileRows);
                     if (mapMouseUp.x < mapMouseDown.x) {
-                        mapTopLeftTile.x = mapTopLeftTile.x - @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                        mapTopLeftTile.x = mapTopLeftTile.x - @as(f64, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
                     } else {
-                        mapBottomRightTileBottomRight.x = mapBottomRightTileBottomRight.x + @as(f32, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
+                        mapBottomRightTileBottomRight.x = mapBottomRightTileBottomRight.x + @as(f64, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
                     }
                     if (mapMouseUp.y < mapMouseDown.y) {
-                        mapTopLeftTile.y = mapTopLeftTile.y - @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                        mapTopLeftTile.y = mapTopLeftTile.y - @as(f64, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
                     } else {
-                        mapBottomRightTileBottomRight.y = mapBottomRightTileBottomRight.y + @as(f32, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
+                        mapBottomRightTileBottomRight.y = mapBottomRightTileBottomRight.y + @as(f64, @floatFromInt(adjustRows * mapZig.GameMap.TILE_SIZE));
                     }
                 }
 
@@ -1152,5 +1157,5 @@ pub fn destroyGameState(state: *ChatSimState) void {
 }
 
 pub fn calculateDirection(start: Position, end: Position) f32 {
-    return std.math.atan2(end.y - start.y, end.x - start.x);
+    return @floatCast(std.math.atan2(end.y - start.y, end.x - start.x));
 }

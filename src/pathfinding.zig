@@ -990,8 +990,8 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
         const distanceHomeRandomPosition = main.calculateDistance(randomReachableGraphTopLeftPos, homePos);
         if (distanceHomeRandomPosition < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.5 or main.calculateDistance(homePos, citizen.position) > distanceHomeRandomPosition) {
             const finalRandomPosition = main.Position{
-                .x = randomReachableGraphTopLeftPos.x + @as(f32, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f32),
-                .y = randomReachableGraphTopLeftPos.y + @as(f32, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f32),
+                .x = randomReachableGraphTopLeftPos.x + @as(f64, @floatFromInt((currentRectangle.tileRectangle.columnCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f64),
+                .y = randomReachableGraphTopLeftPos.y + @as(f64, @floatFromInt((currentRectangle.tileRectangle.rowCount - 1) * mapZig.GameMap.TILE_SIZE)) * rand.random().float(f64),
             };
             result = finalRandomPosition;
         }
