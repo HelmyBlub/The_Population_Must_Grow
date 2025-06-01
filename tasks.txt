@@ -1,18 +1,11 @@
 tasks:
-
-- bug: lost citizen 
-    - assumption when position values high -> f32 precision not good enough. Change to f64?
-
 - new auto balance thread logic?
     - auto thread balance still feels bad.
     - std.debug when citizen count per thread increased. validate it can not happen to go to infinite
     - test if after some time to try higher thread count again
 
 
-
-
-
-- put chunks and areas to idle if no citizen how can work in it
+- put chunks and areas to idle if no citizen who can work in it
     - problem: if having a lot of build orders when no citizens around for longer time it will reduce performance. Especially with lots of build orders
 - visualize when game might crash based on "out of memory"
     - or check out save game progress as i could save idle chunks and clean up from memory

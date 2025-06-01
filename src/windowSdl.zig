@@ -129,8 +129,16 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     state.testData.?.fpsLimiter = true;
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F11) {
+                std.debug.print("thread performance\n", .{});
+                for (state.threadData, 0..) |threadData, index| {
+                    if (threadData.measureData.performancePerTickedCitizens) |performance| {
+                        std.debug.print("    {} {} {}\n", .{ index, performance, threadData.measureData.lastMeasureTime });
+                    }
+                }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
                 std.debug.print("printChunksNotIndleInfo\n", .{});
+                var count: u32 = 0;
                 for (state.threadData) |*threadData| {
                     for (threadData.chunkAreas.items) |chunkArea| {
                         std.debug.print(" chunkArea {},{}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
@@ -140,6 +148,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                             for (chunk.citizens.items) |citizen| {
                                 if (citizen.nextThinkingAction == .idle or citizen.nextThinkingAction == .potatoHarvest or citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoEatFinished) continue;
                                 std.debug.print("   {}\n", .{citizen});
+                                count += 1;
+                                if (count > 100) return;
                             }
                         }
                     }

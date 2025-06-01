@@ -455,7 +455,7 @@ pub fn setZoom(zoom: f32, state: *ChatSimState, toMouse: bool) void {
         state.camera.position.x -= translateX;
         state.camera.position.y -= translateY;
     }
-    resetThreadPerfromanceMeasureData(state);
+    // resetThreadPerfromanceMeasureData(state);
 }
 
 pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
@@ -471,10 +471,11 @@ pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
         state.actualGameSpeed = limitedSpeed;
     }
     state.desiredGameSpeed = limitedSpeed;
-    resetThreadPerfromanceMeasureData(state);
+    // resetThreadPerfromanceMeasureData(state);
 }
 
 pub fn resetThreadPerfromanceMeasureData(state: *ChatSimState) void {
+    //TODO check if can be deleted
     for (state.threadData, 0..) |*threadData, index| {
         if (index + 1 == state.usedThreadsCount) {
             threadData.measureData.switchedToThreadCountGameTime = state.gameTimeMs + 2000;
@@ -515,24 +516,27 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
                 if (optPerformance) |performance| {
                     currentThread.measureData.lastMeasureTime = state.gameTimeMs;
                     currentThread.measureData.performancePerTickedCitizens = performance;
+                    const minCitizenPerThreadCap = 35_000;
+                    var decrease = false;
                     if (currentThread.measureData.switchedToThreadCountGameTime + stableMeasureWaitTime < state.gameTimeMs) {
                         if (performance * minimalPerCentDiffernceReq > lowerThread.measureData.performancePerTickedCitizens.?) {
-                            if (state.usedThreadsCount == 2 and state.minCitizenPerThread * 2 < totalTickedCitizens and totalTickedCitizens < state.minCitizenPerThread * 2 + 10_000) {
-                                state.minCitizenPerThread += 5_000;
-                            }
-                            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
-                            std.debug.print("decrease thread count as performance worse {}\n", .{state.usedThreadsCount});
-                            return;
+                            decrease = true;
+                            std.debug.print("decrease thread count as performance worse {}\n", .{state.usedThreadsCount - 1});
                         }
                     } else {
                         if (performance * 0.95 > lowerThread.measureData.performancePerTickedCitizens.?) {
-                            if (state.usedThreadsCount == 2 and state.minCitizenPerThread * 2 < totalTickedCitizens and totalTickedCitizens < state.minCitizenPerThread * 2 + 10_000) {
-                                state.minCitizenPerThread += 5_000;
-                            }
-                            try changeUsedThreadCount(state.usedThreadsCount - 1, state);
-                            std.debug.print("decrease thread count as performance way worse {}\n", .{state.usedThreadsCount});
-                            return;
+                            decrease = true;
+                            currentThread.measureData.performancePerTickedCitizens = performance * 1.1; // assume if would get worse after more time
+                            std.debug.print("decrease thread count as performance way worse {}\n", .{state.usedThreadsCount - 1});
                         }
+                    }
+                    if (decrease) {
+                        if (state.minCitizenPerThread < minCitizenPerThreadCap and state.usedThreadsCount == 2 and state.minCitizenPerThread * 2 < totalTickedCitizens and totalTickedCitizens < state.minCitizenPerThread * 2 + 10_000) {
+                            state.minCitizenPerThread += 5_000;
+                            std.debug.print("increase minCitizenPerThread {}\n", .{state.minCitizenPerThread});
+                        }
+                        try changeUsedThreadCount(state.usedThreadsCount - 1, state);
+                        return;
                     }
                 }
             }
@@ -544,10 +548,17 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
                 return;
             } else if (estimateThreadCount > state.usedThreadsCount) {
                 const higherThread = &state.threadData[state.usedThreadsCount];
+                if (currentThread.measureData.performancePerTickedCitizens == null) return;
                 if (higherThread.measureData.performancePerTickedCitizens != null) {
-                    if (currentThread.measureData.performancePerTickedCitizens == null) return;
                     if (higherThread.measureData.performancePerTickedCitizens.? > currentThread.measureData.performancePerTickedCitizens.?) {
-                        return;
+                        const performanceDiff = higherThread.measureData.performancePerTickedCitizens.? - currentThread.measureData.performancePerTickedCitizens.?;
+                        //retry after time
+                        const waitTime = @as(u32, @intFromFloat(@min(performanceDiff, 5) * 360_000 + 60_000));
+                        if (higherThread.measureData.lastMeasureTime + waitTime > state.gameTimeMs) {
+                            return;
+                        } else {
+                            std.debug.print("time to try higher again {d}, {d}\n", .{ waitTime, performanceDiff });
+                        }
                     }
                 }
                 try changeUsedThreadCount(state.usedThreadsCount + 1, state);
@@ -830,7 +841,6 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
                 lowestAmountOfWorkThread.?.splitIndexCounter += removedHigherArea.activeChunkKeys.items.len;
                 try highestAmountOfWorkThread.?.chunkAreas.append(removedLowerArea);
                 highestAmountOfWorkThread.?.splitIndexCounter += removedLowerArea.activeChunkKeys.items.len;
-                std.debug.print("autoBalance change: {d}, h:{d} ,l:{d}\n", .{ closestMatchWorkAmountChange, highestAmountOfWork, lowestAmountOfWork });
             }
         }
     }
