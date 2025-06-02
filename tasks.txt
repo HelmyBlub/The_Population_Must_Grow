@@ -1,12 +1,8 @@
 tasks:
 - new auto balance thread logic?
     - check if feels good while streaming
-- bug: citizens very hungry not finishing building
-    - did long thin horizontal build. Leftmost citizens had 3 very hungry ones, never finishing their building. How?
-    - one chunkArea with active citizens eating from unactive chunk area all the time. But this only ticks every 16seconds so not enough food
-- put chunks and areas to idle if no citizen who can work in it
-    - problem: if having a lot of build orders when no citizens around for longer time it will reduce performance. Especially with lots of build orders
 - save idle chunks and clean up from memory, load when required again
+
 
 - limit citizen hunger, currently infite negative
 - bug: copy paste big area crash

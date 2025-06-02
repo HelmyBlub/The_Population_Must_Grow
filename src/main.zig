@@ -1169,16 +1169,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
     try destroyPaintVulkanAndWindowSdl(state);
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
-        chunk.buildings.deinit();
-        chunk.bigBuildings.deinit();
-        chunk.trees.deinit();
-        chunk.potatoFields.deinit();
-        Citizen.destroyCitizens(chunk);
-        chunk.citizens.deinit();
-        chunk.buildOrders.deinit();
-        chunk.pathes.deinit();
-        chunk.queue.deinit();
-        pathfindingZig.destoryChunkData(&chunk.pathingData);
+        mapZig.destroyChunk(chunk);
     }
 
     for (0..state.maxThreadCount) |i| {

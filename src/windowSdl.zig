@@ -13,6 +13,7 @@ const soundMixerZig = @import("soundMixer.zig");
 const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
 const imageZig = @import("image.zig");
 const testZig = @import("test.zig");
+const saveZig = @import("save.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -129,6 +130,12 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     state.testData.?.fpsLimiter = true;
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {
+                const area = &state.threadData[0].chunkAreas.items[0];
+                try saveZig.saveChunkAreaToFile(area, state);
+                std.debug.print("test save one chunk\n", .{});
+                try saveZig.loadChunkAreaFromFile(area.areaXY, state);
+                std.debug.print("test load one chunk\n", .{});
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F11) {
                 std.debug.print("thread performance\n", .{});
                 for (state.threadData, 0..) |threadData, index| {
