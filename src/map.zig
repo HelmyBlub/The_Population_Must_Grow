@@ -776,6 +776,20 @@ pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimSta
     return null;
 }
 
+pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, state: *main.ChatSimState) !void {
+    const chunkAreaXY = main.getChunkAreaXyForChunkXy(chunk.chunkXY);
+    const citizenHomeChunkXY = getChunkXyForPosition(citizenHome);
+    const chunkAreaXYCitizenHome = main.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
+    if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
+        for (state.idleChunkAreas.items) |*idleArea| {
+            if (idleArea.areaXY.areaX == chunkAreaXY.areaX and idleArea.areaXY.areaY == chunkAreaXY.areaY) {
+                idleArea.idleTypeData = .notIdle;
+            }
+        }
+    }
+    try chunk.queue.append(chunkQueueItem);
+}
+
 pub fn getTreeOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { tree: *MapTree, chunk: *MapChunk, treeIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.trees.items, 0..) |*tree, index| {
@@ -854,7 +868,7 @@ pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main
         for (0..areaRectangleFromTileRectangle.rowCount) |y| {
             for (state.idleChunkAreas.items) |*idleArea| {
                 if (idleArea.areaXY.areaX == x and idleArea.areaXY.areaY == y) {
-                    idleArea.idle = false;
+                    idleArea.idleTypeData = .notIdle;
                     break;
                 }
             }

@@ -111,13 +111,24 @@ pub const ChunkAreaXY: type = struct {
     areaY: i32,
 };
 
+pub const ChunkAreaIdleType = enum {
+    waitingForCitizens,
+    idle,
+    notIdle,
+};
+
+pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
+    waitingForCitizens: u32,
+    idle,
+    notIdle,
+};
+
 pub const ChunkArea: type = struct {
     areaXY: ChunkAreaXY,
     currentChunkKeyIndex: usize,
     activeChunkKeys: std.ArrayList(ChunkAreaActiveKey),
     tickedCitizenCounter: usize = 0,
-    idle: bool = false,
-    wasDoingSomethingCurrentTick: bool = true,
+    idleTypeData: ChunkAreaIdleTypeData = .notIdle,
     pub const SIZE = 20;
 };
 
@@ -568,12 +579,16 @@ fn getStablePerformancePerTickedCitizenValue(state: *ChatSimState, totalTickedCi
     return state.tickDurationSmoothedMircoSeconds / @as(f32, @floatFromInt(state.totalTickedCitizensSmoothed));
 }
 
-pub fn addActiveChunkForThreads(newActiveChunkKey: u64, state: *ChatSimState) !void {
-    const chunkXY = mapZig.getChunkXyForKey(newActiveChunkKey);
-    const areaXY: ChunkAreaXY = .{
+pub fn getChunkAreaXyForChunkXy(chunkXY: mapZig.ChunkXY) ChunkAreaXY {
+    return .{
         .areaX = @divFloor(chunkXY.chunkX, ChunkArea.SIZE),
         .areaY = @divFloor(chunkXY.chunkY, ChunkArea.SIZE),
     };
+}
+
+pub fn addActiveChunkForThreads(newActiveChunkKey: u64, state: *ChatSimState) !void {
+    const chunkXY = mapZig.getChunkXyForKey(newActiveChunkKey);
+    const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     var optChunkArea: ?*ChunkArea = null;
     main: for (state.threadData) |*threadData| {
         for (threadData.chunkAreas.items) |*area| {
@@ -747,10 +762,9 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
         var currendIndex: usize = 0;
         while (currendIndex < threadData.chunkAreas.items.len) {
             const chunkArea = threadData.chunkAreas.items[currendIndex];
-            if (!chunkArea.wasDoingSomethingCurrentTick and !mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
-                var removedArea = threadData.chunkAreas.swapRemove(currendIndex);
+            if (chunkArea.idleTypeData != .notIdle and !mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
+                const removedArea = threadData.chunkAreas.swapRemove(currendIndex);
                 threadData.splitIndexCounter -= removedArea.activeChunkKeys.items.len;
-                removedArea.idle = true;
                 try state.idleChunkAreas.append(removedArea);
             } else {
                 currendIndex += 1;
@@ -760,11 +774,15 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
     // move active chunkAreas out of idle
     {
         var currendIndex: usize = 0;
-        const separateDistance = 1000;
-        const removeFromIdleValue: u32 = @mod(state.gameTimeMs, (@as(u32, @intCast(state.tickIntervalMs)) * separateDistance));
         while (currendIndex < state.idleChunkAreas.items.len) {
             const chunkArea = &state.idleChunkAreas.items[currendIndex];
-            if (!chunkArea.idle or mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
+            var idleTypeWakeUp = false;
+            if (chunkArea.idleTypeData != .idle) {
+                if (chunkArea.idleTypeData != .waitingForCitizens or chunkArea.idleTypeData.waitingForCitizens < state.gameTimeMs) {
+                    idleTypeWakeUp = true;
+                }
+            }
+            if (idleTypeWakeUp or mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
                 const removedArea = state.idleChunkAreas.swapRemove(currendIndex);
                 var threadWithLeastAreas: ?*ThreadData = null;
                 for (state.threadData, 0..) |*threadData, index| {
@@ -777,10 +795,6 @@ fn optimizeChunkAreaAssignments(state: *ChatSimState) !void {
                 threadWithLeastAreas.?.splitIndexCounter += removedArea.activeChunkKeys.items.len;
             } else {
                 currendIndex += 1;
-                //unidle chunkArea one in a while, as a simple fix for issues where a chunkArea does not get removed from idle status
-                if (removeFromIdleValue == @mod(chunkArea.areaXY.areaX, separateDistance) * state.tickIntervalMs) {
-                    chunkArea.idle = false;
-                }
             }
         }
     }
@@ -850,7 +864,7 @@ fn tick(state: *ChatSimState) !void {
             if (chunkArea.activeChunkKeys.items.len > 0) {
                 chunkArea.currentChunkKeyIndex = 0;
                 chunkArea.tickedCitizenCounter = 0;
-                chunkArea.wasDoingSomethingCurrentTick = false;
+                chunkArea.idleTypeData = .idle;
                 if (i == 0) continue; // don't count main thread
                 nonMainThreadsDataCount += chunkArea.activeChunkKeys.items.len;
                 if (threadData.thread == null) {
@@ -869,8 +883,14 @@ fn tick(state: *ChatSimState) !void {
         threadData.citizensAddedThisTick = 0;
         for (threadData.chunkAreas.items) |*chunkArea| {
             for (chunkArea.activeChunkKeys.items) |activeKey| {
-                const tickedSomething = try tickSingleChunk(activeKey.chunkKey, 0, chunkArea, state);
-                chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
+                const idleTypeData = try tickSingleChunk(activeKey.chunkKey, 0, chunkArea, state);
+                if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
+                    if (idleTypeData == .notIdle) {
+                        chunkArea.idleTypeData = .notIdle;
+                    } else if (idleTypeData == .waitingForCitizens and chunkArea.idleTypeData != .notIdle) {
+                        chunkArea.idleTypeData = idleTypeData;
+                    }
+                }
             }
         }
     } else {
@@ -899,8 +919,14 @@ fn tick(state: *ChatSimState) !void {
                     const activeKeys = chunkArea.activeChunkKeys;
                     while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
                         const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
-                        const tickedSomething = try tickSingleChunk(chunkKey, 0, chunkArea, state);
-                        chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
+                        const idleTypeData = try tickSingleChunk(chunkKey, 0, chunkArea, state);
+                        if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
+                            if (idleTypeData == .notIdle) {
+                                chunkArea.idleTypeData = .notIdle;
+                            } else if (idleTypeData == .waitingForCitizens and chunkArea.idleTypeData != .notIdle) {
+                                chunkArea.idleTypeData = idleTypeData;
+                            }
+                        }
                         chunkKeyIndex += 1;
                     }
                     chunkArea.currentChunkKeyIndex = chunkKeyIndex;
@@ -983,8 +1009,14 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                         const areaLen = activeKeys.items.len;
                         while (areaLen > chunkKeyIndex and activeKeys.items[chunkKeyIndex].pathIndex <= allowedPathIndex) {
                             const chunkKey = activeKeys.items[chunkKeyIndex].chunkKey;
-                            const tickedSomething = try tickSingleChunk(chunkKey, threadNumber, chunkArea, state);
-                            chunkArea.wasDoingSomethingCurrentTick = chunkArea.wasDoingSomethingCurrentTick or tickedSomething;
+                            const idleTypeData = try tickSingleChunk(chunkKey, threadNumber, chunkArea, state);
+                            if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
+                                if (idleTypeData == .notIdle) {
+                                    chunkArea.idleTypeData = .notIdle;
+                                } else if (idleTypeData == .waitingForCitizens and chunkArea.idleTypeData != .notIdle) {
+                                    chunkArea.idleTypeData = idleTypeData;
+                                }
+                            }
                             chunkKeyIndex += 1;
                         }
                         chunkArea.currentChunkKeyIndex = chunkKeyIndex;
@@ -1017,7 +1049,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
 }
 
 ///returns false if chunk is idle
-fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, state: *ChatSimState) !bool {
+fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, state: *ChatSimState) !ChunkAreaIdleTypeData {
     // if (state.gameTimeMs == 16 * 60 * 250) std.debug.print("{}:{}\n", .{ chunkKey, threadIndex });
     const chunk = state.map.chunks.getPtr(chunkKey).?;
     state.threadData[threadIndex].tickedChunkCounter += 1;
@@ -1060,6 +1092,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, sta
         if (time <= state.gameTimeMs) chunk.skipBuildOrdersUntilTimeMs = null;
     }
     var iterator = chunk.buildOrders.items.len;
+    var couldAssignOneBuildOrder = false;
     if (chunk.skipBuildOrdersUntilTimeMs == null) {
         while (iterator > 0) {
             iterator -= 1;
@@ -1068,6 +1101,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, sta
             if (optMapObject) |mapObject| {
                 if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizenData| {
                     const freeCitizen = freeCitizenData.citizen;
+                    couldAssignOneBuildOrder = true;
                     switch (mapObject) {
                         mapZig.MapObject.building => |building| {
                             freeCitizen.buildingPosition = building.position;
@@ -1114,7 +1148,13 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *ChunkArea, sta
         }
     }
     codePerformanceZig.endMeasure(" chunkBuildOrders", &state.codePerformanceData);
-    return !(chunk.workingCitizenCounter == 0 and chunk.buildOrders.items.len == 0 and chunk.queue.items.len == 0);
+    var result: ChunkAreaIdleTypeData = .notIdle;
+    if (chunk.buildOrders.items.len > 0) {
+        if (!couldAssignOneBuildOrder and chunk.citizens.items.len == 0 and chunk.queue.items.len == 0) result = .{ .waitingForCitizens = state.gameTimeMs + 10_000 };
+    } else if (chunk.workingCitizenCounter == 0 and !couldAssignOneBuildOrder and chunk.queue.items.len == 0) {
+        result = .idle;
+    }
+    return result;
 }
 
 pub fn destroyGameState(state: *ChatSimState) void {

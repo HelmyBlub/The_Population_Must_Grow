@@ -264,7 +264,8 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !
 fn treePlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeAndChunk| {
         treeAndChunk.tree.growStartTimeMs = state.gameTimeMs;
-        try treeAndChunk.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
+        const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
+        try mapZig.appendToChunkQueue(treeAndChunk.chunk, queueItem, citizen.homePosition, state);
     }
     citizen.treePosition = null;
     try nextThinkingAction(citizen, state);
@@ -328,7 +329,8 @@ fn buildingCutTree(citizen: *Citizen, state: *main.ChatSimState) !void {
             mapZig.removeTree(treeData.treeIndex, treeData.chunk);
         } else {
             treeData.tree.growStartTimeMs = state.gameTimeMs;
-            try treeData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
+            const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
+            try mapZig.appendToChunkQueue(treeData.chunk, queueItem, citizen.homePosition, state);
         }
         if (!try checkHunger(citizen, state)) {
             citizen.nextThinkingAction = .buildingBuild;
@@ -409,7 +411,8 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState)
 fn potatoPlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getPotatoFieldOnPosition(citizen.farmPosition.?, state)) |farmData| {
         farmData.potatoField.growStartTimeMs = state.gameTimeMs;
-        try farmData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
+        const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
+        try mapZig.appendToChunkQueue(farmData.chunk, queueItem, citizen.homePosition, state);
     }
     citizen.farmPosition = null;
     try nextThinkingAction(citizen, state);
@@ -441,7 +444,8 @@ fn potatoEatFinishedTick(citizen: *Citizen, state: *main.ChatSimState) !void {
 fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     if (try mapZig.getPotatoFieldOnPosition(citizen.potatoPosition.?, state)) |farmData| {
         farmData.potatoField.growStartTimeMs = state.gameTimeMs;
-        try farmData.chunk.queue.append(mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS });
+        const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
+        try mapZig.appendToChunkQueue(farmData.chunk, queueItem, citizen.homePosition, state);
         farmData.potatoField.fullyGrown = false;
         farmData.potatoField.citizenOnTheWay -= 1;
         citizen.hasPotato = true;
