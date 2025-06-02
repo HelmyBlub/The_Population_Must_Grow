@@ -455,7 +455,6 @@ pub fn setZoom(zoom: f32, state: *ChatSimState, toMouse: bool) void {
         state.camera.position.x -= translateX;
         state.camera.position.y -= translateY;
     }
-    // resetThreadPerfromanceMeasureData(state);
 }
 
 pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
@@ -471,18 +470,6 @@ pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
         state.actualGameSpeed = limitedSpeed;
     }
     state.desiredGameSpeed = limitedSpeed;
-    // resetThreadPerfromanceMeasureData(state);
-}
-
-pub fn resetThreadPerfromanceMeasureData(state: *ChatSimState) void {
-    //TODO check if can be deleted
-    for (state.threadData, 0..) |*threadData, index| {
-        if (index + 1 == state.usedThreadsCount) {
-            threadData.measureData.switchedToThreadCountGameTime = state.gameTimeMs + 2000;
-        } else {
-            threadData.measureData.lastMeasureTime = state.gameTimeMs;
-        }
-    }
 }
 
 fn autoBalanceThreadCount(state: *ChatSimState) !void {
@@ -551,12 +538,17 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
                 if (currentThread.measureData.performancePerTickedCitizens == null) return;
                 if (higherThread.measureData.performancePerTickedCitizens != null) {
                     if (higherThread.measureData.performancePerTickedCitizens.? > currentThread.measureData.performancePerTickedCitizens.?) {
-                        const performanceDiff = higherThread.measureData.performancePerTickedCitizens.? - currentThread.measureData.performancePerTickedCitizens.?;
+                        const performanceDiff = higherThread.measureData.performancePerTickedCitizens.? / currentThread.measureData.performancePerTickedCitizens.?;
                         //retry after time
-                        const waitTime = @as(u32, @intFromFloat(@min(performanceDiff, 5) * 360_000 + 60_000));
+                        var waitTime = @as(u32, @intFromFloat(@min(performanceDiff, 5) * 60_000 + 60_000));
+                        if (state.usedThreadsCount == state.maxThreadCount - 1) {
+                            // one thread most often used by other application. Try it out less frequently as it can be far worse.
+                            waitTime *= 3;
+                        }
                         if (higherThread.measureData.lastMeasureTime + waitTime > state.gameTimeMs) {
                             return;
                         } else {
+                            higherThread.measureData.performancePerTickedCitizens = null;
                             std.debug.print("time to try higher again {d}, {d}\n", .{ waitTime, performanceDiff });
                         }
                     }
