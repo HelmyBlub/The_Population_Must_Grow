@@ -89,14 +89,20 @@ pub const MapTree = struct {
     imageIndex: u8 = imageZig.IMAGE_TREE,
 };
 
+pub const BuildingType = enum {
+    house,
+    bigHouse,
+};
+
 pub const Building = struct {
-    type: u8,
+    type: BuildingType,
     position: main.Position,
     inConstruction: bool = true,
     woodRequired: u8 = 1,
     citizensSpawned: u8 = 0,
     constructionStartedTime: ?u32 = null,
     imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE,
+    pub const BIG_HOUSE_WOOD = 16;
 };
 
 pub const PotatoField = struct {
@@ -138,8 +144,6 @@ pub const VisibleChunksData = struct {
 pub const BUILD_MODE_SINGLE = 0;
 pub const BUILD_MODE_DRAG_RECTANGLE = 1;
 pub const BUILD_MODE_DRAW = 2;
-pub const BUILDING_TYPE_HOUSE = 0;
-pub const BUILDING_TYPE_BIG_HOUSE = 1;
 pub const BUILD_TYPE_HOUSE = 0;
 pub const BUILD_TYPE_TREE_FARM = 1;
 pub const BUILD_TYPE_POTATO_FARM = 2;
@@ -592,7 +596,7 @@ pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
 pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
-        .type = BUILD_TYPE_HOUSE,
+        .type = .house,
     };
     return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
@@ -600,15 +604,15 @@ pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath:
 pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
-        .type = BUILDING_TYPE_BIG_HOUSE,
-        .woodRequired = 16,
+        .type = .bigHouse,
+        .woodRequired = Building.BIG_HOUSE_WOOD,
     };
     return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
 
 pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, state);
-    if (building.type == BUILDING_TYPE_BIG_HOUSE) {
+    if (building.type == .bigHouse) {
         const buildRectangle = getBigBuildingRectangle(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, true, true)) return false;
         if (checkPath and !try isRectangleAdjacentToPath(buildRectangle, state)) return false;
@@ -634,7 +638,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
 pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.ChatSimState) !void {
     building.constructionStartedTime = null;
     building.woodRequired -= 1;
-    if (building.type == BUILDING_TYPE_HOUSE) {
+    if (building.type == .house) {
         building.inConstruction = false;
         building.imageIndex = imageZig.IMAGE_HOUSE;
         const buildRectangle = get1x1RectangleFromPosition(building.position);
@@ -643,7 +647,7 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
         newCitizen.position = building.position;
         try placeCitizen(newCitizen, threadIndex, state);
         building.citizensSpawned += 1;
-    } else if (building.type == BUILDING_TYPE_BIG_HOUSE) {
+    } else if (building.type == .bigHouse) {
         if (building.woodRequired == 0) {
             building.inConstruction = false;
             building.imageIndex = imageZig.IMAGE_BIG_HOUSE;
@@ -988,9 +992,39 @@ fn createAndPushChunkForPosition(position: main.Position, state: *main.ChatSimSt
     try createAndPushChunkForChunkXY(chunkXY, state);
 }
 
+pub fn createEmptyChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
+    const allocator = state.allocator;
+    const chunk: MapChunk = .{
+        .chunkXY = chunkXY,
+        .buildings = std.ArrayList(Building).init(allocator),
+        .bigBuildings = std.ArrayList(Building).init(allocator),
+        .trees = std.ArrayList(MapTree).init(allocator),
+        .potatoFields = std.ArrayList(PotatoField).init(allocator),
+        .citizens = std.ArrayList(main.Citizen).init(allocator),
+        .buildOrders = std.ArrayList(BuildOrder).init(allocator),
+        .pathes = std.ArrayList(main.Position).init(allocator),
+        .pathingData = undefined,
+        .queue = std.ArrayList(ChunkQueueItem).init(allocator),
+    };
+    return chunk;
+}
+
+pub fn destroyChunk(chunk: *MapChunk) void {
+    chunk.buildings.deinit();
+    chunk.bigBuildings.deinit();
+    chunk.trees.deinit();
+    chunk.potatoFields.deinit();
+    main.Citizen.destroyCitizens(chunk);
+    chunk.citizens.deinit();
+    chunk.buildOrders.deinit();
+    chunk.pathes.deinit();
+    chunk.queue.deinit();
+    pathfindingZig.destoryChunkData(&chunk.pathingData);
+}
+
 fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
     var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state);
-
+    mapChunk.pathingData = try main.pathfindingZig.createChunkData(chunkXY, state.allocator, state);
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
             const random = fixedRandom(
@@ -1013,40 +1047,12 @@ fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
     return mapChunk;
 }
 
-pub fn createEmptyChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
-    const allocator = state.allocator;
-    const chunk: MapChunk = .{
-        .chunkXY = chunkXY,
-        .buildings = std.ArrayList(Building).init(allocator),
-        .bigBuildings = std.ArrayList(Building).init(allocator),
-        .trees = std.ArrayList(MapTree).init(allocator),
-        .potatoFields = std.ArrayList(PotatoField).init(allocator),
-        .citizens = std.ArrayList(main.Citizen).init(allocator),
-        .buildOrders = std.ArrayList(BuildOrder).init(allocator),
-        .pathes = std.ArrayList(main.Position).init(allocator),
-        .pathingData = try main.pathfindingZig.createChunkData(chunkXY, allocator, state),
-        .queue = std.ArrayList(ChunkQueueItem).init(allocator),
-    };
-    return chunk;
-}
-
-pub fn destroyChunk(chunk: *MapChunk) void {
-    chunk.buildings.deinit();
-    chunk.bigBuildings.deinit();
-    chunk.trees.deinit();
-    chunk.potatoFields.deinit();
-    main.Citizen.destroyCitizens(chunk);
-    chunk.citizens.deinit();
-    chunk.buildOrders.deinit();
-    chunk.pathes.deinit();
-    chunk.queue.deinit();
-    pathfindingZig.destoryChunkData(&chunk.pathingData);
-}
-
 pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState) !void {
-    var spawnChunk: MapChunk = try createEmptyChunk(.{ .chunkX = 0, .chunkY = 0 }, state);
+    const spawnChunkXY: ChunkXY = .{ .chunkX = 0, .chunkY = 0 };
+    var spawnChunk: MapChunk = try createEmptyChunk(spawnChunkXY, state);
+    spawnChunk.pathingData = try main.pathfindingZig.createChunkData(spawnChunkXY, state.allocator, state);
     const halveTileSize = GameMap.TILE_SIZE / 2;
-    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = BUILDING_TYPE_HOUSE, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
+    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = .house, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .fullyGrown = true });
     const citizen = main.Citizen.createCitizen(.{ .x = halveTileSize, .y = halveTileSize }, allocator);
