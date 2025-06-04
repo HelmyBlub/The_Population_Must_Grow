@@ -1,12 +1,13 @@
 tasks:
 - save idle chunks and clean up from memory, load when required again
     - save and load all important tile data
-    - setup pathing correctly
-    - setup big building cases
-    - check performance, improve
-        - had pad save strategy. But if filesystem is the slow part it might not matter
-        - might mean a seperate thread might be better
+        - setup big building cases
     - auto free memory and save and load
+    - citizens of other chunk area can be in unloaded chunk area, how to handle
+    - check performance, improve
+        - might mean a seperate thread might be better
+    - save and load on game end and game start
+        - reset
 
 
 

@@ -127,9 +127,29 @@ pub fn saveChunkAreaToFile(chunkArea: *main.ChunkArea, state: *main.ChatSimState
                     writeValue = SAVE_TREE_AND_BUILD_ORDER_BIG_BUILDING;
                 } else if (bigBuilding.inConstruction) {
                     if (bigBuilding.woodRequired <= 8) {
-                        writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE;
+                        if (bigBuilding.citizensSpawned == 0) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE;
+                        } else if (bigBuilding.citizensSpawned == 1) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_1;
+                        } else if (bigBuilding.citizensSpawned == 2) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_2;
+                        } else if (bigBuilding.citizensSpawned == 3) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_3;
+                        } else {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4;
+                        }
                     } else {
-                        writeValue = SAVE_BIG_BUILDING_BUILD_ORDER;
+                        if (bigBuilding.citizensSpawned == 0) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER;
+                        } else if (bigBuilding.citizensSpawned == 1) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_1;
+                        } else if (bigBuilding.citizensSpawned == 2) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_2;
+                        } else if (bigBuilding.citizensSpawned == 3) {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_3;
+                        } else {
+                            writeValue = SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_4;
+                        }
                     }
                 }
                 writeValues[writeValueIndex] = writeValue;
@@ -401,21 +421,12 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
                         .imageIndex = imageZig.IMAGE_BIG_HOUSE,
                     };
                     for (0..8) |_| {
-                        var newCitizen = main.Citizen.createCitizen(position, state.allocator);
+                        var newCitizen = main.Citizen.createCitizen(newBuilding.position, state.allocator);
                         newCitizen.position = position;
                         newCitizen.foodLevel += @as(f32, @floatFromInt(@mod(index, 100))) / 100.0 + 0.5; //should not all want to eat at the same time
                         try chunk.citizens.append(newCitizen);
                     }
                     try chunk.bigBuildings.append(newBuilding);
-                },
-                SAVE_BIG_BUILDING_BUILD_ORDER => {
-                    const newBuilding: mapZig.Building = .{
-                        .type = .bigHouse,
-                        .position = .{ .x = position.x - mapZig.GameMap.TILE_SIZE / 2, .y = position.y - mapZig.GameMap.TILE_SIZE / 2 },
-                        .woodRequired = mapZig.Building.BIG_HOUSE_WOOD,
-                    };
-                    try chunk.bigBuildings.append(newBuilding);
-                    try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
                 },
                 SAVE_TREE_AND_BUILD_ORDER_BIG_BUILDING => {
                     const newBuilding: mapZig.Building = .{
@@ -430,6 +441,39 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
                         .fullyGrown = true,
                     };
                     try chunk.trees.append(newTree);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER => {
+                    const newBuilding: mapZig.Building = .{
+                        .type = .bigHouse,
+                        .position = .{ .x = position.x - mapZig.GameMap.TILE_SIZE / 2, .y = position.y - mapZig.GameMap.TILE_SIZE / 2 },
+                        .woodRequired = mapZig.Building.BIG_HOUSE_WOOD,
+                    };
+                    try chunk.bigBuildings.append(newBuilding);
+                    try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_1 => {
+                    try bigBuildingBuildOrderLoad(position, 1, chunk, false, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_2 => {
+                    try bigBuildingBuildOrderLoad(position, 2, chunk, false, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_3 => {
+                    try bigBuildingBuildOrderLoad(position, 3, chunk, false, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_CITIZEN_4 => {
+                    try bigBuildingBuildOrderLoad(position, 4, chunk, false, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_1 => {
+                    try bigBuildingBuildOrderLoad(position, 1, chunk, true, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_2 => {
+                    try bigBuildingBuildOrderLoad(position, 2, chunk, true, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_3 => {
+                    try bigBuildingBuildOrderLoad(position, 3, chunk, true, state);
+                },
+                SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4 => {
+                    try bigBuildingBuildOrderLoad(position, 4, chunk, true, state);
                 },
                 SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE => {
                     const newBuilding: mapZig.Building = .{
@@ -457,6 +501,26 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
         try state.map.chunks.put(currentKey, chunk);
     }
     try setupPathingForLoadedChunkArea(areaXY, state);
+}
+
+fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: *mapZig.MapChunk, halveDone: bool, state: *main.ChatSimState) !void {
+    var woodRequired: u8 = if (halveDone) mapZig.Building.BIG_HOUSE_WOOD / 2 else mapZig.Building.BIG_HOUSE_WOOD;
+    if (!halveDone) woodRequired -= citizensSpawn;
+    const newBuilding: mapZig.Building = .{
+        .type = .bigHouse,
+        .position = .{ .x = position.x - mapZig.GameMap.TILE_SIZE / 2, .y = position.y - mapZig.GameMap.TILE_SIZE / 2 },
+        .woodRequired = woodRequired,
+        .citizensSpawned = citizensSpawn,
+    };
+    for (0..citizensSpawn) |_| {
+        var newCitizen = main.Citizen.createCitizen(newBuilding.position, state.allocator);
+        newCitizen.position = position;
+        newCitizen.foodLevel += @as(f32, @floatCast(@mod(position.x, 2000.0))) / 2000.0 + 0.5; //should not all want to eat at the same time
+        try chunk.citizens.append(newCitizen);
+    }
+
+    try chunk.bigBuildings.append(newBuilding);
+    try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
 }
 
 fn setupPathingForLoadedChunkArea(areaXY: main.ChunkAreaXY, state: *main.ChatSimState) !void {
