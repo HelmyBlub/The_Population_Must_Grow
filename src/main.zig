@@ -56,7 +56,7 @@ pub const ChatSimState: type = struct {
     autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     wasSingleCore: bool = true,
-    idleChunkAreas: std.ArrayList(chunkAreaZig.ChunkArea),
+    idleChunkAreas: std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea),
 };
 
 pub const ThreadData = struct {
@@ -166,7 +166,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .random = prng,
         .maxThreadCount = std.Thread.getCpuCount() catch 1,
         .usedThreadsCount = 1,
-        .idleChunkAreas = std.ArrayList(chunkAreaZig.ChunkArea).init(allocator),
+        .idleChunkAreas = std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea).init(allocator),
     };
     state.threadData = try allocator.alloc(ThreadData, state.maxThreadCount);
     for (0..state.maxThreadCount) |i| {

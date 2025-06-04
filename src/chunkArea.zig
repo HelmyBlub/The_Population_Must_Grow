@@ -52,6 +52,10 @@ pub fn getChunkAreaXyForChunkXy(chunkXY: mapZig.ChunkXY) ChunkAreaXY {
     };
 }
 
+pub fn getKeyForAreaXY(areaXY: ChunkAreaXY) u32 {
+    return @intCast(areaXY.areaX * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS + areaXY.areaY + mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS);
+}
+
 pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !void {
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     for (state.threadData) |*threadData| {
@@ -61,11 +65,10 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
             }
         }
     }
-    for (state.idleChunkAreas.items) |*area| {
-        if (area.areaXY.areaX == areaXY.areaX and area.areaXY.areaY == areaXY.areaY) {
-            area.idleTypeData = .notIdle;
-            return;
-        }
+    const areaKey = getKeyForAreaXY(areaXY);
+    if (state.idleChunkAreas.getPtr(areaKey)) |area| {
+        area.idleTypeData = .notIdle;
+        return;
     }
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
@@ -153,7 +156,8 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
             const chunkArea = threadData.chunkAreas.items[currendIndex];
             if (chunkArea.idleTypeData != .notIdle and !mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
                 const removedArea = threadData.chunkAreas.swapRemove(currendIndex);
-                try state.idleChunkAreas.append(removedArea);
+                const removedAreaKey = getKeyForAreaXY(removedArea.areaXY);
+                try state.idleChunkAreas.put(removedAreaKey, removedArea);
             } else {
                 currendIndex += 1;
             }
@@ -162,8 +166,9 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     // move active chunkAreas out of idle
     {
         var currendIndex: usize = 0;
-        while (currendIndex < state.idleChunkAreas.items.len) {
-            const chunkArea = &state.idleChunkAreas.items[currendIndex];
+        while (currendIndex < state.idleChunkAreas.count()) {
+            const chunkArea = state.idleChunkAreas.values()[currendIndex];
+
             var idleTypeWakeUp = false;
             if (chunkArea.idleTypeData != .idle) {
                 if (chunkArea.idleTypeData != .waitingForCitizens or chunkArea.idleTypeData.waitingForCitizens < state.gameTimeMs) {
@@ -171,7 +176,8 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
                 }
             }
             if (idleTypeWakeUp or mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
-                const removedArea = state.idleChunkAreas.swapRemove(currendIndex);
+                const removedArea = chunkArea;
+                _ = state.idleChunkAreas.swapRemove(state.idleChunkAreas.keys()[currendIndex]);
                 var threadWithLeastAreas: ?*main.ThreadData = null;
                 for (state.threadData, 0..) |*threadData, index| {
                     if (index >= state.usedThreadsCount) break;

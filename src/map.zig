@@ -16,7 +16,7 @@ pub const GameMap = struct {
 
 pub const GROW_TIME_MS = 10_000;
 
-const U64HashMapContext = struct {
+pub const U64HashMapContext = struct {
     pub fn hash(self: @This(), s: u64) u64 {
         _ = self;
         return s;
@@ -791,10 +791,9 @@ pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citi
     const citizenHomeChunkXY = getChunkXyForPosition(citizenHome);
     const chunkAreaXYCitizenHome = chunkAreaZig.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
     if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
-        for (state.idleChunkAreas.items) |*idleArea| {
-            if (idleArea.areaXY.areaX == chunkAreaXY.areaX and idleArea.areaXY.areaY == chunkAreaXY.areaY) {
-                idleArea.idleTypeData = .notIdle;
-            }
+        const areaKey = chunkAreaZig.getKeyForAreaXY(chunkAreaXY);
+        if (state.idleChunkAreas.getPtr(areaKey)) |idleArea| {
+            idleArea.idleTypeData = .notIdle;
         }
     }
     try chunk.queue.append(chunkQueueItem);
@@ -876,11 +875,12 @@ pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main
     };
     for (0..areaRectangleFromTileRectangle.columnCount) |x| {
         for (0..areaRectangleFromTileRectangle.rowCount) |y| {
-            for (state.idleChunkAreas.items) |*idleArea| {
-                if (idleArea.areaXY.areaX == x and idleArea.areaXY.areaY == y) {
-                    idleArea.idleTypeData = .notIdle;
-                    break;
-                }
+            const areaKey = chunkAreaZig.getKeyForAreaXY(.{
+                .areaX = @as(i32, @intCast(x)) + areaRectangleFromTileRectangle.topLeftTileXY.tileX,
+                .areaY = @as(i32, @intCast(y)) + areaRectangleFromTileRectangle.topLeftTileXY.tileY,
+            });
+            if (state.idleChunkAreas.getPtr(areaKey)) |idleArea| {
+                idleArea.idleTypeData = .notIdle;
             }
         }
     }
