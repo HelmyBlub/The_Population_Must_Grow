@@ -139,6 +139,85 @@ pub fn saveChunkAreaToFile(chunkArea: *main.ChunkArea, state: *main.ChatSimState
     try writer.writeAll(&writeValues);
 }
 
+fn isInSameChunkArea(position: main.Position, areaXY: main.ChunkAreaXY) bool {
+    const posChunkXY = mapZig.getChunkXyForPosition(position);
+    const posChunkAreaXY: main.ChunkAreaXY = .{
+        .areaX = @divFloor(posChunkXY.chunkX, main.ChunkArea.SIZE),
+        .areaY = @divFloor(posChunkXY.chunkY, main.ChunkArea.SIZE),
+    };
+    return areaXY.areaX == posChunkAreaXY.areaX and areaXY.areaY == posChunkAreaXY.areaY;
+}
+
+fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: main.ChunkAreaXY, state: *main.ChatSimState) !void {
+    for (chunk.citizens.items) |citizen| {
+        if (citizen.nextThinkingAction != .idle) {
+            // citizens has build order. Place it back
+            var buildOrderPosition: ?main.Position = null;
+            if (citizen.buildingPosition) |pos| {
+                buildOrderPosition = pos;
+            } else if (citizen.treePosition) |pos| {
+                buildOrderPosition = pos;
+            } else if (citizen.farmPosition) |pos| {
+                buildOrderPosition = pos;
+            }
+
+            if (citizen.treePosition) |pos| {
+                if (!isInSameChunkArea(pos, areaXY)) {
+                    const treeChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                    for (treeChunk.trees.items) |*tree| {
+                        if (main.calculateDistance(pos, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                            tree.beginCuttingTime = null;
+                            tree.citizenOnTheWay = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (citizen.potatoPosition) |pos| {
+                if (!isInSameChunkArea(pos, areaXY)) {
+                    const potatoChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                    for (potatoChunk.potatoFields.items) |*potatoField| {
+                        if (main.calculateDistance(pos, potatoField.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                            potatoField.citizenOnTheWay -= 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (buildOrderPosition) |pos| {
+                const posChunkXY = mapZig.getChunkXyForPosition(pos);
+                const posChunkAreaXY: main.ChunkAreaXY = .{
+                    .areaX = @divFloor(posChunkXY.chunkX, main.ChunkArea.SIZE),
+                    .areaY = @divFloor(posChunkXY.chunkY, main.ChunkArea.SIZE),
+                };
+                if (areaXY.areaX != posChunkAreaXY.areaX or areaXY.areaY != posChunkAreaXY.areaY) {
+                    const buildOrderChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                    var isSpecialBigBuildingCase = false;
+                    if (citizen.buildingPosition != null) {
+                        //big buildings need more specific handling
+                        for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
+                            if (main.calculateDistance(pos, bigBuilding.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                for (buildOrderChunk.buildOrders.items) |*buildOrder| {
+                                    if (main.calculateDistance(pos, buildOrder.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                        buildOrder.materialCount += 1;
+                                        isSpecialBigBuildingCase = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (!isSpecialBigBuildingCase) {
+                        try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn positionToWriteIndexTilePart(position: main.Position) usize {
     const tileXY = mapZig.mapPositionToTileXy(position);
     const tileUsizeX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
@@ -168,6 +247,7 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
                 if (state.map.chunks.contains(currentKey)) {
                     const oldChunk = state.map.chunks.getPtr(currentKey).?;
                     disconnectPathingBetweenChunkAreas(oldChunk, state);
+                    try handleActiveCitizensInChunkToUnload(oldChunk, areaXY, state);
                     mapZig.destroyChunk(oldChunk);
                 }
                 try state.map.chunks.put(currentKey, chunk);
@@ -371,6 +451,7 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
         if (state.map.chunks.contains(currentKey)) {
             const oldChunk = state.map.chunks.getPtr(currentKey).?;
             disconnectPathingBetweenChunkAreas(oldChunk, state);
+            try handleActiveCitizensInChunkToUnload(oldChunk, areaXY, state);
             mapZig.destroyChunk(oldChunk);
         }
         try state.map.chunks.put(currentKey, chunk);
@@ -476,12 +557,14 @@ fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, chunk
         }
     }
     for (chunk.buildings.items) |building| {
+        if (building.inConstruction) continue;
         const tileXY = mapZig.mapPositionToTileXy(building.position);
         const indexX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
         const indexY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));
         blockingTiles[indexX][indexY] = true;
     }
     for (chunk.bigBuildings.items) |bigBuilding| {
+        if (bigBuilding.inConstruction) continue;
         const tileXY = mapZig.mapPositionToTileXy(bigBuilding.position);
         const indexX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
         const indexY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));

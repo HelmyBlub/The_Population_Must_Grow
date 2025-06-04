@@ -637,7 +637,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
 
 pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.ChatSimState) !void {
     building.constructionStartedTime = null;
-    building.woodRequired -= 1;
+    building.woodRequired -|= 1;
     if (building.type == .house) {
         building.inConstruction = false;
         building.imageIndex = imageZig.IMAGE_HOUSE;

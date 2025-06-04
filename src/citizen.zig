@@ -436,7 +436,6 @@ fn potatoHarvestTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSim
 
 fn potatoEatFinishedTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     citizen.hasPotato = false;
-    citizen.potatoPosition = null;
     eatFood(0.5, citizen, state);
     try nextThinkingAction(citizen, state);
 }
@@ -447,7 +446,8 @@ fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
         try mapZig.appendToChunkQueue(farmData.chunk, queueItem, citizen.homePosition, state);
         farmData.potatoField.fullyGrown = false;
-        farmData.potatoField.citizenOnTheWay -= 1;
+        farmData.potatoField.citizenOnTheWay -|= 1;
+        citizen.potatoPosition = null;
         citizen.hasPotato = true;
         citizen.nextThinkingTickTimeMs = state.gameTimeMs + 1500;
         citizen.nextThinkingAction = .potatoEatFinished;
