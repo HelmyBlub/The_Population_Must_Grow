@@ -101,7 +101,7 @@ fn dataUpdate(state: *main.ChatSimState) !void {
             var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
             textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.splitIndexCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreas.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
             _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
             offsetY += onePixelYInVulkan * performanceFontSize;

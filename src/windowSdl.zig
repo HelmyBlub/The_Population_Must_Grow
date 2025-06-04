@@ -144,21 +144,21 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
-                std.debug.print("printChunksNotIndleInfo\n", .{});
-                var count: u32 = 0;
+                std.debug.print("printChunksNotIdleInfo\n", .{});
+                // var count: u32 = 0;
                 for (state.threadData) |*threadData| {
                     for (threadData.chunkAreas.items) |chunkArea| {
                         std.debug.print(" chunkArea {},{}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
-                        for (chunkArea.activeChunkKeys.items) |chunkKey| {
-                            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(mapZig.getChunkXyForKey(chunkKey.chunkKey), state);
-                            if (chunk.workingCitizenCounter == 0) continue;
-                            for (chunk.citizens.items) |citizen| {
-                                if (citizen.nextThinkingAction == .idle or citizen.nextThinkingAction == .potatoHarvest or citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoEatFinished) continue;
-                                std.debug.print("   {}\n", .{citizen});
-                                count += 1;
-                                if (count > 100) return;
-                            }
-                        }
+                        // for (chunkArea.chunkKeyOrder) |chunkKey| {
+                        // const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(mapZig.getChunkXyForKey(chunkKey), state);
+                        // if (chunk.workingCitizenCounter == 0) continue;
+                        // for (chunk.citizens.items) |citizen| {
+                        //     if (citizen.nextThinkingAction == .idle or citizen.nextThinkingAction == .potatoHarvest or citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoEatFinished) continue;
+                        //     std.debug.print("   {}\n", .{citizen});
+                        //     count += 1;
+                        //     if (count > 100) return;
+                        // }
+                        // }
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {

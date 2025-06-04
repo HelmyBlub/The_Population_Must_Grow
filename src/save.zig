@@ -3,6 +3,7 @@ const main = @import("main.zig");
 const mapZig = @import("map.zig");
 const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
+const chunkAreaZig = @import("chunkArea.zig");
 
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
@@ -46,7 +47,7 @@ fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
     return full_path;
 }
 
-fn getFileNameForAreaXy(areaXY: main.ChunkAreaXY, allocator: std.mem.Allocator) ![]const u8 {
+fn getFileNameForAreaXy(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.Allocator) ![]const u8 {
     // Format the filename: region_x_y.dat
     var buf = std.ArrayList(u8).init(allocator);
     defer buf.deinit();
@@ -57,24 +58,24 @@ fn getFileNameForAreaXy(areaXY: main.ChunkAreaXY, allocator: std.mem.Allocator) 
     return getSavePath(allocator, buf.items);
 }
 
-pub fn saveChunkAreaToFile(chunkArea: *main.ChunkArea, state: *main.ChatSimState) !void {
+pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
     defer file.close();
     const writer = file.writer();
-    var writeValues: [main.ChunkArea.SIZE * main.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
+    var writeValues: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
     for (0..writeValues.len) |index| {
         writeValues[index] = SAVE_EMPTY;
     }
 
-    for (0..main.ChunkArea.SIZE) |areaChunkX| {
-        for (0..main.ChunkArea.SIZE) |areaChunkY| {
+    for (0..chunkAreaZig.ChunkArea.SIZE) |areaChunkX| {
+        for (0..chunkAreaZig.ChunkArea.SIZE) |areaChunkY| {
             const chunkXY: mapZig.ChunkXY = .{
-                .chunkX = (@as(i32, @intCast(areaChunkX)) + chunkArea.areaXY.areaX * main.ChunkArea.SIZE),
-                .chunkY = (@as(i32, @intCast(areaChunkY)) + chunkArea.areaXY.areaY * main.ChunkArea.SIZE),
+                .chunkX = (@as(i32, @intCast(areaChunkX)) + chunkArea.areaXY.areaX * chunkAreaZig.ChunkArea.SIZE),
+                .chunkY = (@as(i32, @intCast(areaChunkY)) + chunkArea.areaXY.areaY * chunkAreaZig.ChunkArea.SIZE),
             };
-            const writeValueChunkXyIndex: usize = (areaChunkX * main.ChunkArea.SIZE + areaChunkY) * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH;
+            const writeValueChunkXyIndex: usize = (areaChunkX * chunkAreaZig.ChunkArea.SIZE + areaChunkY) * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH;
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
             for (chunk.trees.items) |tree| {
                 const writeValueIndex: usize = writeValueChunkXyIndex + positionToWriteIndexTilePart(tree.position);
@@ -159,16 +160,16 @@ pub fn saveChunkAreaToFile(chunkArea: *main.ChunkArea, state: *main.ChatSimState
     try writer.writeAll(&writeValues);
 }
 
-fn isInSameChunkArea(position: main.Position, areaXY: main.ChunkAreaXY) bool {
+fn isInSameChunkArea(position: main.Position, areaXY: chunkAreaZig.ChunkAreaXY) bool {
     const posChunkXY = mapZig.getChunkXyForPosition(position);
-    const posChunkAreaXY: main.ChunkAreaXY = .{
-        .areaX = @divFloor(posChunkXY.chunkX, main.ChunkArea.SIZE),
-        .areaY = @divFloor(posChunkXY.chunkY, main.ChunkArea.SIZE),
+    const posChunkAreaXY: chunkAreaZig.ChunkAreaXY = .{
+        .areaX = @divFloor(posChunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE),
+        .areaY = @divFloor(posChunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE),
     };
     return areaXY.areaX == posChunkAreaXY.areaX and areaXY.areaY == posChunkAreaXY.areaY;
 }
 
-fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: main.ChunkAreaXY, state: *main.ChatSimState) !void {
+fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
     for (chunk.citizens.items) |citizen| {
         if (citizen.nextThinkingAction != .idle) {
             // citizens has build order. Place it back
@@ -207,9 +208,9 @@ fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: main.Chu
 
             if (buildOrderPosition) |pos| {
                 const posChunkXY = mapZig.getChunkXyForPosition(pos);
-                const posChunkAreaXY: main.ChunkAreaXY = .{
-                    .areaX = @divFloor(posChunkXY.chunkX, main.ChunkArea.SIZE),
-                    .areaY = @divFloor(posChunkXY.chunkY, main.ChunkArea.SIZE),
+                const posChunkAreaXY: chunkAreaZig.ChunkAreaXY = .{
+                    .areaX = @divFloor(posChunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE),
+                    .areaY = @divFloor(posChunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE),
                 };
                 if (areaXY.areaX != posChunkAreaXY.areaX or areaXY.areaY != posChunkAreaXY.areaY) {
                     const buildOrderChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
@@ -245,7 +246,7 @@ fn positionToWriteIndexTilePart(position: main.Position) usize {
     return tileUsizeX * mapZig.GameMap.CHUNK_LENGTH + tileUsizeY;
 }
 
-pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState) !void {
+pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
     const path = try getFileNameForAreaXy(areaXY, state.allocator);
     defer state.allocator.free(path);
 
@@ -253,7 +254,7 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
     defer file.close();
 
     const reader = file.reader();
-    var readValues: [main.ChunkArea.SIZE * main.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
+    var readValues: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
     _ = try reader.readAll(&readValues);
 
     var currentChunkXY: mapZig.ChunkXY = .{ .chunkX = 0, .chunkY = 0 };
@@ -273,8 +274,8 @@ pub fn loadChunkAreaFromFile(areaXY: main.ChunkAreaXY, state: *main.ChatSimState
                 try state.map.chunks.put(currentKey, chunk);
             }
             currentChunkXY = .{
-                .chunkX = areaXY.areaX * main.ChunkArea.SIZE + @as(i32, @intCast(@divFloor(chunkInAreaIndex, main.ChunkArea.SIZE))),
-                .chunkY = areaXY.areaY * main.ChunkArea.SIZE + @as(i32, @intCast(@mod(chunkInAreaIndex, main.ChunkArea.SIZE))),
+                .chunkX = areaXY.areaX * chunkAreaZig.ChunkArea.SIZE + @as(i32, @intCast(@divFloor(chunkInAreaIndex, chunkAreaZig.ChunkArea.SIZE))),
+                .chunkY = areaXY.areaY * chunkAreaZig.ChunkArea.SIZE + @as(i32, @intCast(@mod(chunkInAreaIndex, chunkAreaZig.ChunkArea.SIZE))),
             };
             currentKey = mapZig.getKeyForChunkXY(currentChunkXY);
             currenChunk = try mapZig.createEmptyChunk(currentChunkXY, state);
@@ -523,17 +524,16 @@ fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: 
     try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
 }
 
-fn setupPathingForLoadedChunkArea(areaXY: main.ChunkAreaXY, state: *main.ChatSimState) !void {
-    // var chunkArea: main.ChunkArea = .{
+fn setupPathingForLoadedChunkArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
+    // var chunkArea: chunkAreaZig.ChunkArea = .{
     //     .areaXY = areaXY,
-    //     .activeChunkKeys = std.ArrayList(main.ChunkAreaActiveKey).init(state.allocator),
     //     .currentChunkKeyIndex = 0,
     // };
-    for (0..main.ChunkArea.SIZE) |x| {
-        for (0..main.ChunkArea.SIZE) |y| {
+    for (0..chunkAreaZig.ChunkArea.SIZE) |x| {
+        for (0..chunkAreaZig.ChunkArea.SIZE) |y| {
             const chunkXY: mapZig.ChunkXY = .{
-                .chunkX = @as(i32, @intCast(x)) + areaXY.areaX * main.ChunkArea.SIZE,
-                .chunkY = @as(i32, @intCast(y)) + areaXY.areaY * main.ChunkArea.SIZE,
+                .chunkX = @as(i32, @intCast(x)) + areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
+                .chunkY = @as(i32, @intCast(y)) + areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
             };
             const chunkKey = mapZig.getKeyForChunkXY(chunkXY);
             const chunk = state.map.chunks.getPtr(chunkKey).?;
@@ -710,14 +710,14 @@ fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, chunk
 }
 
 fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.ChatSimState) void {
-    const chunkAreaXPos = @mod(chunk.chunkXY.chunkX, main.ChunkArea.SIZE);
-    const chunkAreaYPos = @mod(chunk.chunkXY.chunkY, main.ChunkArea.SIZE);
+    const chunkAreaXPos = @mod(chunk.chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE);
+    const chunkAreaYPos = @mod(chunk.chunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE);
     const chunkKey = mapZig.getKeyForChunkXY(chunk.chunkXY);
-    if (chunkAreaXPos == 0 or chunkAreaXPos == main.ChunkArea.SIZE - 1 or chunkAreaYPos == 0 or chunkAreaYPos == main.ChunkArea.SIZE - 1) {
+    if (chunkAreaXPos == 0 or chunkAreaXPos == chunkAreaZig.ChunkArea.SIZE - 1 or chunkAreaYPos == 0 or chunkAreaYPos == chunkAreaZig.ChunkArea.SIZE - 1) {
         var checkLeftKey: ?u64 = if (chunkAreaXPos == 0) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX - 1, .chunkY = chunk.chunkXY.chunkY }) else null;
-        var checkRightKey: ?u64 = if (chunkAreaXPos == main.ChunkArea.SIZE - 1) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX + 1, .chunkY = chunk.chunkXY.chunkY }) else null;
+        var checkRightKey: ?u64 = if (chunkAreaXPos == chunkAreaZig.ChunkArea.SIZE - 1) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX + 1, .chunkY = chunk.chunkXY.chunkY }) else null;
         var checkTopKey: ?u64 = if (chunkAreaYPos == 0) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX, .chunkY = chunk.chunkXY.chunkY - 1 }) else null;
-        var checkBottomKey: ?u64 = if (chunkAreaYPos == main.ChunkArea.SIZE - 1) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX, .chunkY = chunk.chunkXY.chunkY + 1 }) else null;
+        var checkBottomKey: ?u64 = if (chunkAreaYPos == chunkAreaZig.ChunkArea.SIZE - 1) mapZig.getKeyForChunkXY(.{ .chunkX = chunk.chunkXY.chunkX, .chunkY = chunk.chunkXY.chunkY + 1 }) else null;
 
         var chunkLeft: ?*mapZig.MapChunk = undefined;
         if (checkLeftKey) |key| {

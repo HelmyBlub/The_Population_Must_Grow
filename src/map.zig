@@ -3,6 +3,7 @@ const main = @import("main.zig");
 const windowSdlZig = @import("windowSdl.zig");
 const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
+const chunkAreaZig = @import("chunkArea.zig");
 
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
@@ -176,14 +177,14 @@ pub fn getVisibleAndAdjacentChunkRectangle(state: *main.ChatSimState) VisibleChu
     };
 }
 
-pub fn isChunkAreaInVisibleData(visibleData: VisibleChunksData, areaXY: main.ChunkAreaXY) bool {
+pub fn isChunkAreaInVisibleData(visibleData: VisibleChunksData, areaXY: chunkAreaZig.ChunkAreaXY) bool {
     const rectForOverlapping1: MapTileRectangle = .{
         .topLeftTileXY = .{
-            .tileX = areaXY.areaX * main.ChunkArea.SIZE,
-            .tileY = areaXY.areaY * main.ChunkArea.SIZE,
+            .tileX = areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
+            .tileY = areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
         },
-        .columnCount = main.ChunkArea.SIZE,
-        .rowCount = main.ChunkArea.SIZE,
+        .columnCount = chunkAreaZig.ChunkArea.SIZE,
+        .rowCount = chunkAreaZig.ChunkArea.SIZE,
     };
     const rectForOverlapping2: MapTileRectangle = .{
         .topLeftTileXY = .{
@@ -772,8 +773,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
 }
 
 pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
-    const newKey = getKeyForChunkXY(chunkXY);
-    try main.addActiveChunkForThreads(newKey, state);
+    try chunkAreaZig.checkIfAreaIsActive(chunkXY, state);
 }
 
 pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
@@ -787,9 +787,9 @@ pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimSta
 }
 
 pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, state: *main.ChatSimState) !void {
-    const chunkAreaXY = main.getChunkAreaXyForChunkXy(chunk.chunkXY);
+    const chunkAreaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunk.chunkXY);
     const citizenHomeChunkXY = getChunkXyForPosition(citizenHome);
-    const chunkAreaXYCitizenHome = main.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
+    const chunkAreaXYCitizenHome = chunkAreaZig.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
     if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
         for (state.idleChunkAreas.items) |*idleArea| {
             if (idleArea.areaXY.areaX == chunkAreaXY.areaX and idleArea.areaXY.areaY == chunkAreaXY.areaY) {
@@ -868,11 +868,11 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
 pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) void {
     const areaRectangleFromTileRectangle: MapTileRectangle = .{
         .topLeftTileXY = .{
-            .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE),
-            .tileY = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileY, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE),
+            .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE),
+            .tileY = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileY, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE),
         },
-        .columnCount = @divFloor(@divFloor(mapTileRectangle.columnCount, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE) + 1,
-        .rowCount = @divFloor(@divFloor(mapTileRectangle.rowCount, GameMap.CHUNK_LENGTH), main.ChunkArea.SIZE) + 1,
+        .columnCount = @divFloor(@divFloor(mapTileRectangle.columnCount, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE) + 1,
+        .rowCount = @divFloor(@divFloor(mapTileRectangle.rowCount, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE) + 1,
     };
     for (0..areaRectangleFromTileRectangle.columnCount) |x| {
         for (0..areaRectangleFromTileRectangle.rowCount) |y| {

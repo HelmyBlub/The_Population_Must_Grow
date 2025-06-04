@@ -3,6 +3,7 @@ const main = @import("main.zig");
 const mapZig = @import("map.zig");
 const codePerformanceZig = @import("codePerformance.zig");
 const windowSdlZig = @import("windowSdl.zig");
+const chunkAreaZig = @import("chunkArea.zig");
 
 const TestActionType = enum {
     buildPath,
@@ -132,9 +133,9 @@ pub fn tick(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn determineValidanChunkDistanceForArea(chunkKeyArray: [main.ChunkArea.SIZE * main.ChunkArea.SIZE]u64) void {
+pub fn determineValidanChunkDistanceForArea(chunkKeyArray: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE]u64) void {
     const minDistance = 9;
-    const areaSize = main.ChunkArea.SIZE;
+    const areaSize = chunkAreaZig.ChunkArea.SIZE;
     var validationChunkDistance: usize = areaSize * areaSize;
     for (0..chunkKeyArray.len) |index1| {
         const chunkXY1 = mapZig.getChunkXyForKey(chunkKeyArray[index1]);
@@ -175,14 +176,10 @@ fn printTestEndData(state: *main.ChatSimState) void {
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(state);
     for (0..state.maxThreadCount) |i| {
-        var count: usize = 0;
-        for (state.threadData[i].chunkAreas.items) |chunkArea| {
-            count += chunkArea.activeChunkKeys.items.len;
-        }
-        std.debug.print("list {}: {d}\n", .{ i, count });
+        std.debug.print("list {}: {d}\n", .{ i, state.threadData[i].chunkAreas.items.len });
         // for (state.threadData[i].chunkAreas.items) |chunkArea| {
         //     std.debug.print("   {} \n", .{chunkArea.areaXY});
-        // std.debug.print("{}: {any}\n", .{ chunkArea.areaXY, chunkArea.activeChunkKeys.items });
+        // std.debug.print("{}: {any}\n", .{ chunkArea.areaXY, chunkArea. });
         // }
     }
 
