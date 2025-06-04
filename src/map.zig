@@ -792,8 +792,8 @@ pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citi
     const chunkAreaXYCitizenHome = chunkAreaZig.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
     if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
         const areaKey = chunkAreaZig.getKeyForAreaXY(chunkAreaXY);
-        if (state.idleChunkAreas.getPtr(areaKey)) |idleArea| {
-            idleArea.idleTypeData = .notIdle;
+        if (state.chunkAreas.getPtr(areaKey)) |idleArea| {
+            if (idleArea.idleTypeData != .notIdle) try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, state);
         }
     }
     try chunk.queue.append(chunkQueueItem);
@@ -864,7 +864,7 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
     return null;
 }
 
-pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) void {
+pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) !void {
     const areaRectangleFromTileRectangle: MapTileRectangle = .{
         .topLeftTileXY = .{
             .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE),
@@ -879,8 +879,8 @@ pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main
                 .areaX = @as(i32, @intCast(x)) + areaRectangleFromTileRectangle.topLeftTileXY.tileX,
                 .areaY = @as(i32, @intCast(y)) + areaRectangleFromTileRectangle.topLeftTileXY.tileY,
             });
-            if (state.idleChunkAreas.getPtr(areaKey)) |idleArea| {
-                idleArea.idleTypeData = .notIdle;
+            if (state.chunkAreas.getPtr(areaKey)) |idleArea| {
+                try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, state);
             }
         }
     }
@@ -949,7 +949,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
         .columnCount = tileCountColumns,
         .rowCount = tileCountRows,
     };
-    unidleAffectedChunkAreas(tileRectangle, state);
+    try unidleAffectedChunkAreas(tileRectangle, state);
 }
 
 pub fn getKeyForPosition(position: main.Position) !u64 {

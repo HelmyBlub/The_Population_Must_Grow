@@ -56,29 +56,38 @@ pub fn getKeyForAreaXY(areaXY: ChunkAreaXY) u32 {
     return @intCast(areaXY.areaX * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS + areaXY.areaY + mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS);
 }
 
+pub fn getAreaXyForKey(chunkKey: u64) ChunkAreaXY {
+    var tempAreaXY: ChunkAreaXY = .{
+        .areaX = @divFloor(@as(i32, @intCast(chunkKey)) - mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS, mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS),
+        .areaY = @mod(@as(i32, @intCast(chunkKey)) - mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS, mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS),
+    };
+
+    if (tempAreaXY.areaY > mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS / 2) {
+        tempAreaXY.areaY -= mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS;
+        tempAreaXY.areaX += 1;
+    }
+    return tempAreaXY;
+}
+
 pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !void {
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
-    for (state.threadData) |*threadData| {
-        for (threadData.chunkAreas.items) |*area| {
-            if (area.areaXY.areaX == areaXY.areaX and area.areaXY.areaY == areaXY.areaY) {
-                return;
-            }
-        }
-    }
     const areaKey = getKeyForAreaXY(areaXY);
-    if (state.idleChunkAreas.getPtr(areaKey)) |area| {
-        area.idleTypeData = .notIdle;
+    if (state.chunkAreas.getPtr(areaKey)) |area| {
+        if (area.idleTypeData != .notIdle) {
+            try assignChunkAreaBackToThread(area, areaKey, state);
+        }
         return;
     }
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
         if (index >= state.usedThreadsCount) break;
-        if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreas.items.len > threadData.chunkAreas.items.len) {
+        if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreaKeys.items.len > threadData.chunkAreaKeys.items.len) {
             threadWithLeastAreas = threadData;
         }
     }
     if (threadWithLeastAreas) |thread| {
-        try thread.chunkAreas.append(.{
+        try thread.chunkAreaKeys.append(areaKey);
+        try state.chunkAreas.put(areaKey, .{
             .areaXY = areaXY,
             .chunkKeyOrder = setupChunkAreaKeyOrder(areaXY),
             .currentChunkKeyIndex = 0,
@@ -147,50 +156,22 @@ fn diagonalNumbering(x: u32, y: u32) usize {
     return @intCast(firstPart + @divExact(rest * (rest + 1), 2) + (halved - 1 - rest) * (rest + 1) + (halved - x - 1));
 }
 
-pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
-    const visibleAndTickRectangle = mapZig.getVisibleAndAdjacentChunkRectangle(state);
-    // handle idle chunkAreas
-    for (state.threadData) |*threadData| {
-        var currendIndex: usize = 0;
-        while (currendIndex < threadData.chunkAreas.items.len) {
-            const chunkArea = threadData.chunkAreas.items[currendIndex];
-            if (chunkArea.idleTypeData != .notIdle and !mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
-                const removedArea = threadData.chunkAreas.swapRemove(currendIndex);
-                const removedAreaKey = getKeyForAreaXY(removedArea.areaXY);
-                try state.idleChunkAreas.put(removedAreaKey, removedArea);
-            } else {
-                currendIndex += 1;
-            }
+pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.ChatSimState) !void {
+    chunkArea.idleTypeData = .notIdle;
+    var threadWithLeastAreas: ?*main.ThreadData = null;
+    for (state.threadData, 0..) |*threadData, index| {
+        if (index >= state.usedThreadsCount) break;
+        for (threadData.chunkAreaKeys.items) |key| {
+            if (key == areaKey) return;
+        }
+        if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreaKeys.items.len > threadData.chunkAreaKeys.items.len) {
+            threadWithLeastAreas = threadData;
         }
     }
-    // move active chunkAreas out of idle
-    {
-        var currendIndex: usize = 0;
-        while (currendIndex < state.idleChunkAreas.count()) {
-            const chunkArea = state.idleChunkAreas.values()[currendIndex];
+    try threadWithLeastAreas.?.chunkAreaKeys.append(areaKey);
+}
 
-            var idleTypeWakeUp = false;
-            if (chunkArea.idleTypeData != .idle) {
-                if (chunkArea.idleTypeData != .waitingForCitizens or chunkArea.idleTypeData.waitingForCitizens < state.gameTimeMs) {
-                    idleTypeWakeUp = true;
-                }
-            }
-            if (idleTypeWakeUp or mapZig.isChunkAreaInVisibleData(visibleAndTickRectangle, chunkArea.areaXY)) {
-                const removedArea = chunkArea;
-                _ = state.idleChunkAreas.swapRemove(state.idleChunkAreas.keys()[currendIndex]);
-                var threadWithLeastAreas: ?*main.ThreadData = null;
-                for (state.threadData, 0..) |*threadData, index| {
-                    if (index >= state.usedThreadsCount) break;
-                    if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreas.items.len > threadData.chunkAreas.items.len) {
-                        threadWithLeastAreas = threadData;
-                    }
-                }
-                try threadWithLeastAreas.?.chunkAreas.append(removedArea);
-            } else {
-                currendIndex += 1;
-            }
-        }
-    }
+pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     if (state.usedThreadsCount > 1) {
         // check balance
         var highestAmountOfWorkThread: ?*main.ThreadData = null;
@@ -198,8 +179,8 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
         var lowestAmountOfWorkThread: ?*main.ThreadData = null;
         var lowestAmountOfWork: usize = 0;
         for (state.threadData) |*threadData| {
-            if (threadData.chunkAreas.items.len < 2) continue;
-            const tempAmountOfWork = threadData.tickedCitizenCounter + threadData.chunkAreas.items.len * ChunkArea.SIZE * ChunkArea.SIZE;
+            if (threadData.chunkAreaKeys.items.len < 2) continue;
+            const tempAmountOfWork = threadData.tickedCitizenCounter + threadData.chunkAreaKeys.items.len * ChunkArea.SIZE * ChunkArea.SIZE;
             if (highestAmountOfWorkThread == null or highestAmountOfWork < tempAmountOfWork) {
                 highestAmountOfWorkThread = threadData;
                 highestAmountOfWork = tempAmountOfWork;
@@ -215,9 +196,11 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
             var closestMatchAreaHigherIndex: usize = 0;
             var closestMatchWorkAmountDiffToBest: usize = bestSwapWorkAmount;
             var closestMatchWorkAmountChange: usize = 0;
-            for (lowestAmountOfWorkThread.?.chunkAreas.items, 0..) |chunkAreaLower, indexLower| {
+            for (lowestAmountOfWorkThread.?.chunkAreaKeys.items, 0..) |chunkAreaLowerKey, indexLower| {
+                const chunkAreaLower = state.chunkAreas.getPtr(chunkAreaLowerKey).?;
                 const lowerThreadAreaWorkAmount = chunkAreaLower.tickedCitizenCounter + chunkAreaLower.chunkKeyOrder.len;
-                for (highestAmountOfWorkThread.?.chunkAreas.items, 0..) |chunkAreaHigher, indexHigher| {
+                for (highestAmountOfWorkThread.?.chunkAreaKeys.items, 0..) |chunkAreaHigherKey, indexHigher| {
+                    const chunkAreaHigher = state.chunkAreas.getPtr(chunkAreaHigherKey).?;
                     const higherThreadAreaWorkAmount = chunkAreaHigher.tickedCitizenCounter + chunkAreaHigher.chunkKeyOrder.len;
                     if (lowerThreadAreaWorkAmount < higherThreadAreaWorkAmount) {
                         const diff: usize = @abs(@as(i32, @intCast(higherThreadAreaWorkAmount - lowerThreadAreaWorkAmount)) - @as(i32, @intCast(bestSwapWorkAmount)));
@@ -231,11 +214,11 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
                 }
             }
             if (0 < closestMatchWorkAmountChange and closestMatchWorkAmountChange < @divFloor(bestSwapWorkAmount * 3, 2)) {
-                const removedLowerArea = lowestAmountOfWorkThread.?.chunkAreas.swapRemove(closestMatchAreaLowerIndex);
-                const removedHigherArea = highestAmountOfWorkThread.?.chunkAreas.swapRemove(closestMatchAreaHigherIndex);
+                const removedLowerArea = lowestAmountOfWorkThread.?.chunkAreaKeys.swapRemove(closestMatchAreaLowerIndex);
+                const removedHigherArea = highestAmountOfWorkThread.?.chunkAreaKeys.swapRemove(closestMatchAreaHigherIndex);
 
-                try lowestAmountOfWorkThread.?.chunkAreas.append(removedHigherArea);
-                try highestAmountOfWorkThread.?.chunkAreas.append(removedLowerArea);
+                try lowestAmountOfWorkThread.?.chunkAreaKeys.append(removedHigherArea);
+                try highestAmountOfWorkThread.?.chunkAreaKeys.append(removedLowerArea);
             }
         }
     }

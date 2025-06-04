@@ -1,5 +1,10 @@
 tasks:
-- check change: idle area to map
+- try out change idleChunkAreas to chunkAreas
+    - threads only use areaKeys
+    - easier access to every existing chunkArea
+    - think about: one thread appends thread area and other thread tick and get invalid pointer?
+    - check unindle stuff not adding key in twice
+        - currently one check in. Check logic behind it
 - save idle chunks and clean up from memory, load when required again
     - unload every area which is idle and only has idle neighbors
         - if one area is set to idle -> check if area adjacent to it might be unloaded
@@ -44,6 +49,7 @@ Some data:
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 118, citizens: 34724, gameTime: 330000, end FPS: 75.841736 (always tick entiry area)
 - FPS: 118, citizens: 34724, gameTime: 330000, end FPS: 75.98427 (idle now a map instead of array)
+- FPS: 118, citizens: 34724, gameTime: 330000, end FPS: 75.61844 ()
 
 
 Goal:

@@ -14,6 +14,7 @@ const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
 const imageZig = @import("image.zig");
 const testZig = @import("test.zig");
 const saveZig = @import("save.zig");
+const chunkAreaZig = @import("chunkArea.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -131,10 +132,11 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {
-                const area = &state.threadData[0].chunkAreas.items[0];
-                try saveZig.saveChunkAreaToFile(area, state);
+                const areaKey = state.threadData[0].chunkAreaKeys.items[0];
+                try saveZig.saveChunkAreaToFile(state.chunkAreas.getPtr(areaKey).?, state);
                 std.debug.print("test save one chunk\n", .{});
-                try saveZig.loadChunkAreaFromFile(area.areaXY, state);
+
+                try saveZig.loadChunkAreaFromFile(chunkAreaZig.getAreaXyForKey(areaKey), state);
                 std.debug.print("test load one chunk\n", .{});
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F11) {
                 std.debug.print("thread performance\n", .{});
@@ -147,7 +149,8 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 std.debug.print("printChunksNotIdleInfo\n", .{});
                 // var count: u32 = 0;
                 for (state.threadData) |*threadData| {
-                    for (threadData.chunkAreas.items) |chunkArea| {
+                    for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
+                        const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
                         std.debug.print(" chunkArea {},{}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
                         // for (chunkArea.chunkKeyOrder) |chunkKey| {
                         // const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(mapZig.getChunkXyForKey(chunkKey), state);
@@ -290,7 +293,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             }
         }
     }
-    mapZig.unidleAffectedChunkAreas(mapTileRectangle, state);
+    try mapZig.unidleAffectedChunkAreas(mapTileRectangle, state);
     if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
         try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, 0, state);
     }

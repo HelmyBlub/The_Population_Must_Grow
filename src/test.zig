@@ -176,7 +176,7 @@ fn printTestEndData(state: *main.ChatSimState) void {
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(state);
     for (0..state.maxThreadCount) |i| {
-        std.debug.print("list {}: {d}\n", .{ i, state.threadData[i].chunkAreas.items.len });
+        std.debug.print("list {}: {d}\n", .{ i, state.threadData[i].chunkAreaKeys.items.len });
         // for (state.threadData[i].chunkAreas.items) |chunkArea| {
         //     std.debug.print("   {} \n", .{chunkArea.areaXY});
         // std.debug.print("{}: {any}\n", .{ chunkArea.areaXY, chunkArea. });

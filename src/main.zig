@@ -56,7 +56,8 @@ pub const ChatSimState: type = struct {
     autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     wasSingleCore: bool = true,
-    idleChunkAreas: std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea),
+    chunkAreas: std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea),
+    visibleAndTickRectangle: mapZig.VisibleChunksData = undefined,
 };
 
 pub const ThreadData = struct {
@@ -67,7 +68,7 @@ pub const ThreadData = struct {
     dummyValue: u64 = 0,
     finishedTick: bool = true,
     citizensAddedThisTick: u32 = 0,
-    chunkAreas: std.ArrayList(chunkAreaZig.ChunkArea),
+    chunkAreaKeys: std.ArrayList(u64),
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
@@ -166,13 +167,13 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .random = prng,
         .maxThreadCount = std.Thread.getCpuCount() catch 1,
         .usedThreadsCount = 1,
-        .idleChunkAreas = std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea).init(allocator),
+        .chunkAreas = std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea).init(allocator),
     };
     state.threadData = try allocator.alloc(ThreadData, state.maxThreadCount);
     for (0..state.maxThreadCount) |i| {
         state.threadData[i] = .{
             .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator),
-            .chunkAreas = std.ArrayList(chunkAreaZig.ChunkArea).init(allocator),
+            .chunkAreaKeys = std.ArrayList(u64).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
             .measureData = .{},
         };
@@ -309,6 +310,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
         state.tickStartTimeMicroSeconds = std.time.microTimestamp();
         state.ticksRemainingBeforePaint += state.actualGameSpeed;
         try windowSdlZig.handleEvents(state);
+        state.visibleAndTickRectangle = mapZig.getVisibleAndAdjacentChunkRectangle(state);
         try chunkAreaZig.optimizeChunkAreaAssignments(state);
         while (state.ticksRemainingBeforePaint >= 1) {
             try tick(state);
@@ -547,39 +549,39 @@ pub fn changeUsedThreadCount(newThreadCount: usize, state: *ChatSimState) !void 
             return;
         }
         var moveToThreadIndex = oldCount;
-        var moveToThreadArea = &state.threadData[moveToThreadIndex].chunkAreas;
+        var moveToThreadAreaKeys = &state.threadData[moveToThreadIndex].chunkAreaKeys;
         outer: for (0..oldCount) |oldIndex| {
             const oldThreadData = &state.threadData[oldCount - oldIndex - 1];
-            const oldThreadAreas = &oldThreadData.chunkAreas;
+            const oldThreadAreaKeys = &oldThreadData.chunkAreaKeys;
 
-            if (oldThreadAreas.items.len - minAreasPerThread > 0) {
-                const amountToMove = oldThreadAreas.items.len - minAreasPerThread;
+            if (oldThreadAreaKeys.items.len - minAreasPerThread > 0) {
+                const amountToMove = oldThreadAreaKeys.items.len - minAreasPerThread;
                 for (0..amountToMove) |_| {
-                    const toMove = oldThreadAreas.pop().?;
-                    try moveToThreadArea.append(toMove);
-                    if (moveToThreadArea.items.len >= minAreasPerThread) {
+                    const toMoveKey = oldThreadAreaKeys.pop().?;
+                    try moveToThreadAreaKeys.append(toMoveKey);
+                    if (moveToThreadAreaKeys.items.len >= minAreasPerThread) {
                         moveToThreadIndex += 1;
                         if (moveToThreadIndex >= newThreadCount) break :outer;
-                        moveToThreadArea = &state.threadData[moveToThreadIndex].chunkAreas;
+                        moveToThreadAreaKeys = &state.threadData[moveToThreadIndex].chunkAreaKeys;
                     }
                 }
             }
         }
     } else {
         for (newThreadCount..oldCount) |threadIndex| {
-            const threadAreas = &state.threadData[threadIndex].chunkAreas;
-            const removeCount = threadAreas.items.len;
+            const threadAreaKeys = &state.threadData[threadIndex].chunkAreaKeys;
+            const removeCount = threadAreaKeys.items.len;
             for (0..removeCount) |_| {
-                const toMoveArea = threadAreas.pop().?;
+                const toMoveAreaKey = threadAreaKeys.pop().?;
                 var fewestChunkAreasThreadIndex: usize = 0;
-                var fewestChunkAreasCount = state.threadData[0].chunkAreas.items.len;
+                var fewestChunkAreasCount = state.threadData[0].chunkAreaKeys.items.len;
                 for (1..newThreadCount) |moveToIndex| {
-                    if (state.threadData[moveToIndex].chunkAreas.items.len < fewestChunkAreasCount) {
-                        fewestChunkAreasCount = state.threadData[moveToIndex].chunkAreas.items.len;
+                    if (state.threadData[moveToIndex].chunkAreaKeys.items.len < fewestChunkAreasCount) {
+                        fewestChunkAreasCount = state.threadData[moveToIndex].chunkAreaKeys.items.len;
                         fewestChunkAreasThreadIndex = moveToIndex;
                     }
                 }
-                try state.threadData[fewestChunkAreasThreadIndex].chunkAreas.append(toMoveArea);
+                try state.threadData[fewestChunkAreasThreadIndex].chunkAreaKeys.append(toMoveAreaKey);
             }
         }
     }
@@ -590,7 +592,7 @@ pub fn changeUsedThreadCount(newThreadCount: usize, state: *ChatSimState) !void 
 fn getTotalChunkAreaCount(threadDatas: []ThreadData) usize {
     var result: usize = 0;
     for (threadDatas) |threadData| {
-        result += threadData.chunkAreas.items.len;
+        result += threadData.chunkAreaKeys.items.len;
     }
     return result;
 }
@@ -603,7 +605,8 @@ fn tick(state: *ChatSimState) !void {
 
     var nonMainThreadsDataCount: usize = 0;
     for (state.threadData, 0..) |*threadData, i| {
-        for (threadData.chunkAreas.items) |*chunkArea| {
+        for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
+            const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
             if (chunkArea.chunkKeyOrder.len > 0) {
                 chunkArea.currentChunkKeyIndex = 0;
                 chunkArea.tickedCitizenCounter = 0;
@@ -624,7 +627,9 @@ fn tick(state: *ChatSimState) !void {
         threadData.tickedCitizenCounter = 0;
         threadData.tickedChunkCounter = 0;
         threadData.citizensAddedThisTick = 0;
-        for (threadData.chunkAreas.items) |*chunkArea| {
+        var keyIndex: usize = 0;
+        while (keyIndex < threadData.chunkAreaKeys.items.len) {
+            const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
             for (chunkArea.chunkKeyOrder) |activeKey| {
                 const idleTypeData = try tickSingleChunk(activeKey, 0, chunkArea, state);
                 if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
@@ -634,6 +639,11 @@ fn tick(state: *ChatSimState) !void {
                         chunkArea.idleTypeData = idleTypeData;
                     }
                 }
+            }
+            if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
+            } else {
+                keyIndex += 1;
             }
         }
     } else {
@@ -656,7 +666,9 @@ fn tick(state: *ChatSimState) !void {
             const allowedPathIndex = state.activeChunkAllowedPathIndex.load(.unordered) + ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
             if (allowedPathIndex >= mainThreadData.currentPathIndex.load(.unordered)) {
                 var highestFinishedPathIndex: usize = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
-                for (mainThreadData.chunkAreas.items) |*chunkArea| {
+
+                for (mainThreadData.chunkAreaKeys.items) |chunkAreaKey| {
+                    const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
                     var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
                     const areaLen = chunkArea.chunkKeyOrder.len;
                     const activeKeys = chunkArea.chunkKeyOrder;
@@ -680,6 +692,16 @@ fn tick(state: *ChatSimState) !void {
                 }
                 mainThreadData.currentPathIndex.store(highestFinishedPathIndex, .seq_cst);
             }
+            var keyIndex: usize = 0;
+            while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
+                const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
+                if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                    _ = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
+                } else {
+                    keyIndex += 1;
+                }
+            }
+
             var minIndex = mainThreadData.currentPathIndex.load(.unordered);
             if (minIndex >= chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE) break;
             const initial = state.activeChunkAllowedPathIndex.load(.unordered);
@@ -746,7 +768,8 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                 if (allowedPathIndex >= threadData.currentPathIndex.load(.unordered)) {
                     var highestFinishedPathIndex: usize = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
                     var allChunkAreasDone = true;
-                    for (threadData.chunkAreas.items) |*chunkArea| {
+                    for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
+                        const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
                         var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
                         const activeKeys = chunkArea.chunkKeyOrder;
                         const areaLen = activeKeys.len;
@@ -771,6 +794,15 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                     }
                     threadData.currentPathIndex.store(highestFinishedPathIndex, .seq_cst);
                     if (allChunkAreasDone) break;
+                }
+            }
+            var keyIndex: usize = 0;
+            while (keyIndex < threadData.chunkAreaKeys.items.len) {
+                const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
+                if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                    _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
+                } else {
+                    keyIndex += 1;
                 }
             }
             threadData.finishedTick = true;
@@ -923,14 +955,14 @@ pub fn destroyGameState(state: *ChatSimState) void {
     for (0..state.maxThreadCount) |i| {
         const threadData = &state.threadData[i];
         pathfindingZig.destoryPathfindingData(&threadData.pathfindingTempData);
-        threadData.chunkAreas.deinit();
+        threadData.chunkAreaKeys.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();
     }
     inputZig.destory(state);
     codePerformanceZig.destroy(state);
-    state.idleChunkAreas.deinit();
+    state.chunkAreas.deinit();
     state.map.chunks.deinit();
 }
 
