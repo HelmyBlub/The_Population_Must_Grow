@@ -1,6 +1,10 @@
 tasks:
+- continue: very confused by load/save not working
+    - load and save do not show that they have path tiles in them, but sometimes they do.
+        - i do not see the inconsistency
+    - temp file has more complicated code
+    - code commented out in chunkArea.zig function optimizeChunkAreaAssignments. Try here again
 - save idle chunks and clean up from memory, load when required again
-    - create chunkArea when chunk created
     - unload every area which is idle and only has idle neighbors
         - if one area is set to idle -> check if area adjacent to it might be unloaded
         - if one area is removed from idle -> check if area needs to be loaded
@@ -43,6 +47,7 @@ Some data:
 - FPS: 123, citizens: 33516, gameTime: 330000, end FPS: 76.91814 (05.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 123, citizens: 33513, gameTime: 330000, end FPS: 76.44776 (with chunk area creation on chunk creation)
+- FPS: 124, citizens: 32860, gameTime: 330000, end FPS: 78.31164
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

@@ -312,7 +312,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
         state.tickStartTimeMicroSeconds = std.time.microTimestamp();
         state.ticksRemainingBeforePaint += state.actualGameSpeed;
         try windowSdlZig.handleEvents(state);
-        state.visibleAndTickRectangle = mapZig.getVisibleAndAdjacentChunkRectangle(state);
+        try mapZig.visibleAndAdjacentChunkRectangle(state);
         try chunkAreaZig.optimizeChunkAreaAssignments(state);
         while (state.ticksRemainingBeforePaint >= 1) {
             try tick(state);
@@ -649,7 +649,7 @@ fn tick(state: *ChatSimState) !void {
                     }
                 }
             }
-            if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+            if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                 const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
                 try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
             } else {
@@ -706,7 +706,7 @@ fn tick(state: *ChatSimState) !void {
             var keyIndex: usize = 0;
             while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
-                if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                     const removedKey = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
                     try mainThreadData.recentlyRemovedChunkAreaKeys.append(removedKey);
                 } else {
@@ -812,7 +812,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
             var keyIndex: usize = 0;
             while (keyIndex < threadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
-                if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                     const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
                     try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
                 } else {

@@ -132,8 +132,10 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {
-                const areaKey = state.threadData[0].chunkAreaKeys.items[0];
+                const areaXY: chunkAreaZig.ChunkAreaXY = .{ .areaX = -1, .areaY = 0 };
+                const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
                 try saveZig.saveChunkAreaToFile(state.chunkAreas.getPtr(areaKey).?, state);
+                try saveZig.destroyChunksOfUnloadedArea(areaXY, state);
                 std.debug.print("test save one chunk\n", .{});
 
                 try saveZig.loadChunkAreaFromFile(chunkAreaZig.getAreaXyForKey(areaKey), state);

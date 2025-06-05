@@ -4,6 +4,7 @@ const windowSdlZig = @import("windowSdl.zig");
 const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
+const saveZig = @import("save.zig");
 
 pub const GameMap = struct {
     chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
@@ -161,7 +162,7 @@ pub fn createMap(allocator: std.mem.Allocator) !GameMap {
     return map;
 }
 
-pub fn getVisibleAndAdjacentChunkRectangle(state: *main.ChatSimState) VisibleChunksData {
+pub fn visibleAndAdjacentChunkRectangle(state: *main.ChatSimState) !void {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
         .x = camera.position.x - windowSdlZig.windowData.widthFloat / 2 / camera.zoom - 10,
@@ -169,12 +170,16 @@ pub fn getVisibleAndAdjacentChunkRectangle(state: *main.ChatSimState) VisibleChu
     };
     const chunkXY = getChunkXyForPosition(mapVisibleTopLeft);
     const increaseBy = 3;
-    return VisibleChunksData{
+    const newVisible = VisibleChunksData{
         .left = chunkXY.chunkX - increaseBy,
         .top = chunkXY.chunkY - increaseBy,
         .columns = @intFromFloat(windowSdlZig.windowData.widthFloat / camera.zoom / GameMap.CHUNK_SIZE + 2 + increaseBy * 2),
         .rows = @intFromFloat(windowSdlZig.windowData.heightFloat / camera.zoom / GameMap.CHUNK_SIZE + 2 + increaseBy * 2),
     };
+
+    if (state.gameTimeMs > 0) try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(state.visibleAndTickRectangle, false, state);
+    state.visibleAndTickRectangle = newVisible;
+    try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(newVisible, true, state);
 }
 
 pub fn getTopLeftVisibleChunkXY(state: *main.ChatSimState) VisibleChunksData {
@@ -212,7 +217,7 @@ pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
     };
 }
 
-pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !*MapChunk {
+pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) anyerror!*MapChunk {
     const key = getKeyForChunkXY(chunkXY);
     if (!state.map.chunks.contains(key)) {
         try createAndPushChunkForChunkXY(chunkXY, state);
@@ -222,7 +227,7 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.Cha
 
 pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *main.ChatSimState) !*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
-    return getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+    return try getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
 }
 
 pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.ChatSimState) !void {
@@ -962,14 +967,23 @@ pub fn getChunkXyForPosition(position: main.Position) ChunkXY {
 }
 
 fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
+    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
+        if (chunkArea.idleTypeData == .unloaded) {
+            try saveZig.loadChunkAreaFromFile(areaXY, state);
+            chunkArea.idleTypeData = .idle;
+            std.debug.print("loaded chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
+            return;
+        }
+    } else {
+        try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+        std.debug.print("created chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
+    }
+    // if (chunkXY.chunkX < 0 and chunkXY.chunkX > -20 and chunkXY.chunkY > 0 and chunkXY.chunkY < 20) std.debug.print("created chunk {} {}\n", .{ chunkXY.chunkX, chunkXY.chunkY });
     const newChunk = try createChunk(chunkXY, state);
     const key = getKeyForChunkXY(chunkXY);
     try state.map.chunks.put(key, newChunk);
-    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
-    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
-    if (!state.chunkAreas.contains(areaKey)) {
-        try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
-    }
 }
 
 fn createAndPushChunkForPosition(position: main.Position, state: *main.ChatSimState) !void {

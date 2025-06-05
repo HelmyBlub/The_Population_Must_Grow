@@ -30,6 +30,7 @@ pub const ChunkArea: type = struct {
     tickedCitizenCounter: usize = 0,
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
+    visible: bool = false,
     pub const SIZE = 20;
 };
 
@@ -199,63 +200,43 @@ pub fn isChunkAreaInVisibleData(visibleData: mapZig.VisibleChunksData, areaXY: C
     return mapZig.isRectangleOverlapping(rectForOverlapping1, rectForOverlapping2);
 }
 
-pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
-    // flag visible chunkAreas
-    const leftAreaX = @divFloor(state.visibleAndTickRectangle.left, ChunkArea.SIZE);
-    const topAreaY = @divFloor(state.visibleAndTickRectangle.top, ChunkArea.SIZE);
-    const width = @divFloor(state.visibleAndTickRectangle.columns, ChunkArea.SIZE) + 2;
-    const height = @divFloor(state.visibleAndTickRectangle.rows, ChunkArea.SIZE) + 2;
+pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.VisibleChunksData, isVisible: bool, state: *main.ChatSimState) !void {
+    const leftAreaX = @divFloor(visibleChunksData.left, ChunkArea.SIZE);
+    const topAreaY = @divFloor(visibleChunksData.top, ChunkArea.SIZE);
+    const width = @divFloor(visibleChunksData.columns, ChunkArea.SIZE) + 2;
+    const height = @divFloor(visibleChunksData.rows, ChunkArea.SIZE) + 2;
     for (0..width) |areaX| {
         for (0..height) |areaY| {
             const areaXY: ChunkAreaXY = .{
                 .areaX = @as(i32, @intCast(areaX)) + leftAreaX,
                 .areaY = @as(i32, @intCast(areaY)) + topAreaY,
             };
-            if (isChunkAreaInVisibleData(state.visibleAndTickRectangle, areaXY)) {
+            if (isChunkAreaInVisibleData(visibleChunksData, areaXY)) {
                 const areaKey = getKeyForAreaXY(areaXY);
                 const optChunkArea = state.chunkAreas.getPtr(areaKey);
-                if (optChunkArea != null and optChunkArea.?.idleTypeData != .notIdle) {
-                    try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                if (optChunkArea) |area| {
+                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                    area.visible = isVisible;
                 }
             }
         }
     }
+}
+
+pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     // check for area load/unload
-    for (0..state.usedThreadsCount) |threadIndex| {
-        const threadData = &state.threadData[threadIndex];
-        while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
-            const removedKey = threadData.recentlyRemovedChunkAreaKeys.swapRemove(0);
-            const chunkArea = state.chunkAreas.getPtr(removedKey).?;
-            if (chunkArea.idleTypeData == .idle) {
-                const areaXY = getAreaXyForKey(removedKey);
-                const neighborsXY = [_]ChunkAreaXY{
-                    .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY },
-                    .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY },
-                    .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY - 1 },
-                    .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY + 1 },
-                };
-                var allNeighborsIdle = true;
-                for (neighborsXY) |neighborXY| {
-                    const neighborKey = getKeyForAreaXY(neighborXY);
-                    const optNeighborChunkArea = state.chunkAreas.getPtr(neighborKey);
-                    if (optNeighborChunkArea) |neighborChunkArea| {
-                        if (neighborChunkArea.idleTypeData != .idle and neighborChunkArea.idleTypeData != .unloaded) {
-                            allNeighborsIdle = false;
-                            break;
-                        }
-                        std.debug.print("idleNeighbor {}\n", .{neighborXY});
-                    }
-                }
-                if (allNeighborsIdle) {
-                    // unload
-                    std.debug.print("unloading chunkArea {}\n", .{areaXY});
-                    try saveZig.saveChunkAreaToFile(chunkArea, state);
-                    try saveZig.destroyChunksOfUnloadedArea(areaXY, state);
-                    chunkArea.idleTypeData = .unloaded;
-                }
-            }
-        }
-    }
+    // for (0..state.usedThreadsCount) |threadIndex| {
+    //     const threadData = &state.threadData[threadIndex];
+    //     while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
+    //         const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
+    //         const chunkArea = state.chunkAreas.getPtr(removedKey).?;
+    //         if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
+    //             chunkArea.idleTypeData = .unloaded;
+    //             try saveZig.saveChunkAreaToFile(chunkArea, state);
+    //             try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
+    //         }
+    //     }
+    // }
 
     if (state.usedThreadsCount > 1) {
         // check balance

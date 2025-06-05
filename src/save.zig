@@ -59,6 +59,7 @@ fn getFileNameForAreaXy(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.All
 }
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
+    std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
@@ -75,6 +76,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
                 .chunkX = (@as(i32, @intCast(areaChunkX)) + chunkArea.areaXY.areaX * chunkAreaZig.ChunkArea.SIZE),
                 .chunkY = (@as(i32, @intCast(areaChunkY)) + chunkArea.areaXY.areaY * chunkAreaZig.ChunkArea.SIZE),
             };
+            if (chunkXY.chunkY == 0) std.debug.print("d", .{});
             const writeValueChunkXyIndex: usize = (areaChunkX * chunkAreaZig.ChunkArea.SIZE + areaChunkY) * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH;
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
             for (chunk.trees.items) |tree| {
@@ -98,6 +100,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
                     writeValue = SAVE_TREE_AND_PATH;
                 }
                 writeValues[writeValueIndex] = writeValue;
+                std.debug.print("savepath", .{});
             }
             for (chunk.potatoFields.items) |potatoField| {
                 const writeValueIndex = writeValueChunkXyIndex + positionToWriteIndexTilePart(potatoField.position);
@@ -315,6 +318,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
         if (currenChunk) |*chunk| {
             switch (value) {
                 SAVE_PATH => {
+                    std.debug.print("loadpath", .{});
                     try chunk.pathes.append(position);
                 },
                 SAVE_TREE => {
