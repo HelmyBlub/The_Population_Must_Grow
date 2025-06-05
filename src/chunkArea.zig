@@ -25,6 +25,7 @@ pub const ChunkArea: type = struct {
     currentChunkKeyIndex: usize,
     chunkKeyOrder: [SIZE * SIZE]u64,
     tickedCitizenCounter: usize = 0,
+    lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
     pub const SIZE = 20;
 };
@@ -171,7 +172,48 @@ pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *
     try threadWithLeastAreas.?.chunkAreaKeys.append(areaKey);
 }
 
+pub fn isChunkAreaInVisibleData(visibleData: mapZig.VisibleChunksData, areaXY: ChunkAreaXY) bool {
+    const rectForOverlapping1: mapZig.MapTileRectangle = .{
+        .topLeftTileXY = .{
+            .tileX = areaXY.areaX * ChunkArea.SIZE,
+            .tileY = areaXY.areaY * ChunkArea.SIZE,
+        },
+        .columnCount = ChunkArea.SIZE,
+        .rowCount = ChunkArea.SIZE,
+    };
+    const rectForOverlapping2: mapZig.MapTileRectangle = .{
+        .topLeftTileXY = .{
+            .tileX = visibleData.left,
+            .tileY = visibleData.top,
+        },
+        .columnCount = @intCast(visibleData.columns),
+        .rowCount = @intCast(visibleData.rows),
+    };
+    return mapZig.isRectangleOverlapping(rectForOverlapping1, rectForOverlapping2);
+}
+
 pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
+    // flag visible chunkAreas
+    const leftAreaX = @divFloor(state.visibleAndTickRectangle.left, ChunkArea.SIZE);
+    const topAreaY = @divFloor(state.visibleAndTickRectangle.top, ChunkArea.SIZE);
+    const width = @divFloor(state.visibleAndTickRectangle.columns, ChunkArea.SIZE) + 2;
+    const height = @divFloor(state.visibleAndTickRectangle.rows, ChunkArea.SIZE) + 2;
+    for (0..width) |areaX| {
+        for (0..height) |areaY| {
+            const areaXY: ChunkAreaXY = .{
+                .areaX = @as(i32, @intCast(areaX)) + leftAreaX,
+                .areaY = @as(i32, @intCast(areaY)) + topAreaY,
+            };
+            if (isChunkAreaInVisibleData(state.visibleAndTickRectangle, areaXY)) {
+                const areaKey = getKeyForAreaXY(areaXY);
+                const optChunkArea = state.chunkAreas.getPtr(areaKey);
+                if (optChunkArea != null and optChunkArea.?.idleTypeData != .notIdle) {
+                    try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                }
+            }
+        }
+    }
+
     if (state.usedThreadsCount > 1) {
         // check balance
         var highestAmountOfWorkThread: ?*main.ThreadData = null;

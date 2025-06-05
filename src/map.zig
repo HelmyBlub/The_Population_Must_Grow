@@ -177,26 +177,6 @@ pub fn getVisibleAndAdjacentChunkRectangle(state: *main.ChatSimState) VisibleChu
     };
 }
 
-pub fn isChunkAreaInVisibleData(visibleData: VisibleChunksData, areaXY: chunkAreaZig.ChunkAreaXY) bool {
-    const rectForOverlapping1: MapTileRectangle = .{
-        .topLeftTileXY = .{
-            .tileX = areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
-            .tileY = areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
-        },
-        .columnCount = chunkAreaZig.ChunkArea.SIZE,
-        .rowCount = chunkAreaZig.ChunkArea.SIZE,
-    };
-    const rectForOverlapping2: MapTileRectangle = .{
-        .topLeftTileXY = .{
-            .tileX = visibleData.left,
-            .tileY = visibleData.top,
-        },
-        .columnCount = @intCast(visibleData.columns),
-        .rowCount = @intCast(visibleData.rows),
-    };
-    return isRectangleOverlapping(rectForOverlapping1, rectForOverlapping2);
-}
-
 pub fn getTopLeftVisibleChunkXY(state: *main.ChatSimState) VisibleChunksData {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
@@ -480,7 +460,7 @@ fn is1x1ObjectOverlapping(position: main.Position, buildRectangle: MapTileRectan
     return isRectangleOverlapping(get1x1RectangleFromPosition(position), buildRectangle);
 }
 
-fn isRectangleOverlapping(rect1: MapTileRectangle, rect2: MapTileRectangle) bool {
+pub fn isRectangleOverlapping(rect1: MapTileRectangle, rect2: MapTileRectangle) bool {
     if (rect1.topLeftTileXY.tileX <= rect2.topLeftTileXY.tileX + @as(i32, @intCast(rect2.columnCount - 1)) and rect2.topLeftTileXY.tileX <= rect1.topLeftTileXY.tileX + @as(i32, @intCast(rect1.columnCount - 1)) //
     and rect1.topLeftTileXY.tileY <= rect2.topLeftTileXY.tileY + @as(i32, @intCast(rect2.rowCount - 1)) and rect2.topLeftTileXY.tileY <= rect1.topLeftTileXY.tileY + @as(i32, @intCast(rect1.rowCount - 1))) {
         return true;

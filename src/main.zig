@@ -604,12 +604,15 @@ fn tick(state: *ChatSimState) !void {
     try testZig.tick(state);
 
     var nonMainThreadsDataCount: usize = 0;
+    try state.chunkAreas.ensureUnusedCapacity(10);
     for (state.threadData, 0..) |*threadData, i| {
+        try threadData.chunkAreaKeys.ensureUnusedCapacity(10);
         for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
             const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
             if (chunkArea.chunkKeyOrder.len > 0) {
                 chunkArea.currentChunkKeyIndex = 0;
                 chunkArea.tickedCitizenCounter = 0;
+                chunkArea.lastTickIdleTypeData = chunkArea.idleTypeData;
                 chunkArea.idleTypeData = .idle;
                 if (i == 0) continue; // don't count main thread
                 nonMainThreadsDataCount += chunkArea.chunkKeyOrder.len;
@@ -630,6 +633,10 @@ fn tick(state: *ChatSimState) !void {
         var keyIndex: usize = 0;
         while (keyIndex < threadData.chunkAreaKeys.items.len) {
             const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
+            if (chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) {
+                keyIndex += 1;
+                continue;
+            }
             for (chunkArea.chunkKeyOrder) |activeKey| {
                 const idleTypeData = try tickSingleChunk(activeKey, 0, chunkArea, state);
                 if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
@@ -640,7 +647,7 @@ fn tick(state: *ChatSimState) !void {
                     }
                 }
             }
-            if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+            if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
                 _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
             } else {
                 keyIndex += 1;
@@ -669,6 +676,7 @@ fn tick(state: *ChatSimState) !void {
 
                 for (mainThreadData.chunkAreaKeys.items) |chunkAreaKey| {
                     const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
+                    if (chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) continue;
                     var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
                     const areaLen = chunkArea.chunkKeyOrder.len;
                     const activeKeys = chunkArea.chunkKeyOrder;
@@ -695,7 +703,7 @@ fn tick(state: *ChatSimState) !void {
             var keyIndex: usize = 0;
             while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
-                if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
                     _ = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
                 } else {
                     keyIndex += 1;
@@ -770,6 +778,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                     var allChunkAreasDone = true;
                     for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
                         const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
+                        if (chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) continue;
                         var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
                         const activeKeys = chunkArea.chunkKeyOrder;
                         const areaLen = activeKeys.len;
@@ -799,7 +808,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
             var keyIndex: usize = 0;
             while (keyIndex < threadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
-                if (chunkArea.idleTypeData == .idle and !mapZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
+                if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
                     _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
                 } else {
                     keyIndex += 1;
