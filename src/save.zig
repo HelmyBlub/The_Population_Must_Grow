@@ -246,6 +246,24 @@ fn positionToWriteIndexTilePart(position: main.Position) usize {
     return tileUsizeX * mapZig.GameMap.CHUNK_LENGTH + tileUsizeY;
 }
 
+pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
+    for (0..chunkAreaZig.ChunkArea.SIZE) |x| {
+        for (0..chunkAreaZig.ChunkArea.SIZE) |y| {
+            const chunkXY: mapZig.ChunkXY = .{
+                .chunkX = @as(i32, @intCast(x)) + areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
+                .chunkY = @as(i32, @intCast(y)) + areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
+            };
+            const chunkKey = mapZig.getKeyForChunkXY(chunkXY);
+            if (state.map.chunks.getPtr(chunkKey)) |toDestroyChunk| {
+                disconnectPathingBetweenChunkAreas(toDestroyChunk, state);
+                try handleActiveCitizensInChunkToUnload(toDestroyChunk, areaXY, state);
+                mapZig.destroyChunk(toDestroyChunk);
+                _ = state.map.chunks.remove(chunkKey);
+            }
+        }
+    }
+}
+
 pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
     const path = try getFileNameForAreaXy(areaXY, state.allocator);
     defer state.allocator.free(path);

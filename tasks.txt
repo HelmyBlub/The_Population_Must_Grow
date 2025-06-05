@@ -1,12 +1,6 @@
 tasks:
-- try out change idleChunkAreas to chunkAreas
-    - bug: waiting for citizen idling not working
-    - bug: citizens not moving when chunk area was idle. when visible
-    - threads only use areaKeys
-    - easier access to every existing chunkArea
-    - check unindle stuff not adding key in twice
-        - currently one check in. Check logic behind it
 - save idle chunks and clean up from memory, load when required again
+    - create chunkArea when chunk created
     - unload every area which is idle and only has idle neighbors
         - if one area is set to idle -> check if area adjacent to it might be unloaded
         - if one area is removed from idle -> check if area needs to be loaded
@@ -46,11 +40,9 @@ tasks:
 
   
 Some data:
-- FPS: 118, citizens: 34720, gameTime: 330000, end FPS: 76.49935 (05.06.2025)
+- FPS: 123, citizens: 33516, gameTime: 330000, end FPS: 76.91814 (05.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 122, citizens: 33968, gameTime: 330000, end FPS: 79.06248 (waiting for citizens case fixed)
-- FPS: 123, citizens: 33516, gameTime: 330000, end FPS: 76.91814 (check for move idle chunks back)
-- 28 areas, 11 limit (width test)
+- FPS: 123, citizens: 33513, gameTime: 330000, end FPS: 76.44776 (with chunk area creation on chunk creation)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

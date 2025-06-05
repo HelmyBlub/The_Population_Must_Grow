@@ -965,6 +965,11 @@ fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !vo
     const newChunk = try createChunk(chunkXY, state);
     const key = getKeyForChunkXY(chunkXY);
     try state.map.chunks.put(key, newChunk);
+    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    if (!state.chunkAreas.contains(areaKey)) {
+        try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+    }
 }
 
 fn createAndPushChunkForPosition(position: main.Position, state: *main.ChatSimState) !void {

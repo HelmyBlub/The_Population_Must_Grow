@@ -69,6 +69,7 @@ pub const ThreadData = struct {
     finishedTick: bool = true,
     citizensAddedThisTick: u32 = 0,
     chunkAreaKeys: std.ArrayList(u64),
+    recentlyRemovedChunkAreaKeys: std.ArrayList(u64),
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
@@ -174,6 +175,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         state.threadData[i] = .{
             .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator),
             .chunkAreaKeys = std.ArrayList(u64).init(allocator),
+            .recentlyRemovedChunkAreaKeys = std.ArrayList(u64).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
             .measureData = .{},
         };
@@ -648,7 +650,8 @@ fn tick(state: *ChatSimState) !void {
                 }
             }
             if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
-                _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
+                const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
+                try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
             } else {
                 keyIndex += 1;
             }
@@ -704,7 +707,8 @@ fn tick(state: *ChatSimState) !void {
             while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
                 if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
-                    _ = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
+                    const removedKey = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
+                    try mainThreadData.recentlyRemovedChunkAreaKeys.append(removedKey);
                 } else {
                     keyIndex += 1;
                 }
@@ -809,7 +813,8 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
             while (keyIndex < threadData.chunkAreaKeys.items.len) {
                 const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
                 if (chunkArea.idleTypeData == .idle and !chunkAreaZig.isChunkAreaInVisibleData(state.visibleAndTickRectangle, chunkArea.areaXY)) {
-                    _ = threadData.chunkAreaKeys.swapRemove(keyIndex);
+                    const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
+                    try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
                 } else {
                     keyIndex += 1;
                 }
@@ -832,7 +837,6 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     }
 }
 
-///returns false if chunk is idle
 fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *chunkAreaZig.ChunkArea, state: *ChatSimState) !chunkAreaZig.ChunkAreaIdleTypeData {
     // if (state.gameTimeMs == 16 * 60 * 250) {
     //     std.debug.print("test1 \n", .{});
@@ -965,6 +969,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         const threadData = &state.threadData[i];
         pathfindingZig.destoryPathfindingData(&threadData.pathfindingTempData);
         threadData.chunkAreaKeys.deinit();
+        threadData.recentlyRemovedChunkAreaKeys.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();

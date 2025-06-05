@@ -2,6 +2,7 @@ const std = @import("std");
 const main = @import("main.zig");
 const testZig = @import("test.zig");
 const mapZig = @import("map.zig");
+const saveZig = @import("save.zig");
 
 pub const ChunkAreaXY: type = struct {
     areaX: i32,
@@ -12,12 +13,14 @@ pub const ChunkAreaIdleType = enum {
     waitingForCitizens,
     idle,
     notIdle,
+    unloaded,
 };
 
 pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
     waitingForCitizens: u32,
     idle,
     notIdle,
+    unloaded,
 };
 
 pub const ChunkArea: type = struct {
@@ -88,15 +91,19 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
     }
     if (threadWithLeastAreas) |thread| {
         try thread.chunkAreaKeys.append(areaKey);
-        try state.chunkAreas.put(areaKey, .{
-            .areaXY = areaXY,
-            .chunkKeyOrder = setupChunkAreaKeyOrder(areaXY),
-            .currentChunkKeyIndex = 0,
-        });
+        try putChunkArea(areaXY, areaKey, state);
         return;
     }
 
     std.debug.print("problem?: chunk area not handles\n", .{});
+}
+
+pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !void {
+    try state.chunkAreas.put(areaKey, .{
+        .areaXY = areaXY,
+        .chunkKeyOrder = setupChunkAreaKeyOrder(areaXY),
+        .currentChunkKeyIndex = 0,
+    });
 }
 
 fn setupChunkAreaKeyOrder(areaXY: ChunkAreaXY) [ChunkArea.SIZE * ChunkArea.SIZE]u64 {
@@ -209,6 +216,42 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
                 const optChunkArea = state.chunkAreas.getPtr(areaKey);
                 if (optChunkArea != null and optChunkArea.?.idleTypeData != .notIdle) {
                     try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                }
+            }
+        }
+    }
+    // check for area load/unload
+    for (0..state.usedThreadsCount) |threadIndex| {
+        const threadData = &state.threadData[threadIndex];
+        while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
+            const removedKey = threadData.recentlyRemovedChunkAreaKeys.swapRemove(0);
+            const chunkArea = state.chunkAreas.getPtr(removedKey).?;
+            if (chunkArea.idleTypeData == .idle) {
+                const areaXY = getAreaXyForKey(removedKey);
+                const neighborsXY = [_]ChunkAreaXY{
+                    .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY },
+                    .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY },
+                    .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY - 1 },
+                    .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY + 1 },
+                };
+                var allNeighborsIdle = true;
+                for (neighborsXY) |neighborXY| {
+                    const neighborKey = getKeyForAreaXY(neighborXY);
+                    const optNeighborChunkArea = state.chunkAreas.getPtr(neighborKey);
+                    if (optNeighborChunkArea) |neighborChunkArea| {
+                        if (neighborChunkArea.idleTypeData != .idle and neighborChunkArea.idleTypeData != .unloaded) {
+                            allNeighborsIdle = false;
+                            break;
+                        }
+                        std.debug.print("idleNeighbor {}\n", .{neighborXY});
+                    }
+                }
+                if (allNeighborsIdle) {
+                    // unload
+                    std.debug.print("unloading chunkArea {}\n", .{areaXY});
+                    try saveZig.saveChunkAreaToFile(chunkArea, state);
+                    try saveZig.destroyChunksOfUnloadedArea(areaXY, state);
+                    chunkArea.idleTypeData = .unloaded;
                 }
             }
         }
