@@ -974,12 +974,10 @@ fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !vo
             try saveZig.loadChunkAreaFromFile(areaXY, state);
             chunkArea.unloaded = false;
             chunkArea.idleTypeData = .idle;
-            std.debug.print("loaded chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
             return;
         }
     } else {
         try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
-        std.debug.print("created chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
     }
     const newChunk = try createChunk(chunkXY, state);
     const key = getKeyForChunkXY(chunkXY);

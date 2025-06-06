@@ -280,7 +280,7 @@ fn buildingStart(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimStat
                 citizen.buildingPosition = null;
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, state);
                 chunk.workingCitizenCounter -= 1;
-                try nextThinkingAction(citizen, state);
+                if (citizen.nextThinkingAction == .buildingStart) try nextThinkingAction(citizen, state);
             }
         } else {
             citizen.nextThinkingAction = .buildingGetWood;
@@ -585,7 +585,9 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
     const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
     const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
     if (homeChunk.noTreeLeftInChunkProximityGameTime == state.gameTimeMs) {
-        try setRandomMoveTo(citizen, threadIndex, state);
+        if (!try checkHunger(citizen, state)) {
+            try setRandomMoveTo(citizen, threadIndex, state);
+        }
         return;
     }
     var closestTree: ?*mapZig.MapTree = null;
@@ -628,7 +630,9 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
         closestTree.?.citizenOnTheWay = true;
     } else {
         homeChunk.noTreeLeftInChunkProximityGameTime = state.gameTimeMs;
-        try setRandomMoveTo(citizen, threadIndex, state);
+        if (!try checkHunger(citizen, state)) {
+            try setRandomMoveTo(citizen, threadIndex, state);
+        }
     }
 }
 

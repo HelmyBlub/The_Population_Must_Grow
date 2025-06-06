@@ -1,6 +1,4 @@
 tasks:
-- continue: very confused by load/save not working
-    - temp file has more complicated code
 - save idle chunks and clean up from memory, load when required again
     - unload every area which is idle and only has idle neighbors
         - if one area is set to idle -> check if area adjacent to it might be unloaded
@@ -16,6 +14,16 @@ tasks:
     - save and load on game end and game start
         - reset
 
+- bug: game crash, unknown how to reproduce, different stack traces
+        thread 8608 panic: attempt to use null value
+        D:\mein\github_gamedev\Zig_ChatSim\src\pathfinding.zig:947:71: 0x7ff71d8681c7 in pathfindAStar (zig.exe.obj)
+                    const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
+                                                                            ^
+        D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:89:64: 0x7ff71d869288 in moveToPosition (zig.exe.obj)
+                const foundPath = try main.pathfindingZig.pathfindAStar(goal, self, threadIndex, state);
+                                                                    ^
+        D:\mein\github_gamedev\Zig_ChatSim\src\citizen.zig:638:35: 0x7ff71d86bbc7 in setRandomMoveTo (zig.exe.obj)
+                try citizen.moveToPosition(randomPos, threadIndex, state);
 
 
 - new auto balance thread logic?
@@ -43,6 +51,8 @@ tasks:
 Some data:
 - FPS: 121, citizens: 33624, gameTime: 330000, end FPS: 75.474686 (06.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+
+- FPS: 121, citizens: 33768, gameTime: 330000, end FPS: 75.298096 (citizens can eat while waiting for tree)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

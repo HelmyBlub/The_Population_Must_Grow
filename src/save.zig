@@ -48,7 +48,6 @@ fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
 }
 
 fn getFileNameForAreaXy(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.Allocator) ![]const u8 {
-    // Format the filename: region_x_y.dat
     var buf = std.ArrayList(u8).init(allocator);
     defer buf.deinit();
 
