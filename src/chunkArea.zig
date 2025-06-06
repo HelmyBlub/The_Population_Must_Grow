@@ -49,6 +49,28 @@ test "temp split active chunks" {
     testZig.determineValidanChunkDistanceForArea(area);
 }
 
+pub fn getChunkAreaXyForPosition(position: main.Position) ChunkAreaXY {
+    const posChunkXY = mapZig.getChunkXyForPosition(position);
+    return getChunkAreaXyForChunkXy(posChunkXY);
+}
+
+pub fn isPositionInSameChunkArea(position: main.Position, areaXY: ChunkAreaXY) bool {
+    const posChunkAreaXY = getChunkAreaXyForPosition(position);
+    return chunkAreaEquals(areaXY, posChunkAreaXY);
+}
+
+pub fn isChunkAreaLoaded(areaXY: ChunkAreaXY, state: *main.ChatSimState) bool {
+    const key = getKeyForAreaXY(areaXY);
+    if (state.chunkAreas.getPtr(key)) |chunkArea| {
+        if (!chunkArea.unloaded) return true;
+    }
+    return false;
+}
+
+pub fn chunkAreaEquals(areaXY1: ChunkAreaXY, areaXY2: ChunkAreaXY) bool {
+    return areaXY1.areaX == areaXY2.areaX and areaXY1.areaY == areaXY2.areaY;
+}
+
 pub fn getChunkAreaXyForChunkXy(chunkXY: mapZig.ChunkXY) ChunkAreaXY {
     return .{
         .areaX = @divFloor(chunkXY.chunkX, ChunkArea.SIZE),

@@ -1007,9 +1007,9 @@ pub fn createEmptyChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
 }
 
 pub fn destroyChunk(chunk: *MapChunk) void {
+    chunk.trees.deinit();
     chunk.buildings.deinit();
     chunk.bigBuildings.deinit();
-    chunk.trees.deinit();
     chunk.potatoFields.deinit();
     main.Citizen.destroyCitizens(chunk);
     chunk.citizens.deinit();

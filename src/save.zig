@@ -160,15 +160,6 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
     try writer.writeAll(&writeValues);
 }
 
-fn isInSameChunkArea(position: main.Position, areaXY: chunkAreaZig.ChunkAreaXY) bool {
-    const posChunkXY = mapZig.getChunkXyForPosition(position);
-    const posChunkAreaXY: chunkAreaZig.ChunkAreaXY = .{
-        .areaX = @divFloor(posChunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE),
-        .areaY = @divFloor(posChunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE),
-    };
-    return areaXY.areaX == posChunkAreaXY.areaX and areaXY.areaY == posChunkAreaXY.areaY;
-}
-
 fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
     for (chunk.citizens.items) |citizen| {
         if (citizen.nextThinkingAction != .idle) {
@@ -183,55 +174,59 @@ fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAre
             }
 
             if (citizen.treePosition) |pos| {
-                if (!isInSameChunkArea(pos, areaXY)) {
-                    const treeChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
-                    for (treeChunk.trees.items) |*tree| {
-                        if (main.calculateDistance(pos, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                            tree.beginCuttingTime = null;
-                            tree.citizenOnTheWay = false;
-                            break;
+                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
+                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                        const treeChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                        for (treeChunk.trees.items) |*tree| {
+                            if (main.calculateDistance(pos, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                tree.beginCuttingTime = null;
+                                tree.citizenOnTheWay = false;
+                                break;
+                            }
                         }
                     }
                 }
             }
             if (citizen.potatoPosition) |pos| {
-                if (!isInSameChunkArea(pos, areaXY)) {
-                    const potatoChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
-                    for (potatoChunk.potatoFields.items) |*potatoField| {
-                        if (main.calculateDistance(pos, potatoField.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                            potatoField.citizenOnTheWay -|= 1;
-                            break;
+                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
+                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                        const potatoChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                        for (potatoChunk.potatoFields.items) |*potatoField| {
+                            if (main.calculateDistance(pos, potatoField.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                potatoField.citizenOnTheWay -|= 1;
+                                break;
+                            }
                         }
                     }
                 }
             }
 
             if (buildOrderPosition) |pos| {
-                const posChunkXY = mapZig.getChunkXyForPosition(pos);
-                const posChunkAreaXY: chunkAreaZig.ChunkAreaXY = .{
-                    .areaX = @divFloor(posChunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE),
-                    .areaY = @divFloor(posChunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE),
-                };
-                if (areaXY.areaX != posChunkAreaXY.areaX or areaXY.areaY != posChunkAreaXY.areaY) {
-                    const buildOrderChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
-                    var isSpecialBigBuildingCase = false;
-                    if (citizen.buildingPosition != null) {
-                        //big buildings need more specific handling
-                        for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
-                            if (main.calculateDistance(pos, bigBuilding.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                for (buildOrderChunk.buildOrders.items) |*buildOrder| {
-                                    if (main.calculateDistance(pos, buildOrder.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                        buildOrder.materialCount += 1;
-                                        isSpecialBigBuildingCase = true;
-                                        break;
+                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
+                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                        const buildOrderChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
+                        var isSpecialBigBuildingCase = false;
+                        if (citizen.buildingPosition != null) {
+                            //big buildings need more specific handling
+                            for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
+                                if (main.calculateDistance(pos, bigBuilding.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                    for (buildOrderChunk.buildOrders.items) |*buildOrder| {
+                                        if (main.calculateDistance(pos, buildOrder.position) < mapZig.GameMap.TILE_SIZE / 2) {
+                                            buildOrder.materialCount += 1;
+                                            isSpecialBigBuildingCase = true;
+                                            break;
+                                        }
                                     }
+                                    break;
                                 }
-                                break;
                             }
                         }
-                    }
-                    if (!isSpecialBigBuildingCase) {
-                        try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
+                        if (!isSpecialBigBuildingCase) {
+                            try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
+                        }
                     }
                 }
             }
