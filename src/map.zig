@@ -970,8 +970,9 @@ fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !vo
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
-        if (chunkArea.idleTypeData == .unloaded) {
+        if (chunkArea.unloaded) {
             try saveZig.loadChunkAreaFromFile(areaXY, state);
+            chunkArea.unloaded = false;
             chunkArea.idleTypeData = .idle;
             std.debug.print("loaded chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
             return;
@@ -980,7 +981,6 @@ fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !vo
         try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
         std.debug.print("created chunkarea {} {}\n", .{ areaXY.areaX, areaXY.areaY });
     }
-    // if (chunkXY.chunkX < 0 and chunkXY.chunkX > -20 and chunkXY.chunkY > 0 and chunkXY.chunkY < 20) std.debug.print("created chunk {} {}\n", .{ chunkXY.chunkX, chunkXY.chunkY });
     const newChunk = try createChunk(chunkXY, state);
     const key = getKeyForChunkXY(chunkXY);
     try state.map.chunks.put(key, newChunk);

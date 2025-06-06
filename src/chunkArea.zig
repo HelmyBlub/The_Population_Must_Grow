@@ -13,14 +13,12 @@ pub const ChunkAreaIdleType = enum {
     waitingForCitizens,
     idle,
     notIdle,
-    unloaded,
 };
 
 pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
     waitingForCitizens: u32,
     idle,
     notIdle,
-    unloaded,
 };
 
 pub const ChunkArea: type = struct {
@@ -30,6 +28,7 @@ pub const ChunkArea: type = struct {
     tickedCitizenCounter: usize = 0,
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
+    unloaded: bool = false,
     visible: bool = false,
     pub const SIZE = 20;
 };
@@ -225,18 +224,18 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
 
 pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     // check for area load/unload
-    // for (0..state.usedThreadsCount) |threadIndex| {
-    //     const threadData = &state.threadData[threadIndex];
-    //     while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
-    //         const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
-    //         const chunkArea = state.chunkAreas.getPtr(removedKey).?;
-    //         if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
-    //             chunkArea.idleTypeData = .unloaded;
-    //             try saveZig.saveChunkAreaToFile(chunkArea, state);
-    //             try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
-    //         }
-    //     }
-    // }
+    for (0..state.usedThreadsCount) |threadIndex| {
+        const threadData = &state.threadData[threadIndex];
+        while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
+            const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
+            const chunkArea = state.chunkAreas.getPtr(removedKey).?;
+            if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
+                try saveZig.saveChunkAreaToFile(chunkArea, state);
+                try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
+                chunkArea.unloaded = true;
+            }
+        }
+    }
 
     if (state.usedThreadsCount > 1) {
         // check balance

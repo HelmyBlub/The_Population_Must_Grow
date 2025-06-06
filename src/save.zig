@@ -76,7 +76,6 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
                 .chunkX = (@as(i32, @intCast(areaChunkX)) + chunkArea.areaXY.areaX * chunkAreaZig.ChunkArea.SIZE),
                 .chunkY = (@as(i32, @intCast(areaChunkY)) + chunkArea.areaXY.areaY * chunkAreaZig.ChunkArea.SIZE),
             };
-            if (chunkXY.chunkY == 0) std.debug.print("d", .{});
             const writeValueChunkXyIndex: usize = (areaChunkX * chunkAreaZig.ChunkArea.SIZE + areaChunkY) * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH;
             const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
             for (chunk.trees.items) |tree| {
@@ -100,7 +99,6 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
                     writeValue = SAVE_TREE_AND_PATH;
                 }
                 writeValues[writeValueIndex] = writeValue;
-                std.debug.print("savepath", .{});
             }
             for (chunk.potatoFields.items) |potatoField| {
                 const writeValueIndex = writeValueChunkXyIndex + positionToWriteIndexTilePart(potatoField.position);
@@ -202,7 +200,7 @@ fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAre
                     const potatoChunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(pos, state);
                     for (potatoChunk.potatoFields.items) |*potatoField| {
                         if (main.calculateDistance(pos, potatoField.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                            potatoField.citizenOnTheWay -= 1;
+                            potatoField.citizenOnTheWay -|= 1;
                             break;
                         }
                     }
@@ -273,7 +271,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
 
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
-
+    std.debug.print("loaded area {} {}\n", .{ areaXY.areaX, areaXY.areaY });
     const reader = file.reader();
     var readValues: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
     _ = try reader.readAll(&readValues);
@@ -318,7 +316,6 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
         if (currenChunk) |*chunk| {
             switch (value) {
                 SAVE_PATH => {
-                    std.debug.print("loadpath", .{});
                     try chunk.pathes.append(position);
                 },
                 SAVE_TREE => {
