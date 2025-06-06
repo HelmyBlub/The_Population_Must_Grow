@@ -31,6 +31,7 @@ const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_1 = 22;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_2 = 23;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_3 = 24;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4 = 25;
+const FILE_NAME_GENERAL_DATA = "general.data";
 
 fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
     const game_name = "NumberGoUp";
@@ -55,6 +56,63 @@ fn getFileNameForAreaXy(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.All
     try writer.print("region_{d}_{d}.dat", .{ areaXY.areaX, areaXY.areaY });
 
     return getSavePath(allocator, buf.items);
+}
+
+pub fn chunkAreaFileExists(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.Allocator) !bool {
+    const path = try getFileNameForAreaXy(areaXY, allocator);
+    defer allocator.free(path);
+
+    const file = std.fs.cwd().openFile(path, .{}) catch return false;
+    defer file.close();
+    return true;
+}
+
+pub fn saveGeneralDataToFile(state: *main.ChatSimState) !void {
+    const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
+    defer state.allocator.free(filepath);
+
+    const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
+    defer file.close();
+
+    const writer = file.writer();
+    _ = try writer.writeInt(u64, state.citizenCounter, .little);
+    _ = try writer.writeInt(u32, state.gameTimeMs, .little);
+
+    var activeThreads = std.ArrayList(u64).init(state.allocator);
+    defer activeThreads.deinit();
+
+    for (state.threadData) |threadData| {
+        for (threadData.chunkAreaKeys.items) |areaKey| {
+            try activeThreads.append(areaKey);
+        }
+    }
+    _ = try writer.writeInt(usize, activeThreads.items.len, .little);
+    for (activeThreads.items) |item| {
+        _ = try writer.writeInt(u64, item, .little);
+    }
+}
+
+/// returns false if no file found
+pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
+    const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
+    defer state.allocator.free(filepath);
+
+    const file = std.fs.cwd().openFile(filepath, .{}) catch return false;
+    defer file.close();
+
+    const reader = file.reader();
+
+    state.citizenCounter = try reader.readInt(u64, .little);
+    state.citizenCounterLastTick = state.citizenCounter;
+    state.gameTimeMs = try reader.readInt(u32, .little);
+    const activeChunkAreaKeysLength: usize = try reader.readInt(usize, .little);
+    var activeThreads = try std.ArrayList(u64).initCapacity(state.allocator, activeChunkAreaKeysLength);
+    defer activeThreads.deinit();
+    for (0..activeChunkAreaKeysLength) |_| {
+        const key = try reader.readInt(u64, .little);
+        try activeThreads.append(key);
+    }
+    return true;
 }
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
@@ -241,6 +299,14 @@ fn positionToWriteIndexTilePart(position: main.Position) usize {
     return tileUsizeX * mapZig.GameMap.CHUNK_LENGTH + tileUsizeY;
 }
 
+pub fn saveAllChunkAreasBeforeQuit(state: *main.ChatSimState) !void {
+    for (state.chunkAreas.values()) |*chunkArea| {
+        if (!chunkArea.unloaded) {
+            try saveChunkAreaToFile(chunkArea, state);
+        }
+    }
+}
+
 pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
     for (0..chunkAreaZig.ChunkArea.SIZE) |x| {
         for (0..chunkAreaZig.ChunkArea.SIZE) |y| {
@@ -283,6 +349,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
                     disconnectPathingBetweenChunkAreas(oldChunk, state);
                     try handleActiveCitizensInChunkToUnload(oldChunk, areaXY, state);
                     mapZig.destroyChunk(oldChunk);
+                    std.debug.print("saveZig load chunk area. should no longer happen?\n", .{});
                 }
                 try state.map.chunks.put(currentKey, chunk);
             }
@@ -511,6 +578,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
             disconnectPathingBetweenChunkAreas(oldChunk, state);
             try handleActiveCitizensInChunkToUnload(oldChunk, areaXY, state);
             mapZig.destroyChunk(oldChunk);
+            std.debug.print("saveZig load chunk area. should no longer happen?\n", .{});
         }
         try state.map.chunks.put(currentKey, chunk);
     }
@@ -538,10 +606,6 @@ fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: 
 }
 
 fn setupPathingForLoadedChunkArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
-    // var chunkArea: chunkAreaZig.ChunkArea = .{
-    //     .areaXY = areaXY,
-    //     .currentChunkKeyIndex = 0,
-    // };
     for (0..chunkAreaZig.ChunkArea.SIZE) |x| {
         for (0..chunkAreaZig.ChunkArea.SIZE) |y| {
             const chunkXY: mapZig.ChunkXY = .{

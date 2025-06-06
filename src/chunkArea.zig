@@ -113,19 +113,26 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
     }
     if (threadWithLeastAreas) |thread| {
         try thread.chunkAreaKeys.append(areaKey);
-        try putChunkArea(areaXY, areaKey, state);
+        _ = try putChunkArea(areaXY, areaKey, state);
         return;
     }
 
     std.debug.print("problem?: chunk area not handles\n", .{});
 }
 
-pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !void {
+/// returns true of loaded from file
+pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
+    var loadedFromFile = false;
+    if (try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
+        try saveZig.loadChunkAreaFromFile(areaXY, state);
+        loadedFromFile = true;
+    }
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
         .chunkKeyOrder = setupChunkAreaKeyOrder(areaXY),
         .currentChunkKeyIndex = 0,
     });
+    return loadedFromFile;
 }
 
 fn setupChunkAreaKeyOrder(areaXY: ChunkAreaXY) [ChunkArea.SIZE * ChunkArea.SIZE]u64 {

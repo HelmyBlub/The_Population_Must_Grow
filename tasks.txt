@@ -1,5 +1,14 @@
 tasks:
 - save idle chunks and clean up from memory, load when required again
+    - fix tests to not load and save data from files
+    - reset option for player
+    - save on game end
+        - what do i need to save?
+            - game time
+            - citizen counter
+            - active chunkAreas
+    - load on game start
+    - reset
     - unload every area which is idle and only has idle neighbors
         - if one area is set to idle -> check if area adjacent to it might be unloaded
         - if one area is removed from idle -> check if area needs to be loaded
@@ -9,8 +18,7 @@ tasks:
     - check performance, improve
         - might mean a seperate thread might be better
         - reuse unloaded objects to prevent memory alloc and deallocs
-    - save and load on game end and game start
-        - reset
+    - save if citizens was starved
 
 - bug: game crash, unknown how to reproduce, different stack traces
         thread 8608 panic: attempt to use null value

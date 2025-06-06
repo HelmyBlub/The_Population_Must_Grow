@@ -1055,7 +1055,7 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
                     const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
                     if (state.vkState.rectangle.verticeCount + 6 >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
                     if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
-                        std.debug.print("beforeCrash: {}, {}, {}, {}\n", .{ rectangle.tileRectangle, rectangle.index, rectangle.chunkKey, conData.chunkKey });
+                        std.debug.print("beforeCrash: {}, {}, {}, {}, {}\n", .{ rectangle.tileRectangle, rectangle.index, rectangle.chunkKey, conData.chunkKey, rectangle.connectionIndexes.items.len });
                         continue;
                     }
                     const conRect = conChunk.pathingData.graphRectangles.items[conData.index].tileRectangle;

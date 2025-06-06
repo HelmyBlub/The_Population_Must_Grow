@@ -177,7 +177,7 @@ pub fn visibleAndAdjacentChunkRectangle(state: *main.ChatSimState) !void {
         .rows = @intFromFloat(windowSdlZig.windowData.heightFloat / camera.zoom / GameMap.CHUNK_SIZE + 2 + increaseBy * 2),
     };
 
-    if (state.gameTimeMs > 0) try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(state.visibleAndTickRectangle, false, state);
+    if (state.visibleAndTickRectangle) |rect| try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(rect, false, state);
     state.visibleAndTickRectangle = newVisible;
     try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(newVisible, true, state);
 }
@@ -977,7 +977,8 @@ fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !vo
             return;
         }
     } else {
-        try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+        const loadedFromFile = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+        if (loadedFromFile) return;
     }
     const newChunk = try createChunk(chunkXY, state);
     const key = getKeyForChunkXY(chunkXY);

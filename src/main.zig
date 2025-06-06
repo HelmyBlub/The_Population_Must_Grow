@@ -10,6 +10,7 @@ const testZig = @import("test.zig");
 const codePerformanceZig = @import("codePerformance.zig");
 const imageZig = @import("image.zig");
 const chunkAreaZig = @import("chunkArea.zig");
+const saveZig = @import("save.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -57,7 +58,7 @@ pub const ChatSimState: type = struct {
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     wasSingleCore: bool = true,
     chunkAreas: std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea),
-    visibleAndTickRectangle: mapZig.VisibleChunksData = undefined,
+    visibleAndTickRectangle: ?mapZig.VisibleChunksData = null,
 };
 
 pub const ThreadData = struct {
@@ -181,7 +182,8 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         };
     }
     try codePerformanceZig.init(state);
-    try mapZig.createSpawnChunk(allocator, state);
+    const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
+    if (!couldLoadGeneralData) try mapZig.createSpawnChunk(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
     try soundMixerZig.createSoundMixer(state, allocator);
@@ -952,6 +954,12 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *chunkAreaZig.C
 
 pub fn destroyGameState(state: *ChatSimState) void {
     std.debug.print("started destory\n", .{});
+    saveZig.saveGeneralDataToFile(state) catch {
+        std.debug.print("failed to save general data\n", .{});
+    };
+    saveZig.saveAllChunkAreasBeforeQuit(state) catch {
+        std.debug.print("failed to save chunkArea data\n", .{});
+    };
     for (state.threadData) |threadData| {
         if (threadData.thread) |thread| {
             thread.join();
