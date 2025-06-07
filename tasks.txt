@@ -1,6 +1,7 @@
 tasks:
 - save idle chunks and clean up from memory, load when required again
     - fix tests to not load and save data from files
+    - load active chunks on game start
     - reset option for player
     - save on game end
         - what do i need to save?
@@ -19,6 +20,7 @@ tasks:
         - might mean a seperate thread might be better
         - reuse unloaded objects to prevent memory alloc and deallocs
     - save if citizens was starved
+- bug: auto balance chunkAreas to thread swaping entire count when 0 and x?
 
 - bug: game crash, unknown how to reproduce, different stack traces
         thread 8608 panic: attempt to use null value
@@ -57,8 +59,6 @@ tasks:
 Some data:
 - FPS: 121, citizens: 33624, gameTime: 330000, end FPS: 75.474686 (06.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
-- FPS: 121, citizens: 33768, gameTime: 330000, end FPS: 75.298096 (citizens can eat while waiting for tree)
 
 
 Goal:

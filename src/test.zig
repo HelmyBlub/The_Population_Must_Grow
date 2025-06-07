@@ -56,7 +56,7 @@ pub fn executePerfromanceTest() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     var state: main.ChatSimState = undefined;
-    try main.createGameState(allocator, &state, 0);
+    try main.createGameState(allocator, &state, 0, true);
     defer main.destroyGameState(&state);
     state.testData = createTestData(state.allocator);
     const testData = &state.testData.?;

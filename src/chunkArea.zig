@@ -123,7 +123,7 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
 /// returns true of loaded from file
 pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
     var loadedFromFile = false;
-    if (try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
+    if (state.testData == null and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
         try saveZig.loadChunkAreaFromFile(areaXY, state);
         loadedFromFile = true;
     }

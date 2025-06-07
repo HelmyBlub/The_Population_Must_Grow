@@ -118,7 +118,7 @@ var SIMULATION_MICRO_SECOND_DURATION: ?i64 = null;
 test "test for memory leaks" {
     const test_allocator = std.testing.allocator;
     SIMULATION_MICRO_SECOND_DURATION = 100_000;
-    try startGame(test_allocator);
+    try startGame(test_allocator, true);
     // testing allocator will fail test if something is not deallocated
 }
 
@@ -131,7 +131,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    try startGame(allocator);
+    try startGame(allocator, false);
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
@@ -140,7 +140,7 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     return @floatCast(@sqrt(diffX * diffX + diffY * diffY));
 }
 
-pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, randomSeed: ?u64) !void {
+pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, randomSeed: ?u64, isTest: bool) !void {
     var seed: u64 = undefined;
     if (randomSeed) |randSeed| {
         seed = randSeed;
@@ -170,6 +170,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
         .maxThreadCount = std.Thread.getCpuCount() catch 1,
         .usedThreadsCount = 1,
         .chunkAreas = std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea).init(allocator),
+        .testData = if (isTest) testZig.createTestData(allocator) else null,
     };
     state.threadData = try allocator.alloc(ThreadData, state.maxThreadCount);
     for (0..state.maxThreadCount) |i| {
@@ -297,10 +298,10 @@ fn destroyPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
     windowSdlZig.destroyWindowSdl();
 }
 
-fn startGame(allocator: std.mem.Allocator) !void {
+fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     std.debug.print("game run start\n", .{});
     var state: ChatSimState = undefined;
-    try createGameState(allocator, &state, null);
+    try createGameState(allocator, &state, null, isTest);
     defer destroyGameState(&state);
     try mainLoop(&state);
 }

@@ -68,6 +68,9 @@ pub fn chunkAreaFileExists(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.
 }
 
 pub fn saveGeneralDataToFile(state: *main.ChatSimState) !void {
+    if (state.testData) |_| {
+        return;
+    }
     const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
     defer state.allocator.free(filepath);
 
@@ -92,8 +95,11 @@ pub fn saveGeneralDataToFile(state: *main.ChatSimState) !void {
     }
 }
 
-/// returns false if no file found
+/// returns false if no file loaded
 pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
+    if (state.testData) |_| {
+        return false;
+    }
     const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
     defer state.allocator.free(filepath);
 
@@ -106,16 +112,20 @@ pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
     state.citizenCounterLastTick = state.citizenCounter;
     state.gameTimeMs = try reader.readInt(u32, .little);
     const activeChunkAreaKeysLength: usize = try reader.readInt(usize, .little);
-    var activeThreads = try std.ArrayList(u64).initCapacity(state.allocator, activeChunkAreaKeysLength);
-    defer activeThreads.deinit();
     for (0..activeChunkAreaKeysLength) |_| {
         const key = try reader.readInt(u64, .little);
-        try activeThreads.append(key);
+        const areaXY = chunkAreaZig.getAreaXyForKey(key);
+        if (try chunkAreaZig.putChunkArea(areaXY, key, state)) {
+            try state.threadData[0].chunkAreaKeys.append(key);
+        }
     }
     return true;
 }
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
+    if (state.testData) |_| {
+        return;
+    }
     std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
@@ -300,6 +310,9 @@ fn positionToWriteIndexTilePart(position: main.Position) usize {
 }
 
 pub fn saveAllChunkAreasBeforeQuit(state: *main.ChatSimState) !void {
+    if (state.testData) |_| {
+        return;
+    }
     for (state.chunkAreas.values()) |*chunkArea| {
         if (!chunkArea.unloaded) {
             try saveChunkAreaToFile(chunkArea, state);
@@ -326,6 +339,10 @@ pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *mai
 }
 
 pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
+    if (state.testData) |_| {
+        return;
+    }
+
     const path = try getFileNameForAreaXy(areaXY, state.allocator);
     defer state.allocator.free(path);
 
