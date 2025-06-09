@@ -361,6 +361,7 @@ pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *mai
             }
         }
     }
+    state.map.chunks.rehash();
 }
 
 pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {

@@ -1,4 +1,6 @@
 tasks:
+- performance issue:
+    - max out camera and just move into one direction. After some time fps will completly break
 - save idle chunks and clean up from memory, load when required again
     - reset option for player
         - currently 40_000 citizens displyed but only ~40 exist. Check if number seems correct or maybe save is inaccurate
