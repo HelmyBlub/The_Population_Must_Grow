@@ -132,10 +132,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {
-                try saveZig.saveGeneralDataToFile(state);
-                std.debug.print("test save general data\n", .{});
-                _ = try saveZig.loadGeneralDataFromFile(state);
-                std.debug.print("test load general data\n", .{});
+                try main.deleteSaveAndRestart(state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F11) {
                 std.debug.print("thread performance\n", .{});
                 for (state.threadData, 0..) |threadData, index| {

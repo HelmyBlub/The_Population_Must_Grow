@@ -1,19 +1,12 @@
 tasks:
 - save idle chunks and clean up from memory, load when required again
-    - fix tests to not load and save data from files
-    - load active chunks on game start
     - reset option for player
-    - save on game end
-        - what do i need to save?
-            - game time
-            - citizen counter
-            - active chunkAreas
-    - load on game start
-    - reset
-    - unload every area which is idle and only has idle neighbors
-        - if one area is set to idle -> check if area adjacent to it might be unloaded
-        - if one area is removed from idle -> check if area needs to be loaded
-        - if new area created -> check if area needs to be loaded
+        - currently 40_000 citizens displyed but only ~40 exist. Check if number seems correct or maybe save is inaccurate
+    - load and save creates some lag, mabye some buffer zone can help. Only save/unload when neighbor idle
+        - unload every area which is idle and only has idle neighbors
+            - if one area is set to idle -> check if area adjacent to it might be unloaded
+            - if one area is removed from idle -> check if area needs to be loaded
+            - if new area created -> check if area needs to be loaded
 
     - citizens of other chunk area can be in unloaded chunk area, how to handle
     - check performance, improve
@@ -57,7 +50,7 @@ tasks:
 
   
 Some data:
-- FPS: 121, citizens: 33624, gameTime: 330000, end FPS: 75.474686 (06.06.2025)
+- FPS: 120, citizens: 33769, gameTime: 330000, end FPS: 76.31871 (09.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 
 

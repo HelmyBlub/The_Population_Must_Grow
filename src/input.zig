@@ -52,7 +52,7 @@ pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
     state.keyboardInfo.keybindings[11] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_1, .displayChar = '-', .action = ActionType.zoomOut };
 }
 
-pub fn destory(state: *main.ChatSimState) void {
+pub fn destroy(state: *main.ChatSimState) void {
     state.allocator.free(state.keyboardInfo.keybindings);
 }
 

@@ -34,6 +34,15 @@ const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4 = 25;
 const FILE_NAME_GENERAL_DATA = "general.data";
 
 fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
+    const directory_path = try getSaveDirectoryPath(allocator);
+    defer allocator.free(directory_path);
+    try std.fs.cwd().makePath(directory_path);
+
+    const full_path = try std.fs.path.join(allocator, &.{ directory_path, filename });
+    return full_path;
+}
+
+fn getSaveDirectoryPath(allocator: std.mem.Allocator) ![]const u8 {
     const game_name = "NumberGoUp";
     const save_folder = "saves";
 
@@ -41,11 +50,7 @@ fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
     defer allocator.free(base_dir);
 
     const directory_path = try std.fs.path.join(allocator, &.{ base_dir, save_folder });
-    defer allocator.free(directory_path);
-    try std.fs.cwd().makePath(directory_path);
-
-    const full_path = try std.fs.path.join(allocator, &.{ directory_path, filename });
-    return full_path;
+    return directory_path;
 }
 
 fn getFileNameForAreaXy(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.Allocator) ![]const u8 {
@@ -120,6 +125,26 @@ pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
         }
     }
     return true;
+}
+
+pub fn deleteSave(allocator: std.mem.Allocator) !void {
+    const saveDirectory = try getSaveDirectoryPath(allocator);
+    defer allocator.free(saveDirectory);
+
+    var dir = try std.fs.cwd().openDir(saveDirectory, .{
+        .access_sub_paths = false,
+        .iterate = true,
+    });
+    defer dir.close();
+    var walker = try dir.walk(allocator);
+    defer walker.deinit();
+    while (try walker.next()) |entry| {
+        if (entry.kind == .file) {
+            if (std.mem.startsWith(u8, entry.basename, "region_") or std.mem.eql(u8, entry.basename, FILE_NAME_GENERAL_DATA)) {
+                try dir.deleteFile(entry.basename);
+            }
+        }
+    }
 }
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {

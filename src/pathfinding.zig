@@ -803,7 +803,7 @@ pub fn destoryChunkData(pathingData: *PathfindingChunkData) void {
     pathingData.graphRectangles.deinit();
 }
 
-pub fn destoryPathfindingData(data: *PathfindingTempData) void {
+pub fn destroyPathfindingData(data: *PathfindingTempData) void {
     data.cameFrom.deinit();
     data.gScore.deinit();
     data.openSet.deinit();

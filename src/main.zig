@@ -191,6 +191,27 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     try inputZig.executeAction(inputZig.ActionType.buildPath, state);
 }
 
+pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
+    try saveZig.deleteSave(state.allocator);
+    state.citizenCounter = 1;
+    state.camera = .{
+        .position = .{ .x = 0, .y = 0 },
+        .zoom = 1,
+    };
+    state.gameTimeMs = 0;
+    var iterator = state.map.chunks.valueIterator();
+    while (iterator.next()) |chunk| {
+        mapZig.destroyChunk(chunk);
+    }
+    state.map.chunks.clearAndFree();
+    state.chunkAreas.clearAndFree();
+    for (state.threadData) |*threadData| {
+        threadData.chunkAreaKeys.clearAndFree();
+        threadData.recentlyRemovedChunkAreaKeys.clearAndFree();
+    }
+    try mapZig.createSpawnChunk(state.allocator, state);
+}
+
 pub fn setupRectangleData(state: *ChatSimState) void {
     if (state.copyAreaRectangle) |copyAreaRectangle| {
         state.rectangles[1] = .{
@@ -976,14 +997,14 @@ pub fn destroyGameState(state: *ChatSimState) void {
 
     for (0..state.maxThreadCount) |i| {
         const threadData = &state.threadData[i];
-        pathfindingZig.destoryPathfindingData(&threadData.pathfindingTempData);
+        pathfindingZig.destroyPathfindingData(&threadData.pathfindingTempData);
         threadData.chunkAreaKeys.deinit();
         threadData.recentlyRemovedChunkAreaKeys.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();
     }
-    inputZig.destory(state);
+    inputZig.destroy(state);
     codePerformanceZig.destroy(state);
     state.chunkAreas.deinit();
     state.map.chunks.deinit();
