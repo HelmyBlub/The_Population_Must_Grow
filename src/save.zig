@@ -602,9 +602,12 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
                     try chunk.bigBuildings.append(newBuilding);
                     try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
                 },
-
+                SAVE_EMPTY => {
+                    // nothing to do
+                },
                 else => {
-                    //missing implementation or nothing to do
+                    //missing implementation? or bug
+                    std.debug.print("unknown load value: {d}", .{value});
                 },
             }
         }

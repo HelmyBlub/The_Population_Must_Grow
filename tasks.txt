@@ -1,9 +1,8 @@
 tasks:
-- gameCrash: press f8 for auto build up. Then zoom out -> crash
-- bug: empty chunkArea
-- bug: citizen count incorrect
+- bug: empty chunkArea, missing chunks
+    - maybe related to copy alot?
 - bug: not all chunks ticked. Not all buildings where being build
-- bug: auto balance chunkAreas to thread swaping entire count when 0 and x?
+- save/load part of tick measurement? very bad?
 - load/save performance
 
 - UI: reset 
