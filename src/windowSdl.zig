@@ -105,12 +105,14 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
                     state.testData.?.fpsLimiter = true;
+                    state.testData.?.skipSaveAndLoad = false;
                 }
                 state.testData.?.forceSingleCore = true;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F3) {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
                     state.testData.?.fpsLimiter = true;
+                    state.testData.?.skipSaveAndLoad = false;
                 }
                 state.testData.?.forceSingleCore = false;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F5) {
@@ -129,6 +131,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
                     state.testData.?.fpsLimiter = true;
+                    state.testData.?.skipSaveAndLoad = false;
                     try testZig.setupTestInputsXAreas(&state.testData.?);
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {

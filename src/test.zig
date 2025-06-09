@@ -49,6 +49,7 @@ pub const TestData = struct {
     fpsLimiter: bool = true,
     testStartTimeMircoSeconds: i64,
     forceSingleCore: bool = false,
+    skipSaveAndLoad: bool = true,
 };
 
 pub fn executePerfromanceTest() !void {
@@ -61,7 +62,6 @@ pub fn executePerfromanceTest() !void {
     state.testData = createTestData(state.allocator);
     const testData = &state.testData.?;
     state.desiredGameSpeed = 1;
-    // try setupTestInputs(testData);
     try setupTestInputs(testData);
 
     try main.mainLoop(&state);

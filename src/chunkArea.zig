@@ -123,7 +123,7 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
 /// returns true of loaded from file
 pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
     var loadedFromFile = false;
-    if (state.testData == null and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
+    if ((state.testData == null or !state.testData.?.skipSaveAndLoad) and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
         try saveZig.loadChunkAreaFromFile(areaXY, state);
         loadedFromFile = true;
     }
@@ -253,15 +253,17 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
 
 pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     // check for area load/unload
-    for (0..state.usedThreadsCount) |threadIndex| {
-        const threadData = &state.threadData[threadIndex];
-        while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
-            const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
-            const chunkArea = state.chunkAreas.getPtr(removedKey).?;
-            if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
-                try saveZig.saveChunkAreaToFile(chunkArea, state);
-                try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
-                chunkArea.unloaded = true;
+    if (state.testData == null or !state.testData.?.skipSaveAndLoad) {
+        for (0..state.usedThreadsCount) |threadIndex| {
+            const threadData = &state.threadData[threadIndex];
+            while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
+                const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
+                const chunkArea = state.chunkAreas.getPtr(removedKey).?;
+                if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
+                    try saveZig.saveChunkAreaToFile(chunkArea, state);
+                    try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
+                    chunkArea.unloaded = true;
+                }
             }
         }
     }

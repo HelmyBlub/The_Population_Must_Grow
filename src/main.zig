@@ -199,6 +199,7 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
         .zoom = 1,
     };
     state.gameTimeMs = 0;
+    state.lastAutoGameSpeedChangeTime = 0;
     var iterator = state.map.chunks.valueIterator();
     while (iterator.next()) |chunk| {
         mapZig.destroyChunk(chunk);
