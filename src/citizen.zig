@@ -429,8 +429,8 @@ fn potatoHarvestTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSim
             try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 8 }, threadIndex, state);
         }
     } else {
-        try nextThinkingAction(citizen, state);
         citizen.potatoPosition = null;
+        try nextThinkingAction(citizen, state);
     }
 }
 

@@ -1,21 +1,21 @@
 tasks:
-- performance issue:
-    - max out camera and just move into one direction. After some time fps will completly break
-- save idle chunks and clean up from memory, load when required again
-    - reset option for player
-        - currently 40_000 citizens displyed but only ~40 exist. Check if number seems correct or maybe save is inaccurate
-    - load and save creates some lag, mabye some buffer zone can help. Only save/unload when neighbor idle
-        - unload every area which is idle and only has idle neighbors
-            - if one area is set to idle -> check if area adjacent to it might be unloaded
-            - if one area is removed from idle -> check if area needs to be loaded
-            - if new area created -> check if area needs to be loaded
-
-    - citizens of other chunk area can be in unloaded chunk area, how to handle
-    - check performance, improve
-        - might mean a seperate thread might be better
-        - reuse unloaded objects to prevent memory alloc and deallocs
-    - save if citizens was starved
+- gameCrash: press f8 for auto build up. Then zoom out -> crash
+- bug: empty chunkArea
+- bug: citizen count incorrect
+- bug: not all chunks ticked. Not all buildings where being build
 - bug: auto balance chunkAreas to thread swaping entire count when 0 and x?
+- load/save performance
+
+- UI: reset 
+- UI: sound volume setting
+- check: make map round?
+
+- check: citizens of other chunk area can be in unloaded chunk area, how to handle
+- think about: save if citizens was starved?
+
+- small changes:
+    - idle citizens walk slower
+
 
 - bug: game crash, unknown how to reproduce, different stack traces
         thread 8608 panic: attempt to use null value
@@ -54,7 +54,7 @@ tasks:
 Some data:
 - FPS: 120, citizens: 33769, gameTime: 330000, end FPS: 76.31871 (09.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
+- FPS: 126, citizens: 33772, gameTime: 330000, end FPS: 80.59782 (if stream browser minimized)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
