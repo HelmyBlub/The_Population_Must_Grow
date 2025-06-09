@@ -1,6 +1,16 @@
 tasks:
+- redesign code:
+    - chunk into chunkArea
+    - currently all chunks in one map
+    - multiple threads can put into map. Race condition. Can break
+    - how is the data setup
+        - chunkAreas.chunks[index]=value.
+            - index for fast iterating over, chunks will be in order of ticking
+            - accessing chunks might be more complicated as i need to find the correct index
+
 - bug: empty chunkArea, missing chunks
     - maybe related to copy alot?
+- check rehash chunkAreas
 - bug: not all chunks ticked. Not all buildings where being build
 - save/load part of tick measurement? very bad?
 - load/save performance
@@ -14,6 +24,7 @@ tasks:
 
 - small changes:
     - idle citizens walk slower
+- check "ensureUnusedCapacity" values
 
 
 - bug: game crash, unknown how to reproduce, different stack traces

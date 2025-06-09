@@ -17,14 +17,14 @@ pub const PathfindingTempData = struct {
 
 pub const ChunkGraphRectangle = struct {
     index: usize,
-    chunkKey: u64,
+    chunkXY: mapZig.ChunkXY,
     tileRectangle: mapZig.MapTileRectangle,
     connectionIndexes: std.ArrayList(GraphConnection),
 };
 
 pub const GraphConnection = struct {
     index: usize,
-    chunkKey: u64,
+    chunkXY: mapZig.ChunkXY,
 };
 
 pub const PathfindingChunkData = struct {

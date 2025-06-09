@@ -19,7 +19,6 @@ const sdl = @cImport({
 });
 
 pub const ChatSimState: type = struct {
-    map: mapZig.GameMap,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
     desiredGameSpeed: f32,
@@ -200,11 +199,6 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
     };
     state.gameTimeMs = 0;
     state.lastAutoGameSpeedChangeTime = 0;
-    var iterator = state.map.chunks.valueIterator();
-    while (iterator.next()) |chunk| {
-        mapZig.destroyChunk(chunk);
-    }
-    state.map.chunks.clearAndFree();
     state.chunkAreas.clearAndFree();
     for (state.threadData) |*threadData| {
         threadData.chunkAreaKeys.clearAndFree();
@@ -627,11 +621,10 @@ fn getTotalChunkAreaCount(threadDatas: []ThreadData) usize {
 fn tick(state: *ChatSimState) !void {
     try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
-    try state.map.chunks.ensureTotalCapacity(state.map.chunks.count() + 60);
     try testZig.tick(state);
 
     var nonMainThreadsDataCount: usize = 0;
-    try state.chunkAreas.ensureUnusedCapacity(10);
+    try state.chunkAreas.ensureUnusedCapacity(40);
     for (state.threadData, 0..) |*threadData, i| {
         try threadData.chunkAreaKeys.ensureUnusedCapacity(10);
         for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
@@ -866,7 +859,7 @@ fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *chunkAreaZig.C
     // if (state.gameTimeMs == 16 * 60 * 250) {
     //     std.debug.print("test1 \n", .{});
     // }
-    const optChunk = state.map.chunks.getPtr(chunkKey);
+    const optChunk = chunkArea.chunks[chunkKey];
     if (optChunk == null) return .idle;
     const chunk = optChunk.?;
 

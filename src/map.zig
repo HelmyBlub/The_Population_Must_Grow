@@ -7,7 +7,6 @@ const chunkAreaZig = @import("chunkArea.zig");
 const saveZig = @import("save.zig");
 
 pub const GameMap = struct {
-    chunks: std.HashMap(u64, MapChunk, U64HashMapContext, 30),
     pub const CHUNK_LENGTH: comptime_int = 16;
     pub const TILE_SIZE: comptime_int = 20;
     pub const CHUNK_SIZE: comptime_int = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
@@ -218,11 +217,20 @@ pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
 }
 
 pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) anyerror!*MapChunk {
-    const key = getKeyForChunkXY(chunkXY);
-    if (!state.map.chunks.contains(key)) {
-        try createAndPushChunkForChunkXY(chunkXY, state);
+    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    const optChunkArea = state.chunkAreas.getPtr(areaKey);
+    if (optChunkArea) |chunkArea| {
+        if (chunkArea.unloaded) {
+            try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
+            chunkArea.unloaded = false;
+            chunkArea.idleTypeData = .idle;
+        }
+    } else {
+        _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
     }
-    return state.map.chunks.getPtr(key).?;
+    const chunkIndex = getChunkIndexForChunkXY(chunkXY);
+    return &optChunkArea.?.chunks[chunkIndex];
 }
 
 pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *main.ChatSimState) !*MapChunk {
@@ -937,13 +945,8 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
     try unidleAffectedChunkAreas(tileRectangle, state);
 }
 
-pub fn getKeyForPosition(position: main.Position) !u64 {
-    const chunkXY = getChunkXyForPosition(position);
-    return getKeyForChunkXY(chunkXY.chunkX, chunkXY.chunkY);
-}
-
-pub fn getKeyForChunkXY(chunkXY: ChunkXY) u64 {
-    return @intCast(chunkXY.chunkX * GameMap.MAX_CHUNKS_ROWS_COLUMNS + chunkXY.chunkY + GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS);
+pub fn getChunkIndexForChunkXY(chunkXY: ChunkXY) usize {
+    return chunkAreaZig.chunkKeyOrder[@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))][@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))];
 }
 
 pub fn getChunkXyForKey(chunkKey: u64) ChunkXY {
@@ -964,30 +967,6 @@ pub fn getChunkXyForPosition(position: main.Position) ChunkXY {
         .chunkX = @intFromFloat(@floor(position.x / GameMap.CHUNK_SIZE)),
         .chunkY = @intFromFloat(@floor(position.y / GameMap.CHUNK_SIZE)),
     };
-}
-
-fn createAndPushChunkForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
-    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
-    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
-    if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
-        if (chunkArea.unloaded) {
-            try saveZig.loadChunkAreaFromFile(areaXY, state);
-            chunkArea.unloaded = false;
-            chunkArea.idleTypeData = .idle;
-            return;
-        }
-    } else {
-        const loadedFromFile = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
-        if (loadedFromFile) return;
-    }
-    const newChunk = try createChunk(chunkXY, state);
-    const key = getKeyForChunkXY(chunkXY);
-    try state.map.chunks.put(key, newChunk);
-}
-
-fn createAndPushChunkForPosition(position: main.Position, state: *main.ChatSimState) !void {
-    const chunkXY = getChunkXyForPosition(position);
-    try createAndPushChunkForChunkXY(chunkXY, state);
 }
 
 pub fn createEmptyChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {

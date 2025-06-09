@@ -21,10 +21,11 @@ pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
     notIdle,
 };
 
+pub const chunkKeyOrder: [ChunkArea.SIZE][ChunkArea.SIZE]usize = setupChunkAreaKeyOrder();
 pub const ChunkArea: type = struct {
     areaXY: ChunkAreaXY,
+    chunks: [SIZE * SIZE]mapZig.MapChunk,
     currentChunkKeyIndex: usize,
-    chunkKeyOrder: [SIZE * SIZE]u64,
     tickedCitizenCounter: usize = 0,
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
@@ -42,7 +43,7 @@ test "temp split active chunks" {
             .chunkX = @intCast(@mod(index, areaSize)),
             .chunkY = @intCast(@divFloor(index, areaSize)),
         });
-        const position = getNewActiveChunkKeyPosition(currentKey);
+        const position = getNewActiveChunkXYIndex(currentKey);
         area[position] = currentKey;
     }
     // std.debug.print("array: {any}\n", .{area});
@@ -123,36 +124,40 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
 /// returns true of loaded from file
 pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
     var loadedFromFile = false;
-    if ((state.testData == null or !state.testData.?.skipSaveAndLoad) and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
-        try saveZig.loadChunkAreaFromFile(areaXY, state);
-        loadedFromFile = true;
-    }
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
-        .chunkKeyOrder = setupChunkAreaKeyOrder(areaXY),
         .currentChunkKeyIndex = 0,
+        .chunks = undefined,
     });
+    const chunkArea = state.chunkAreas.getPtr(areaKey).?;
+    if ((state.testData == null or !state.testData.?.skipSaveAndLoad) and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
+        try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
+        loadedFromFile = true;
+    } else {
+        for (0..ChunkArea.SIZE) |chunkX| {
+            for (0..ChunkArea.SIZE) |chunkY| {
+                chunkArea.chunks[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
+                    .chunkX = chunkX + areaXY.areaX * ChunkArea.SIZE,
+                    .chunkY = chunkY + areaXY.areaY * ChunkArea.SIZE,
+                }, state);
+            }
+        }
+    }
     return loadedFromFile;
 }
 
-fn setupChunkAreaKeyOrder(areaXY: ChunkAreaXY) [ChunkArea.SIZE * ChunkArea.SIZE]u64 {
-    var result: [ChunkArea.SIZE * ChunkArea.SIZE]u64 = undefined;
+fn setupChunkAreaKeyOrder() [ChunkArea.SIZE][ChunkArea.SIZE]usize {
+    var result: [ChunkArea.SIZE][ChunkArea.SIZE]usize = undefined;
     for (0..ChunkArea.SIZE) |indexX| {
         for (0..ChunkArea.SIZE) |indexY| {
-            const chunkXY: mapZig.ChunkXY = .{
-                .chunkX = areaXY.areaX * ChunkArea.SIZE + @as(i32, @intCast(indexX)),
-                .chunkY = areaXY.areaY * ChunkArea.SIZE + @as(i32, @intCast(indexY)),
-            };
-            const key = mapZig.getKeyForChunkXY(chunkXY);
-            const index = getNewActiveChunkKeyPosition(key);
-            result[index] = key;
+            const index = getNewActiveChunkXYIndex(.{ .chunkX = indexX, .chunkY = indexY });
+            result[indexX][indexY] = index;
         }
     }
     return result;
 }
 
-fn getNewActiveChunkKeyPosition(newActiveChunkKey: u64) usize {
-    const chunkXY = mapZig.getChunkXyForKey(newActiveChunkKey);
+fn getNewActiveChunkXYIndex(chunkXY: mapZig.ChunkXY) usize {
     const areaSize = ChunkArea.SIZE;
     const halved = areaSize / 2;
     const areaXY = .{
