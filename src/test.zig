@@ -133,14 +133,14 @@ pub fn tick(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn determineValidanChunkDistanceForArea(chunkKeyArray: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE]u64) void {
+pub fn determineValidanChunkDistanceForArea(chunkXyArray: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE]mapZig.ChunkXY) void {
     const minDistance = 9;
     const areaSize = chunkAreaZig.ChunkArea.SIZE;
     var validationChunkDistance: usize = areaSize * areaSize;
-    for (0..chunkKeyArray.len) |index1| {
-        const chunkXY1 = mapZig.getChunkXyForKey(chunkKeyArray[index1]);
-        for (index1..chunkKeyArray.len) |index2| {
-            const chunkXY2 = mapZig.getChunkXyForKey(chunkKeyArray[index2]);
+    for (0..chunkXyArray.len) |index1| {
+        const chunkXY1 = chunkXyArray[index1];
+        for (index1..chunkXyArray.len) |index2| {
+            const chunkXY2 = chunkXyArray[index2];
             var isTooClose = false;
             if (@abs(chunkXY1.chunkX + areaSize - chunkXY2.chunkX) < minDistance and @abs(chunkXY1.chunkY + areaSize - chunkXY2.chunkY) < minDistance) {
                 isTooClose = true;

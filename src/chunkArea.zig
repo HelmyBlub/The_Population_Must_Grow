@@ -3,6 +3,7 @@ const main = @import("main.zig");
 const testZig = @import("test.zig");
 const mapZig = @import("map.zig");
 const saveZig = @import("save.zig");
+const pathfindingZig = @import("pathfinding.zig");
 
 pub const ChunkAreaXY: type = struct {
     areaX: i32,
@@ -24,12 +25,11 @@ pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
 pub const chunkKeyOrder: [ChunkArea.SIZE][ChunkArea.SIZE]usize = setupChunkAreaKeyOrder();
 pub const ChunkArea: type = struct {
     areaXY: ChunkAreaXY,
-    chunks: [SIZE * SIZE]mapZig.MapChunk,
-    currentChunkKeyIndex: usize,
+    chunks: ?[]mapZig.MapChunk,
+    currentChunkIndex: usize,
     tickedCitizenCounter: usize = 0,
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
-    unloaded: bool = false,
     visible: bool = false,
     pub const SIZE = 20;
 };
@@ -37,17 +37,17 @@ pub const ChunkArea: type = struct {
 test "temp split active chunks" {
     const areaSize = ChunkArea.SIZE;
     const length = areaSize * areaSize;
-    var area: [length]u64 = undefined;
-    for (0..area.len) |index| {
-        const currentKey: u64 = mapZig.getKeyForChunkXY(.{
+    var chunkXyOrder: [length]mapZig.ChunkXY = undefined;
+    for (0..chunkXyOrder.len) |index| {
+        const currentXY: mapZig.ChunkXY = .{
             .chunkX = @intCast(@mod(index, areaSize)),
             .chunkY = @intCast(@divFloor(index, areaSize)),
-        });
-        const position = getNewActiveChunkXYIndex(currentKey);
-        area[position] = currentKey;
+        };
+        const position = mapZig.getChunkIndexForChunkXY(currentXY);
+        chunkXyOrder[position] = currentXY;
     }
     // std.debug.print("array: {any}\n", .{area});
-    testZig.determineValidanChunkDistanceForArea(area);
+    testZig.determineValidanChunkDistanceForArea(chunkXyOrder);
 }
 
 pub fn getChunkAreaXyForPosition(position: main.Position) ChunkAreaXY {
@@ -63,7 +63,7 @@ pub fn isPositionInSameChunkArea(position: main.Position, areaXY: ChunkAreaXY) b
 pub fn isChunkAreaLoaded(areaXY: ChunkAreaXY, state: *main.ChatSimState) bool {
     const key = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(key)) |chunkArea| {
-        if (!chunkArea.unloaded) return true;
+        if (chunkArea.chunks != null) return true;
     }
     return false;
 }
@@ -121,12 +121,12 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !
     std.debug.print("problem?: chunk area not handles\n", .{});
 }
 
-/// returns true of loaded from file
+/// returns true if loaded from file
 pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
     var loadedFromFile = false;
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
-        .currentChunkKeyIndex = 0,
+        .currentChunkIndex = 0,
         .chunks = undefined,
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
@@ -134,14 +134,16 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState
         try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
         loadedFromFile = true;
     } else {
+        chunkArea.chunks = try state.allocator.alloc(mapZig.MapChunk, ChunkArea.SIZE * ChunkArea.SIZE);
         for (0..ChunkArea.SIZE) |chunkX| {
             for (0..ChunkArea.SIZE) |chunkY| {
-                chunkArea.chunks[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
-                    .chunkX = chunkX + areaXY.areaX * ChunkArea.SIZE,
-                    .chunkY = chunkY + areaXY.areaY * ChunkArea.SIZE,
-                }, state);
+                chunkArea.chunks.?[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
+                    .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * ChunkArea.SIZE,
+                    .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * ChunkArea.SIZE,
+                }, areaXY, state);
             }
         }
+        try setupPathingForLoadedChunkArea(areaXY, state);
     }
     return loadedFromFile;
 }
@@ -150,6 +152,7 @@ fn setupChunkAreaKeyOrder() [ChunkArea.SIZE][ChunkArea.SIZE]usize {
     var result: [ChunkArea.SIZE][ChunkArea.SIZE]usize = undefined;
     for (0..ChunkArea.SIZE) |indexX| {
         for (0..ChunkArea.SIZE) |indexY| {
+            @setEvalBranchQuota(4000);
             const index = getNewActiveChunkXYIndex(.{ .chunkX = indexX, .chunkY = indexY });
             result[indexX][indexY] = index;
         }
@@ -267,7 +270,6 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
                 if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                     try saveZig.saveChunkAreaToFile(chunkArea, state);
                     try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
-                    chunkArea.unloaded = true;
                 }
             }
         }
@@ -299,10 +301,10 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
             var closestMatchWorkAmountChange: usize = 0;
             for (lowestAmountOfWorkThread.?.chunkAreaKeys.items, 0..) |chunkAreaLowerKey, indexLower| {
                 const chunkAreaLower = state.chunkAreas.getPtr(chunkAreaLowerKey).?;
-                const lowerThreadAreaWorkAmount = chunkAreaLower.tickedCitizenCounter + chunkAreaLower.chunkKeyOrder.len;
+                const lowerThreadAreaWorkAmount = chunkAreaLower.tickedCitizenCounter + ChunkArea.SIZE * ChunkArea.SIZE;
                 for (highestAmountOfWorkThread.?.chunkAreaKeys.items, 0..) |chunkAreaHigherKey, indexHigher| {
                     const chunkAreaHigher = state.chunkAreas.getPtr(chunkAreaHigherKey).?;
-                    const higherThreadAreaWorkAmount = chunkAreaHigher.tickedCitizenCounter + chunkAreaHigher.chunkKeyOrder.len;
+                    const higherThreadAreaWorkAmount = chunkAreaHigher.tickedCitizenCounter + ChunkArea.SIZE * ChunkArea.SIZE;
                     if (lowerThreadAreaWorkAmount < higherThreadAreaWorkAmount) {
                         const diff: usize = @abs(@as(i32, @intCast(higherThreadAreaWorkAmount - lowerThreadAreaWorkAmount)) - @as(i32, @intCast(bestSwapWorkAmount)));
                         if (diff < closestMatchWorkAmountDiffToBest) {
@@ -320,6 +322,190 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
 
                 try lowestAmountOfWorkThread.?.chunkAreaKeys.append(removedHigherArea);
                 try highestAmountOfWorkThread.?.chunkAreaKeys.append(removedLowerArea);
+            }
+        }
+    }
+}
+
+pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.ChatSimState) !void {
+    const areaKey = getKeyForAreaXY(areaXY);
+    const chunkArea = state.chunkAreas.getPtr(areaKey).?;
+    for (0..ChunkArea.SIZE) |x| {
+        for (0..ChunkArea.SIZE) |y| {
+            const chunk = &chunkArea.chunks.?[chunkKeyOrder[x][y]];
+            if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
+                const chunkGraphRectangle: pathfindingZig.ChunkGraphRectangle = .{
+                    .index = 0,
+                    .chunkXY = chunk.chunkXY,
+                    .connectionIndexes = std.ArrayList(pathfindingZig.GraphConnection).init(state.allocator),
+                    .tileRectangle = .{
+                        .topLeftTileXY = .{
+                            .tileX = chunk.chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
+                            .tileY = chunk.chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH,
+                        },
+                        .columnCount = mapZig.GameMap.CHUNK_LENGTH,
+                        .rowCount = mapZig.GameMap.CHUNK_LENGTH,
+                    },
+                };
+                try chunk.pathingData.graphRectangles.append(chunkGraphRectangle);
+                const neighbors = [_]mapZig.ChunkXY{
+                    .{ .chunkX = chunk.chunkXY.chunkX - 1, .chunkY = chunk.chunkXY.chunkY },
+                    .{ .chunkX = chunk.chunkXY.chunkX + 1, .chunkY = chunk.chunkXY.chunkY },
+                    .{ .chunkX = chunk.chunkXY.chunkX, .chunkY = chunk.chunkXY.chunkY - 1 },
+                    .{ .chunkX = chunk.chunkXY.chunkX, .chunkY = chunk.chunkXY.chunkY + 1 },
+                };
+                for (neighbors) |neighborXY| {
+                    const neighborAreaXY = getChunkAreaXyForChunkXy(neighborXY);
+                    const neighborAreaKey = getKeyForAreaXY(neighborAreaXY);
+                    const neighborChunkArea = state.chunkAreas.getPtr(neighborAreaKey);
+                    if (neighborChunkArea == null or neighborChunkArea.?.chunks == null) continue;
+                    const neighborChunkIndex = mapZig.getChunkIndexForChunkXY(neighborXY);
+                    const neighborChunk = neighborChunkArea.?.chunks.?[neighborChunkIndex];
+                    for (neighborChunk.pathingData.graphRectangles.items) |*neighborGraphRectangle| {
+                        if (pathfindingZig.areRectanglesTouchingOnEdge(chunkGraphRectangle.tileRectangle, neighborGraphRectangle.tileRectangle)) {
+                            try neighborGraphRectangle.connectionIndexes.append(.{ .index = chunkGraphRectangle.index, .chunkXY = chunk.chunkXY });
+                            try chunk.pathingData.graphRectangles.items[0].connectionIndexes.append(.{ .index = neighborGraphRectangle.index, .chunkXY = neighborXY });
+                        }
+                    }
+                }
+                for (0..chunk.pathingData.pathingData.len) |i| {
+                    chunk.pathingData.pathingData[i] = chunkGraphRectangle.index;
+                }
+            } else {
+                // case need to determine pathingGraphRectangles as blocking tiles exist
+                try setupInitialGraphRectanglesForChunkUnconnected(chunk, state);
+                try connectNewGraphRectangles(chunk, state);
+            }
+        }
+    }
+}
+
+fn connectNewGraphRectangles(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+    const chunkXY = chunk.chunkXY;
+    for (chunk.pathingData.graphRectangles.items, 0..) |*graphRectangle1, index1| {
+        for ((index1 + 1)..chunk.pathingData.graphRectangles.items.len) |index2| {
+            const graphRectangle2 = &chunk.pathingData.graphRectangles.items[index2];
+            if (pathfindingZig.areRectanglesTouchingOnEdge(graphRectangle1.tileRectangle, graphRectangle2.tileRectangle)) {
+                try graphRectangle1.connectionIndexes.append(.{ .index = index2, .chunkXY = chunkXY });
+                try graphRectangle2.connectionIndexes.append(.{ .index = index1, .chunkXY = chunkXY });
+            }
+        }
+    }
+    const neighborsXY = [_]mapZig.ChunkXY{
+        .{ .chunkX = chunkXY.chunkX - 1, .chunkY = chunkXY.chunkY },
+        .{ .chunkX = chunkXY.chunkX + 1, .chunkY = chunkXY.chunkY },
+        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY - 1 },
+        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY + 1 },
+    };
+    for (neighborsXY) |neighborXY| {
+        const areaXY = getChunkAreaXyForChunkXy(neighborXY);
+        const areaKey = getKeyForAreaXY(areaXY);
+        if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
+            if (chunkArea.chunks == null) continue;
+            const neighborChunk = chunkArea.chunks.?[mapZig.getChunkIndexForChunkXY(neighborXY)];
+            for (chunk.pathingData.graphRectangles.items, 0..) |*graphRectangle, index1| {
+                for (neighborChunk.pathingData.graphRectangles.items) |*neighborGraphRectangle| {
+                    if (pathfindingZig.areRectanglesTouchingOnEdge(graphRectangle.tileRectangle, neighborGraphRectangle.tileRectangle)) {
+                        try neighborGraphRectangle.connectionIndexes.append(.{ .index = graphRectangle.index, .chunkXY = chunk.chunkXY });
+                        try chunk.pathingData.graphRectangles.items[index1].connectionIndexes.append(.{ .index = neighborGraphRectangle.index, .chunkXY = neighborXY });
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+    var blockingTiles: [mapZig.GameMap.CHUNK_LENGTH][mapZig.GameMap.CHUNK_LENGTH]bool = undefined;
+    for (0..blockingTiles.len) |indexX| {
+        for (0..blockingTiles.len) |indexY| {
+            blockingTiles[indexX][indexY] = false;
+        }
+    }
+    for (chunk.buildings.items) |building| {
+        if (building.inConstruction) continue;
+        const tileXY = mapZig.mapPositionToTileXy(building.position);
+        const indexX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
+        const indexY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));
+        blockingTiles[indexX][indexY] = true;
+    }
+    for (chunk.bigBuildings.items) |bigBuilding| {
+        if (bigBuilding.inConstruction) continue;
+        const tileXY = mapZig.mapPositionToTileXy(bigBuilding.position);
+        const indexX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
+        const indexY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));
+        blockingTiles[indexX][indexY] = true;
+        if (indexX > 0 and indexY > 0) {
+            blockingTiles[indexX - 1][indexY] = true;
+            blockingTiles[indexX][indexY - 1] = true;
+            blockingTiles[indexX - 1][indexY - 1] = true;
+        } else if (indexX > 0) {
+            blockingTiles[indexX - 1][indexY] = true;
+            try pathfindingZig.changePathingDataRectangle(.{
+                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
+                .columnCount = 2,
+                .rowCount = 1,
+            }, .blocking, 0, state);
+        } else if (indexY > 0) {
+            blockingTiles[indexX][indexY - 1] = true;
+            try pathfindingZig.changePathingDataRectangle(.{
+                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
+                .columnCount = 1,
+                .rowCount = 2,
+            }, .blocking, 0, state);
+        } else {
+            try pathfindingZig.changePathingDataRectangle(.{
+                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
+                .columnCount = 2,
+                .rowCount = 2,
+            }, .blocking, 0, state);
+        }
+    }
+    var usedTiles: [mapZig.GameMap.CHUNK_LENGTH][mapZig.GameMap.CHUNK_LENGTH]bool = undefined;
+    for (0..blockingTiles.len) |indexX| {
+        for (0..blockingTiles.len) |indexY| {
+            usedTiles[indexX][indexY] = false;
+        }
+    }
+    for (0..blockingTiles.len) |indexX| {
+        for (0..blockingTiles.len) |indexY| {
+            if (usedTiles[indexX][indexY] or blockingTiles[indexX][indexY]) continue;
+            var width: u8 = 1;
+            var height: u8 = 1;
+            while (indexX + width < blockingTiles.len and !usedTiles[indexX + width][indexY] and !blockingTiles[indexX + width][indexY]) {
+                width += 1;
+            }
+            heightLoop: while (indexY + height < blockingTiles.len) {
+                for (indexX..(indexX + width)) |checkXIndex| {
+                    if (usedTiles[checkXIndex][indexY + height] or blockingTiles[checkXIndex][indexY + height]) {
+                        break :heightLoop;
+                    }
+                }
+                height += 1;
+            }
+            const chunkGraphRectangle: pathfindingZig.ChunkGraphRectangle = .{
+                .index = chunk.pathingData.graphRectangles.items.len,
+                .chunkXY = chunk.chunkXY,
+                .connectionIndexes = std.ArrayList(pathfindingZig.GraphConnection).init(state.allocator),
+                .tileRectangle = .{
+                    .topLeftTileXY = .{
+                        .tileX = @as(i32, @intCast(indexX)) + chunk.chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
+                        .tileY = @as(i32, @intCast(indexY)) + chunk.chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH,
+                    },
+                    .columnCount = width,
+                    .rowCount = height,
+                },
+            };
+            try chunk.pathingData.graphRectangles.append(chunkGraphRectangle);
+            for (indexX..(indexX + width)) |updateX| {
+                for (indexY..(indexY + height)) |updateY| {
+                    usedTiles[updateX][updateY] = true;
+                    const pathingIndex = pathfindingZig.getPathingIndexForTileXY(.{
+                        .tileX = chunk.chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH + @as(i32, @intCast(updateX)),
+                        .tileY = chunk.chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH + @as(i32, @intCast(updateY)),
+                    });
+                    chunk.pathingData.pathingData[pathingIndex] = chunkGraphRectangle.index;
+                }
             }
         }
     }

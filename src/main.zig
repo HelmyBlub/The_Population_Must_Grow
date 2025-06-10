@@ -148,9 +148,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     }
     const prng = std.Random.DefaultPrng.init(seed);
 
-    const map: mapZig.GameMap = try mapZig.createMap(allocator);
     state.* = ChatSimState{
-        .map = map,
         .desiredGameSpeed = 1,
         .actualGameSpeed = 1,
         .paintIntervalMs = 16,
@@ -183,7 +181,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     }
     try codePerformanceZig.init(state);
     const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
-    if (!couldLoadGeneralData) try mapZig.createSpawnChunk(allocator, state);
+    if (!couldLoadGeneralData) try mapZig.createSpawnArea(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
     try soundMixerZig.createSoundMixer(state, allocator);
@@ -204,7 +202,7 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
         threadData.chunkAreaKeys.clearAndFree();
         threadData.recentlyRemovedChunkAreaKeys.clearAndFree();
     }
-    try mapZig.createSpawnChunk(state.allocator, state);
+    try mapZig.createSpawnArea(state.allocator, state);
 }
 
 pub fn setupRectangleData(state: *ChatSimState) void {
@@ -623,22 +621,18 @@ fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
     try testZig.tick(state);
 
-    var nonMainThreadsDataCount: usize = 0;
     try state.chunkAreas.ensureUnusedCapacity(40);
     for (state.threadData, 0..) |*threadData, i| {
         try threadData.chunkAreaKeys.ensureUnusedCapacity(10);
         for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
             const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
-            if (chunkArea.chunkKeyOrder.len > 0) {
-                chunkArea.currentChunkKeyIndex = 0;
-                chunkArea.tickedCitizenCounter = 0;
-                chunkArea.lastTickIdleTypeData = chunkArea.idleTypeData;
-                chunkArea.idleTypeData = .idle;
-                if (i == 0) continue; // don't count main thread
-                nonMainThreadsDataCount += chunkArea.chunkKeyOrder.len;
-                if (threadData.thread == null) {
-                    threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
-                }
+            chunkArea.currentChunkIndex = 0;
+            chunkArea.tickedCitizenCounter = 0;
+            chunkArea.lastTickIdleTypeData = chunkArea.idleTypeData;
+            chunkArea.idleTypeData = .idle;
+            if (i == 0) continue; // don't count main thread
+            if (threadData.thread == null) {
+                threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
             }
         }
     }
@@ -657,8 +651,8 @@ fn tick(state: *ChatSimState) !void {
                 keyIndex += 1;
                 continue;
             }
-            for (chunkArea.chunkKeyOrder) |activeKey| {
-                const idleTypeData = try tickSingleChunk(activeKey, 0, chunkArea, state);
+            for (0..chunkArea.chunks.?.len) |index| {
+                const idleTypeData = try tickSingleChunk(index, 0, chunkArea, state);
                 if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
                     if (idleTypeData == .notIdle) {
                         chunkArea.idleTypeData = .notIdle;
@@ -688,6 +682,7 @@ fn tick(state: *ChatSimState) !void {
             threadData.finishedTick = false;
         }
         const mainThreadData = &state.threadData[0];
+        const areaLen = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
         while (true) {
             state.threadData[0].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
             if (state.gameEnd) break;
@@ -698,12 +693,9 @@ fn tick(state: *ChatSimState) !void {
                 for (mainThreadData.chunkAreaKeys.items) |chunkAreaKey| {
                     const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
                     if (chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) continue;
-                    var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
-                    const areaLen = chunkArea.chunkKeyOrder.len;
-                    const activeKeys = chunkArea.chunkKeyOrder;
-                    while (areaLen > chunkKeyIndex and chunkKeyIndex <= allowedPathIndex) {
-                        const chunkKey = activeKeys[chunkKeyIndex];
-                        const idleTypeData = try tickSingleChunk(chunkKey, 0, chunkArea, state);
+                    var chunkIndex = chunkArea.currentChunkIndex;
+                    while (areaLen > chunkIndex and chunkIndex <= allowedPathIndex) {
+                        const idleTypeData = try tickSingleChunk(chunkIndex, 0, chunkArea, state);
                         if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
                             if (idleTypeData == .notIdle) {
                                 chunkArea.idleTypeData = .notIdle;
@@ -711,11 +703,11 @@ fn tick(state: *ChatSimState) !void {
                                 chunkArea.idleTypeData = idleTypeData;
                             }
                         }
-                        chunkKeyIndex += 1;
+                        chunkIndex += 1;
                     }
-                    chunkArea.currentChunkKeyIndex = chunkKeyIndex;
-                    if (areaLen > chunkKeyIndex) {
-                        const highest = chunkKeyIndex -| 1;
+                    chunkArea.currentChunkIndex = chunkIndex;
+                    if (areaLen > chunkIndex) {
+                        const highest = chunkIndex -| 1;
                         if (highest < highestFinishedPathIndex) highestFinishedPathIndex = highest;
                     }
                 }
@@ -781,6 +773,7 @@ fn tick(state: *ChatSimState) !void {
 }
 
 fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
+    const areaLen = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
     while (true) {
         if (state.gameEnd) return;
         state.threadData[threadNumber].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
@@ -801,12 +794,9 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                     for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
                         const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
                         if (chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) continue;
-                        var chunkKeyIndex = chunkArea.currentChunkKeyIndex;
-                        const activeKeys = chunkArea.chunkKeyOrder;
-                        const areaLen = activeKeys.len;
-                        while (areaLen > chunkKeyIndex and chunkKeyIndex <= allowedPathIndex) {
-                            const chunkKey = activeKeys[chunkKeyIndex];
-                            const idleTypeData = try tickSingleChunk(chunkKey, threadNumber, chunkArea, state);
+                        var chunkIndex = chunkArea.currentChunkIndex;
+                        while (areaLen > chunkIndex and chunkIndex <= allowedPathIndex) {
+                            const idleTypeData = try tickSingleChunk(chunkIndex, threadNumber, chunkArea, state);
                             if (chunkArea.idleTypeData != .notIdle and idleTypeData != .idle) {
                                 if (idleTypeData == .notIdle) {
                                     chunkArea.idleTypeData = .notIdle;
@@ -814,12 +804,12 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                                     chunkArea.idleTypeData = idleTypeData;
                                 }
                             }
-                            chunkKeyIndex += 1;
+                            chunkIndex += 1;
                         }
-                        chunkArea.currentChunkKeyIndex = chunkKeyIndex;
-                        if (areaLen > chunkKeyIndex) {
+                        chunkArea.currentChunkIndex = chunkIndex;
+                        if (areaLen > chunkIndex) {
                             allChunkAreasDone = false;
-                            const highest = chunkKeyIndex -| 1;
+                            const highest = chunkIndex -| 1;
                             if (highest < highestFinishedPathIndex) highestFinishedPathIndex = highest;
                         }
                     }
@@ -855,14 +845,11 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     }
 }
 
-fn tickSingleChunk(chunkKey: u64, threadIndex: usize, chunkArea: *chunkAreaZig.ChunkArea, state: *ChatSimState) !chunkAreaZig.ChunkAreaIdleTypeData {
+fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZig.ChunkArea, state: *ChatSimState) !chunkAreaZig.ChunkAreaIdleTypeData {
     // if (state.gameTimeMs == 16 * 60 * 250) {
     //     std.debug.print("test1 \n", .{});
     // }
-    const optChunk = chunkArea.chunks[chunkKey];
-    if (optChunk == null) return .idle;
-    const chunk = optChunk.?;
-
+    const chunk = &chunkArea.chunks.?[chunkIndex];
     state.threadData[threadIndex].tickedChunkCounter += 1;
     try codePerformanceZig.startMeasure(" citizen", &state.codePerformanceData);
     const gameSpeedVisibleFactor = if (state.actualGameSpeed <= 1) 1 else state.actualGameSpeed;
@@ -984,9 +971,13 @@ pub fn destroyGameState(state: *ChatSimState) void {
     std.debug.print("threads joined\n", .{});
     soundMixerZig.destroySoundMixer(state);
     try destroyPaintVulkanAndWindowSdl(state);
-    var iterator = state.map.chunks.valueIterator();
-    while (iterator.next()) |chunk| {
-        mapZig.destroyChunk(chunk);
+    var iterator = state.chunkAreas.iterator();
+    while (iterator.next()) |chunkArea| {
+        if (chunkArea.value_ptr.chunks == null) continue;
+        for (chunkArea.value_ptr.chunks.?) |*chunk| {
+            mapZig.destroyChunk(chunk);
+        }
+        state.allocator.free(chunkArea.value_ptr.chunks.?);
     }
 
     for (0..state.maxThreadCount) |i| {
@@ -1001,7 +992,6 @@ pub fn destroyGameState(state: *ChatSimState) void {
     inputZig.destroy(state);
     codePerformanceZig.destroy(state);
     state.chunkAreas.deinit();
-    state.map.chunks.deinit();
 }
 
 pub fn calculateDirection(start: Position, end: Position) f32 {

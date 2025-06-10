@@ -154,13 +154,6 @@ pub const BUILD_TYPE_BIG_HOUSE = 5;
 pub const BUILD_TYPE_PATHES = 6;
 pub const TILE_SIZE_BIG_HOUSE = 2;
 
-pub fn createMap(allocator: std.mem.Allocator) !GameMap {
-    const map: GameMap = .{
-        .chunks = std.HashMap(u64, MapChunk, U64HashMapContext, 30).init(allocator),
-    };
-    return map;
-}
-
 pub fn visibleAndAdjacentChunkRectangle(state: *main.ChatSimState) !void {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
@@ -219,18 +212,30 @@ pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
 pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.ChatSimState) anyerror!*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
-    const optChunkArea = state.chunkAreas.getPtr(areaKey);
+    var optChunkArea = state.chunkAreas.getPtr(areaKey);
     if (optChunkArea) |chunkArea| {
-        if (chunkArea.unloaded) {
+        if (chunkArea.chunks == null) {
             try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
-            chunkArea.unloaded = false;
             chunkArea.idleTypeData = .idle;
         }
     } else {
         _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+        optChunkArea = state.chunkAreas.getPtr(areaKey);
     }
     const chunkIndex = getChunkIndexForChunkXY(chunkXY);
-    return &optChunkArea.?.chunks[chunkIndex];
+    return &optChunkArea.?.chunks.?[chunkIndex];
+}
+
+pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.ChatSimState) !?*MapChunk {
+    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    const optChunkArea = state.chunkAreas.getPtr(areaKey);
+    if (optChunkArea) |chunkArea| {
+        if (chunkArea.chunks) |chunks| {
+            return &chunks[getChunkIndexForChunkXY(chunkXY)];
+        }
+    }
+    return null;
 }
 
 pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *main.ChatSimState) !*MapChunk {
@@ -946,7 +951,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
 }
 
 pub fn getChunkIndexForChunkXY(chunkXY: ChunkXY) usize {
-    return chunkAreaZig.chunkKeyOrder[@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))][@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))];
+    return chunkAreaZig.chunkKeyOrder[@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))][@intCast(@mod(chunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE))];
 }
 
 pub fn getChunkXyForKey(chunkKey: u64) ChunkXY {
@@ -999,9 +1004,9 @@ pub fn destroyChunk(chunk: *MapChunk) void {
     pathfindingZig.destoryChunkData(&chunk.pathingData);
 }
 
-fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
+pub fn createChunk(chunkXY: ChunkXY, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !MapChunk {
     var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state);
-    mapChunk.pathingData = try main.pathfindingZig.createChunkData(chunkXY, state.allocator, state);
+    mapChunk.pathingData = try main.pathfindingZig.createChunkData(chunkXY, areaXY, state.allocator, state);
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
             const random = fixedRandom(
@@ -1024,10 +1029,32 @@ fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
     return mapChunk;
 }
 
-pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState) !void {
+pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) !void {
+    const areaXY: chunkAreaZig.ChunkAreaXY = .{ .areaX = 0, .areaY = 0 };
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    try state.chunkAreas.put(areaKey, .{
+        .areaXY = areaXY,
+        .currentChunkIndex = 0,
+        .chunks = undefined,
+    });
+    const chunkArea = state.chunkAreas.getPtr(areaKey).?;
+    chunkArea.chunks = try state.allocator.alloc(MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
     const spawnChunkXY: ChunkXY = .{ .chunkX = 0, .chunkY = 0 };
-    var spawnChunk: MapChunk = try createEmptyChunk(spawnChunkXY, state);
-    spawnChunk.pathingData = try main.pathfindingZig.createChunkData(spawnChunkXY, state.allocator, state);
+    for (0..chunkAreaZig.ChunkArea.SIZE) |chunkX| {
+        for (0..chunkAreaZig.ChunkArea.SIZE) |chunkY| {
+            if (chunkX == spawnChunkXY.chunkX and chunkY == spawnChunkXY.chunkY) {
+                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createEmptyChunk(spawnChunkXY, state);
+            } else {
+                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createChunk(.{
+                    .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
+                    .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
+                }, areaXY, state);
+            }
+        }
+    }
+    try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
+
+    var spawnChunk: *MapChunk = &chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[spawnChunkXY.chunkX][spawnChunkXY.chunkY]];
     const halveTileSize = GameMap.TILE_SIZE / 2;
     try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = .house, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
     try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
@@ -1035,9 +1062,6 @@ pub fn createSpawnChunk(allocator: std.mem.Allocator, state: *main.ChatSimState)
     const citizen = main.Citizen.createCitizen(.{ .x = halveTileSize, .y = halveTileSize }, allocator);
     try spawnChunk.citizens.append(citizen);
     state.citizenCounterLastTick = 1;
-
-    const key = getKeyForChunkXY(spawnChunk.chunkXY);
-    try state.map.chunks.put(key, spawnChunk);
     try addTickPosition(spawnChunk.chunkXY, state);
 }
 
