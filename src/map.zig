@@ -1044,6 +1044,7 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
         for (0..chunkAreaZig.ChunkArea.SIZE) |chunkY| {
             if (chunkX == spawnChunkXY.chunkX and chunkY == spawnChunkXY.chunkY) {
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createEmptyChunk(spawnChunkXY, state);
+                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]].pathingData = try main.pathfindingZig.createChunkData(spawnChunkXY, areaXY, state.allocator, state);
             } else {
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createChunk(.{
                     .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,

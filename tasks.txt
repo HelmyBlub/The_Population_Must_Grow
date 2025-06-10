@@ -14,6 +14,7 @@ tasks:
 - bug: not all chunks ticked. Not all buildings where being build
 - save/load part of tick measurement? very bad?
 - load/save performance
+- bug: bighouse over work order normal house
 
 - UI: reset 
 - UI: sound volume setting
@@ -64,7 +65,8 @@ tasks:
 Some data:
 - FPS: 120, citizens: 33769, gameTime: 330000, end FPS: 76.31871 (09.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 126, citizens: 33772, gameTime: 330000, end FPS: 80.59782 (if stream browser minimized)
+- FPS: 104, citizens: 33027, gameTime: 330000, end FPS: 63.83838 (chunks into chunkArea)
+
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

@@ -122,7 +122,7 @@ test "test for memory leaks" {
 }
 
 test "test measure performance" {
-    SIMULATION_MICRO_SECOND_DURATION = 35_000_000;
+    SIMULATION_MICRO_SECOND_DURATION = 45_000_000;
     try testZig.executePerfromanceTest();
 }
 
@@ -197,6 +197,10 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
     };
     state.gameTimeMs = 0;
     state.lastAutoGameSpeedChangeTime = 0;
+    var iterator = state.chunkAreas.iterator();
+    while (iterator.next()) |entry| {
+        if (entry.value_ptr.chunks != null) state.allocator.free(entry.value_ptr.chunks.?);
+    }
     state.chunkAreas.clearAndFree();
     for (state.threadData) |*threadData| {
         threadData.chunkAreaKeys.clearAndFree();
@@ -630,7 +634,7 @@ fn tick(state: *ChatSimState) !void {
             chunkArea.tickedCitizenCounter = 0;
             chunkArea.lastTickIdleTypeData = chunkArea.idleTypeData;
             chunkArea.idleTypeData = .idle;
-            if (i == 0) continue; // don't count main thread
+            if (i == 0) continue; //0 is main thread
             if (threadData.thread == null) {
                 threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
             }

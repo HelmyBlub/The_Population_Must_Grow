@@ -214,6 +214,7 @@ pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *
         }
     }
     try threadWithLeastAreas.?.chunkAreaKeys.append(areaKey);
+    if (chunkArea.chunks == null) try saveZig.loadChunkAreaFromFile(chunkArea.areaXY, chunkArea, state);
 }
 
 pub fn isChunkAreaInVisibleData(visibleData: mapZig.VisibleChunksData, areaXY: ChunkAreaXY) bool {
