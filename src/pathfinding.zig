@@ -911,11 +911,13 @@ pub fn pathfindAStar(
             return false;
         }
     }
-    const startChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(startRecData.?.chunkXY, state);
-    const start = &startChunk.pathingData.graphRectangles.items[startRecData.?.index];
+    const startChunk = try mapZig.getChunkByChunkXYWithRequestForLoad(startRecData.?.chunkXY, threadIndex, state);
+    if (startChunk == null) return false;
+    const start = &startChunk.?.pathingData.graphRectangles.items[startRecData.?.index];
     const goalRecData = (try getChunkGraphRectangleIndexForTileXY(goalTile, state)).?;
-    const goalChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(goalRecData.chunkXY, state);
-    const goal = &goalChunk.pathingData.graphRectangles.items[goalRecData.index];
+    const goalChunk = try mapZig.getChunkByChunkXYWithRequestForLoad(goalRecData.chunkXY, threadIndex, state);
+    if (goalChunk == null) return false;
+    const goal = &goalChunk.?.pathingData.graphRectangles.items[goalRecData.index];
 
     try gScore.put(start, 0);
     const startNode = Node{

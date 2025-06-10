@@ -226,6 +226,19 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.Cha
     return &optChunkArea.?.chunks.?[chunkIndex];
 }
 
+pub fn getChunkByChunkXYWithRequestForLoad(chunkXY: ChunkXY, threadIndex: usize, state: *main.ChatSimState) !?*MapChunk {
+    const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+    const optChunkArea = state.chunkAreas.getPtr(areaKey);
+    if (optChunkArea) |chunkArea| {
+        if (chunkArea.chunks) |chunks| {
+            return &chunks[getChunkIndexForChunkXY(chunkXY)];
+        }
+    }
+    try state.threadData[threadIndex].requestToLoadChunkAreaKeys.append(areaKey);
+    return null;
+}
+
 pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.ChatSimState) !?*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);

@@ -1,13 +1,15 @@
 tasks:
-- check performance for chunks in chunkAreas
-- bug: empty chunkArea, missing chunks
+- bug: empty chunkArea, missing chunks, crashing
     - maybe related to copy alot?
     - seem to happen if two thread load the same chunk
+        - seems to happen if chunks are unloaded in which citizens from other chunks and different threads are and than both other threads want to load the same chunkArea again
 - check rehash chunkAreas
 - bug: not all chunks ticked. Not all buildings where being build
 - save/load part of tick measurement? very bad?
 - load/save performance
 - bug: bighouse over work order normal house
+- check performance for chunks in chunkAreas
+    - can improve by not always searching area again and just chunk
 
 - UI: reset 
 - UI: sound volume setting

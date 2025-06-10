@@ -70,6 +70,7 @@ pub const ThreadData = struct {
     citizensAddedThisTick: u32 = 0,
     chunkAreaKeys: std.ArrayList(u64),
     recentlyRemovedChunkAreaKeys: std.ArrayList(u64),
+    requestToLoadChunkAreaKeys: std.ArrayList(u64),
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
@@ -175,6 +176,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
             .pathfindingTempData = try pathfindingZig.createPathfindingData(allocator),
             .chunkAreaKeys = std.ArrayList(u64).init(allocator),
             .recentlyRemovedChunkAreaKeys = std.ArrayList(u64).init(allocator),
+            .requestToLoadChunkAreaKeys = std.ArrayList(u64).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
             .measureData = .{},
         };
@@ -199,12 +201,18 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
     state.lastAutoGameSpeedChangeTime = 0;
     var iterator = state.chunkAreas.iterator();
     while (iterator.next()) |entry| {
-        if (entry.value_ptr.chunks != null) state.allocator.free(entry.value_ptr.chunks.?);
+        if (entry.value_ptr.chunks) |chunks| {
+            for (chunks) |*chunk| {
+                mapZig.destroyChunk(chunk);
+            }
+            state.allocator.free(chunks);
+        }
     }
     state.chunkAreas.clearAndFree();
     for (state.threadData) |*threadData| {
         threadData.chunkAreaKeys.clearAndFree();
         threadData.recentlyRemovedChunkAreaKeys.clearAndFree();
+        threadData.requestToLoadChunkAreaKeys.clearAndFree();
     }
     try mapZig.createSpawnArea(state.allocator, state);
 }
@@ -625,7 +633,6 @@ fn tick(state: *ChatSimState) !void {
     state.gameTimeMs += state.tickIntervalMs;
     try testZig.tick(state);
 
-    try state.chunkAreas.ensureUnusedCapacity(40);
     for (state.threadData, 0..) |*threadData, i| {
         try threadData.chunkAreaKeys.ensureUnusedCapacity(10);
         for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
@@ -639,7 +646,22 @@ fn tick(state: *ChatSimState) !void {
                 threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
             }
         }
+        for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
+            const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
+            const optChunkArea = state.chunkAreas.getPtr(areaKey);
+            std.debug.print("request load {} {}\n", .{ areaXY.areaX, areaXY.areaY });
+            if (optChunkArea) |chunkArea| {
+                if (chunkArea.chunks == null) {
+                    try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
+                    chunkArea.idleTypeData = .idle;
+                }
+            } else {
+                _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
+            }
+        }
+        threadData.requestToLoadChunkAreaKeys.clearRetainingCapacity();
     }
+    try state.chunkAreas.ensureUnusedCapacity(40);
 
     if (state.usedThreadsCount == 1) {
         state.wasSingleCore = true;
@@ -901,7 +923,7 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
             const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
             const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
             if (optMapObject) |mapObject| {
-                if (try Citizen.findCloseFreeCitizen(buildOrder.position, state)) |freeCitizenData| {
+                if (try Citizen.findCloseFreeCitizen(buildOrder.position, threadIndex, state)) |freeCitizenData| {
                     const freeCitizen = freeCitizenData.citizen;
                     couldAssignOneBuildOrder = true;
                     switch (mapObject) {
@@ -989,6 +1011,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         pathfindingZig.destroyPathfindingData(&threadData.pathfindingTempData);
         threadData.chunkAreaKeys.deinit();
         threadData.recentlyRemovedChunkAreaKeys.deinit();
+        threadData.requestToLoadChunkAreaKeys.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();

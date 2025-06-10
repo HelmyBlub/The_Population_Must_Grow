@@ -370,6 +370,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, chunkArea: *chunk
     var currentIndex: usize = mapZig.getChunkIndexForChunkXY(currentChunkXY);
     var currenChunk: ?mapZig.MapChunk = null;
     chunkArea.chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
+    var unknownLoadValue: ?u8 = null;
     for (readValues, 0..) |value, index| {
         const tileXYIndex = @mod(index, mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH);
         if (tileXYIndex == 0) {
@@ -594,11 +595,12 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, chunkArea: *chunk
                 },
                 else => {
                     //missing implementation? or bug
-                    std.debug.print("unknown load value: {d}", .{value});
+                    unknownLoadValue = value;
                 },
             }
         }
     }
+    if (unknownLoadValue) |value| std.debug.print("unknown load value: {d} in area {} {}\n", .{ value, areaXY.areaX, areaXY.areaY });
     if (currenChunk) |chunk| {
         chunkArea.chunks.?[currentIndex] = chunk;
     }

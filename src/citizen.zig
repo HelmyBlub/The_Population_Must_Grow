@@ -68,7 +68,7 @@ pub const Citizen: type = struct {
         for (0..chunk.citizens.items.len) |i| {
             if (chunk.citizens.unusedCapacitySlice().len < 16) try chunk.citizens.ensureUnusedCapacity(32);
             const citizen: *Citizen = &chunk.citizens.items[i];
-            try foodTick(citizen, state);
+            try foodTick(citizen, threadIndex, state);
             try thinkTick(citizen, threadIndex, chunk, state);
         }
     }
@@ -118,7 +118,7 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn findCloseFreeCitizen(targetPosition: main.Position, state: *main.ChatSimState) !?struct { citizen: *Citizen, chunk: *mapZig.MapChunk } {
+    pub fn findCloseFreeCitizen(targetPosition: main.Position, threadIndex: usize, state: *main.ChatSimState) !?struct { citizen: *Citizen, chunk: *mapZig.MapChunk } {
         var closestCitizen: ?*Citizen = null;
         var closestChunk: *mapZig.MapChunk = undefined;
         var shortestDistance: f32 = 0;
@@ -135,13 +135,14 @@ pub const Citizen: type = struct {
                         .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
                         .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
                     };
-                    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
-                    for (chunk.citizens.items) |*citizen| {
+                    const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+                    if (chunk == null) continue;
+                    for (chunk.?.citizens.items) |*citizen| {
                         if (citizen.nextThinkingAction != .idle) continue;
                         const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
                         if (closestCitizen == null or shortestDistance > tempDistance) {
                             closestCitizen = citizen;
-                            closestChunk = chunk;
+                            closestChunk = chunk.?;
                             shortestDistance = tempDistance;
                             if (shortestDistance < mapZig.GameMap.CHUNK_SIZE) break :mainLoop;
                         }
@@ -169,16 +170,16 @@ fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, sta
             try potatoHarvestTick(citizen, threadIndex, state);
         },
         .potatoEat => {
-            try potatoEatTick(citizen, state);
+            try potatoEatTick(citizen, threadIndex, state);
         },
         .potatoEatFinished => {
-            try potatoEatFinishedTick(citizen, state);
+            try potatoEatFinishedTick(citizen, threadIndex, state);
         },
         .potatoPlant => {
             try potatoPlant(citizen, threadIndex, state);
         },
         .potatoPlantFinished => {
-            try potatoPlantFinished(citizen, state);
+            try potatoPlantFinished(citizen, threadIndex, state);
             chunk.workingCitizenCounter -= 1;
         },
         .buildingStart => {
@@ -188,7 +189,7 @@ fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, sta
             try buildingGetWood(citizen, threadIndex, state);
         },
         .buildingCutTree => {
-            try buildingCutTree(citizen, state);
+            try buildingCutTree(citizen, threadIndex, state);
         },
         .buildingBuild => {
             try buildingBuild(citizen, threadIndex, state);
@@ -201,7 +202,7 @@ fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, sta
             try treePlant(citizen, threadIndex, state);
         },
         .treePlantFinished => {
-            try treePlantFinished(citizen, state);
+            try treePlantFinished(citizen, threadIndex, state);
             chunk.workingCitizenCounter -= 1;
         },
         .idle => {
@@ -210,8 +211,8 @@ fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, sta
     }
 }
 
-fn nextThinkingAction(citizen: *Citizen, state: *main.ChatSimState) !void {
-    if (try checkHunger(citizen, state)) {
+fn nextThinkingAction(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
+    if (try checkHunger(citizen, threadIndex, state)) {
         //nothing
     } else if (citizen.buildingPosition != null) {
         citizen.nextThinkingAction = .buildingStart;
@@ -225,9 +226,9 @@ fn nextThinkingAction(citizen: *Citizen, state: *main.ChatSimState) !void {
 }
 
 /// returns true if citizen goes to eat
-fn checkHunger(citizen: *Citizen, state: *main.ChatSimState) !bool {
+fn checkHunger(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !bool {
     if (citizen.foodLevel <= 0.5) {
-        if (try findClosestFreePotato(citizen, state)) |potato| {
+        if (try findClosestFreePotato(citizen, threadIndex, state)) |potato| {
             potato.citizenOnTheWay += 1;
             citizen.potatoPosition = potato.position;
             citizen.nextThinkingAction = .potatoHarvest;
@@ -257,18 +258,18 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !
         citizen.treePosition = null;
         const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, state);
         chunk.workingCitizenCounter -= 1;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
-fn treePlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn treePlantFinished(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeAndChunk| {
         treeAndChunk.tree.growStartTimeMs = state.gameTimeMs;
         const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeAndChunk.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
         try mapZig.appendToChunkQueue(treeAndChunk.chunk, queueItem, citizen.homePosition, state);
     }
     citizen.treePosition = null;
-    try nextThinkingAction(citizen, state);
+    try nextThinkingAction(citizen, threadIndex, state);
 }
 
 fn buildingStart(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
@@ -280,7 +281,7 @@ fn buildingStart(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimStat
                 citizen.buildingPosition = null;
                 const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, state);
                 chunk.workingCitizenCounter -= 1;
-                if (citizen.nextThinkingAction == .buildingStart) try nextThinkingAction(citizen, state);
+                if (citizen.nextThinkingAction == .buildingStart) try nextThinkingAction(citizen, threadIndex, state);
             }
         } else {
             citizen.nextThinkingAction = .buildingGetWood;
@@ -318,7 +319,7 @@ fn buildingGetWood(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimSt
     }
 }
 
-fn buildingCutTree(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn buildingCutTree(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (try mapZig.getTreeOnPosition(citizen.treePosition.?, state)) |treeData| {
         citizen.hasWood = true;
         treeData.tree.fullyGrown = false;
@@ -332,7 +333,7 @@ fn buildingCutTree(citizen: *Citizen, state: *main.ChatSimState) !void {
             const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
             try mapZig.appendToChunkQueue(treeData.chunk, queueItem, citizen.homePosition, state);
         }
-        if (!try checkHunger(citizen, state)) {
+        if (!try checkHunger(citizen, threadIndex, state)) {
             citizen.nextThinkingAction = .buildingBuild;
         }
     } else {
@@ -373,7 +374,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimStat
         citizen.buildingPosition = null;
         const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, state);
         chunk.workingCitizenCounter -= 1;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
@@ -382,11 +383,11 @@ fn buildingFinished(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimS
         citizen.hasWood = false;
         citizen.buildingPosition = null;
         try mapZig.finishBuilding(building, threadIndex, state);
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     } else {
         citizen.hasWood = false;
         citizen.buildingPosition = null;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
@@ -404,18 +405,18 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState)
         citizen.farmPosition = null;
         const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, state);
         chunk.workingCitizenCounter -= 1;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
-fn potatoPlantFinished(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn potatoPlantFinished(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (try mapZig.getPotatoFieldOnPosition(citizen.farmPosition.?, state)) |farmData| {
         farmData.potatoField.growStartTimeMs = state.gameTimeMs;
         const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
         try mapZig.appendToChunkQueue(farmData.chunk, queueItem, citizen.homePosition, state);
     }
     citizen.farmPosition = null;
-    try nextThinkingAction(citizen, state);
+    try nextThinkingAction(citizen, threadIndex, state);
 }
 
 fn potatoHarvestTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
@@ -430,17 +431,17 @@ fn potatoHarvestTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSim
         }
     } else {
         citizen.potatoPosition = null;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
-fn potatoEatFinishedTick(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn potatoEatFinishedTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     citizen.hasPotato = false;
     eatFood(0.5, citizen, state);
-    try nextThinkingAction(citizen, state);
+    try nextThinkingAction(citizen, threadIndex, state);
 }
 
-fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn potatoEatTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (try mapZig.getPotatoFieldOnPosition(citizen.potatoPosition.?, state)) |farmData| {
         farmData.potatoField.growStartTimeMs = state.gameTimeMs;
         const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .potatoField = farmData.potatoIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };
@@ -453,7 +454,7 @@ fn potatoEatTick(citizen: *Citizen, state: *main.ChatSimState) !void {
         citizen.nextThinkingAction = .potatoEatFinished;
     } else {
         citizen.potatoPosition = null;
-        try nextThinkingAction(citizen, state);
+        try nextThinkingAction(citizen, threadIndex, state);
     }
 }
 
@@ -506,7 +507,7 @@ fn eatFood(foodAmount: f32, citizen: *Citizen, state: *main.ChatSimState) void {
     }
 }
 
-fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
+fn foodTick(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (citizen.nextFoodTickTimeMs > state.gameTimeMs) return;
     if (citizen.foodLevelLastUpdateTimeMs == 0) {
         citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
@@ -522,7 +523,7 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     const timePassed: f32 = @floatFromInt(state.gameTimeMs - citizen.foodLevelLastUpdateTimeMs);
     citizen.foodLevel -= 1.0 / 60.0 / 1000.0 * timePassed;
     citizen.foodLevelLastUpdateTimeMs = state.gameTimeMs;
-    if (citizen.nextThinkingAction == .idle) try nextThinkingAction(citizen, state);
+    if (citizen.nextThinkingAction == .idle) try nextThinkingAction(citizen, threadIndex, state);
     if (citizen.foodLevel > 0) {
         const timeUntilStarving: u32 = @intFromFloat((citizen.foodLevel + 0.01) * 60.0 * 1000.0);
         citizen.nextFoodTickTimeMs = state.gameTimeMs + timeUntilStarving;
@@ -532,7 +533,7 @@ fn foodTick(citizen: *Citizen, state: *main.ChatSimState) !void {
     }
 }
 
-fn findClosestFreePotato(citizen: *Citizen, state: *main.ChatSimState) !?*mapZig.PotatoField {
+fn findClosestFreePotato(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !?*mapZig.PotatoField {
     const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
     const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
     if (homeChunk.noPotatoLeftInChunkProximityGameTime == state.gameTimeMs) return null;
@@ -556,8 +557,9 @@ fn findClosestFreePotato(citizen: *Citizen, state: *main.ChatSimState) !?*mapZig
                 const toFarY = @abs(chunkXY.chunkY - homeChunkXY.chunkY) >= maxChunkDistance;
                 if (toFarX or toFarY) continue;
 
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
-                for (chunk.potatoFields.items) |*potatoField| {
+                const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+                if (chunk == null) continue;
+                for (chunk.?.potatoFields.items) |*potatoField| {
                     if ((!potatoField.fullyGrown and potatoField.growStartTimeMs == null) or potatoField.citizenOnTheWay >= 2) continue;
                     if (potatoField.citizenOnTheWay > 0 and potatoField.growStartTimeMs != null) continue;
                     var tempDistance: f32 = main.calculateDistance(citizen.position, potatoField.position) + @as(f32, @floatFromInt(potatoField.citizenOnTheWay)) * 40.0;
@@ -585,7 +587,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
     const homeChunkXY = mapZig.getChunkXyForPosition(citizen.homePosition);
     const homeChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(homeChunkXY, state);
     if (homeChunk.noTreeLeftInChunkProximityGameTime == state.gameTimeMs) {
-        if (!try checkHunger(citizen, state)) {
+        if (!try checkHunger(citizen, threadIndex, state)) {
             try setRandomMoveTo(citizen, threadIndex, state);
         }
         return;
@@ -610,8 +612,9 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
                 const toFarY = @abs(chunkXY.chunkY - homeChunkXY.chunkY) >= maxChunkDistance;
                 if (toFarX or toFarY) continue;
 
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
-                for (chunk.trees.items) |*tree| {
+                const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+                if (chunk == null) continue;
+                for (chunk.?.trees.items) |*tree| {
                     if (!tree.fullyGrown or tree.citizenOnTheWay) continue;
                     const tempDistance = main.calculateDistance(citizen.position, tree.position) + main.calculateDistance(tree.position, targetPosition);
                     if (closestTree == null or fastestDistance > tempDistance) {
@@ -630,7 +633,7 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
         closestTree.?.citizenOnTheWay = true;
     } else {
         homeChunk.noTreeLeftInChunkProximityGameTime = state.gameTimeMs;
-        if (!try checkHunger(citizen, state)) {
+        if (!try checkHunger(citizen, threadIndex, state)) {
             try setRandomMoveTo(citizen, threadIndex, state);
         }
     }
