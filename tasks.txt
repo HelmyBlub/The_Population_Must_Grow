@@ -1,15 +1,8 @@
 tasks:
-- redesign code:
-    - chunk into chunkArea
-    - currently all chunks in one map
-    - multiple threads can put into map. Race condition. Can break
-    - how is the data setup
-        - chunkAreas.chunks[index]=value.
-            - index for fast iterating over, chunks will be in order of ticking
-            - accessing chunks might be more complicated as i need to find the correct index
-
+- check performance for chunks in chunkAreas
 - bug: empty chunkArea, missing chunks
     - maybe related to copy alot?
+    - seem to happen if two thread load the same chunk
 - check rehash chunkAreas
 - bug: not all chunks ticked. Not all buildings where being build
 - save/load part of tick measurement? very bad?
@@ -66,6 +59,7 @@ Some data:
 - FPS: 120, citizens: 33769, gameTime: 330000, end FPS: 76.31871 (09.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 104, citizens: 33027, gameTime: 330000, end FPS: 63.83838 (chunks into chunkArea)
+- FPS: 107, citizens: 33026, gameTime: 330000, end FPS: 67.2107 (pathfinding less chunk loads more if)
 
 
 Goal:

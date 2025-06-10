@@ -944,12 +944,13 @@ pub fn pathfindAStar(
         _ = openSet.swapRemove(currentIndex);
 
         neighbors.clearRetainingCapacity();
+        var conChunk: ?*mapZig.MapChunk = null;
         for (current.rectangle.connectionIndexes.items) |conData| {
-            const conChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(conData.chunkXY, state)).?;
-            if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
+            if (conChunk == null or conChunk.?.chunkXY.chunkX != conData.chunkXY.chunkX or conChunk.?.chunkXY.chunkY != conData.chunkXY.chunkY) conChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(conData.chunkXY, state)).?;
+            if (conChunk.?.pathingData.graphRectangles.items.len <= conData.index) {
                 std.debug.print("beforePathfinding crash: {}, {}", .{ current.rectangle.tileRectangle, current.rectangle.index });
             }
-            const neighborGraph = &conChunk.pathingData.graphRectangles.items[conData.index];
+            const neighborGraph = &conChunk.?.pathingData.graphRectangles.items[conData.index];
             const neighborMiddle = mapZig.getTileRectangleMiddlePosition(neighborGraph.tileRectangle);
             const citizenDistancePos = citizen.homePosition;
             if (@abs(neighborMiddle.x - citizenDistancePos.x) < maxSearchDistance and @abs(neighborMiddle.y - citizenDistancePos.y) < maxSearchDistance) {
