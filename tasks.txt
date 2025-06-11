@@ -1,5 +1,8 @@
 tasks:
 - bug: empty chunkArea, missing chunks, crashing
+    - reproduce
+        - f10 -> restart. f8 -> wait until everything finished. -> move down until f1 info 0 citizens ticked. move up again
+    - saw a double save in console? this should not happen?
     - maybe related to copy alot?
     - seem to happen if two thread load the same chunk
         - seems to happen if chunks are unloaded in which citizens from other chunks and different threads are and than both other threads want to load the same chunkArea again
