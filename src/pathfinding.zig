@@ -885,7 +885,7 @@ pub fn pathfindAStar(
         try citizen.moveTo.append(mapZig.mapTileXyToTilePosition(goalTile));
         return true;
     }
-    if (try isTilePathBlocking(goalTile, state)) {
+    if (try isTilePathBlocking(goalTile, threadIndex, state)) {
         if (PATHFINDING_DEBUG) std.debug.print("goal on blocking tile {}\n", .{goalTile});
         return false;
     }
@@ -896,15 +896,15 @@ pub fn pathfindAStar(
     var gScore = &state.threadData[threadIndex].pathfindingTempData.gScore;
     gScore.clearRetainingCapacity();
     var neighbors = &state.threadData[threadIndex].pathfindingTempData.neighbors;
-    var startRecData = try getChunkGraphRectangleIndexForTileXY(startTile, state);
+    var startRecData = try getChunkGraphRectangleIndexForTileXY(startTile, threadIndex, state);
     if (startRecData == null) {
-        if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY - 1 }, state)) |topOfStart| {
+        if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY - 1 }, threadIndex, state)) |topOfStart| {
             startRecData = topOfStart;
-        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY + 1 }, state)) |bottomOfStart| {
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY + 1 }, threadIndex, state)) |bottomOfStart| {
             startRecData = bottomOfStart;
-        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, state)) |leftOfStart| {
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 1, .tileY = startTile.tileY }, threadIndex, state)) |leftOfStart| {
             startRecData = leftOfStart;
-        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX + 1, .tileY = startTile.tileY }, state)) |rightOfStart| {
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX + 1, .tileY = startTile.tileY }, threadIndex, state)) |rightOfStart| {
             startRecData = rightOfStart;
         } else {
             if (PATHFINDING_DEBUG) std.debug.print("stuck on blocking tile", .{});
@@ -914,7 +914,7 @@ pub fn pathfindAStar(
     const startChunk = try mapZig.getChunkByChunkXYWithRequestForLoad(startRecData.?.chunkXY, threadIndex, state);
     if (startChunk == null) return false;
     const start = &startChunk.?.pathingData.graphRectangles.items[startRecData.?.index];
-    const goalRecData = (try getChunkGraphRectangleIndexForTileXY(goalTile, state)).?;
+    const goalRecData = (try getChunkGraphRectangleIndexForTileXY(goalTile, threadIndex, state)).?;
     const goalChunk = try mapZig.getChunkByChunkXYWithRequestForLoad(goalRecData.chunkXY, threadIndex, state);
     if (goalChunk == null) return false;
     const goal = &goalChunk.?.pathingData.graphRectangles.items[goalRecData.index];
@@ -991,7 +991,7 @@ pub fn pathfindAStar(
     return false;
 }
 
-pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSimState) !?main.Position {
+pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize, state: *main.ChatSimState) !?main.Position {
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
     var result: ?main.Position = null;
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
@@ -1016,13 +1016,13 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, state: *main.ChatSi
             result = finalRandomPosition;
         }
     } else {
-        if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 }, state)) {
+        if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 }, threadIndex, state)) {
             result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 });
-        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 }, state)) {
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 }, threadIndex, state)) {
             result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 });
-        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY }, state)) {
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
             result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY });
-        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY }, state)) {
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
             result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY });
         }
     }
@@ -1124,15 +1124,16 @@ pub fn paintDebugPathfindingVisualizationFont(state: *main.ChatSimState) !void {
     }
 }
 
-fn isTilePathBlocking(tileXY: mapZig.TileXY, state: *main.ChatSimState) !bool {
-    return try getChunkGraphRectangleIndexForTileXY(tileXY, state) == null;
+fn isTilePathBlocking(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.ChatSimState) !bool {
+    return try getChunkGraphRectangleIndexForTileXY(tileXY, threadIndex, state) == null;
 }
 
-fn getChunkGraphRectangleIndexForTileXY(tileXY: mapZig.TileXY, state: *main.ChatSimState) !?GraphConnection {
+fn getChunkGraphRectangleIndexForTileXY(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.ChatSimState) !?GraphConnection {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+    const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+    if (chunk == null) return null;
     const pathingDataIndex = getPathingIndexForTileXY(tileXY);
-    const optIndex = chunk.pathingData.pathingData[pathingDataIndex];
+    const optIndex = chunk.?.pathingData.pathingData[pathingDataIndex];
     if (optIndex) |index| {
         return .{ .index = index, .chunkXY = chunkXY };
     } else {

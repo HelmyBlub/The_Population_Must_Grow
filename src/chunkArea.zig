@@ -98,12 +98,12 @@ pub fn getAreaXyForKey(chunkKey: u64) ChunkAreaXY {
     return tempAreaXY;
 }
 
-pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, state: *main.ChatSimState) !void {
+pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *main.ChatSimState) !void {
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |area| {
         if (area.idleTypeData != .notIdle) {
-            try assignChunkAreaBackToThread(area, areaKey, state);
+            try assignChunkAreaBackToThread(area, areaKey, threadIndex, state);
         }
         return;
     }
@@ -204,7 +204,7 @@ fn diagonalNumbering(x: u32, y: u32) usize {
     return @intCast(firstPart + @divExact(rest * (rest + 1), 2) + (halved - 1 - rest) * (rest + 1) + (halved - x - 1));
 }
 
-pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.ChatSimState) !void {
+pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !void {
     chunkArea.idleTypeData = .notIdle;
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
@@ -217,7 +217,9 @@ pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *
         }
     }
     try threadWithLeastAreas.?.chunkAreaKeys.append(areaKey);
-    if (chunkArea.chunks == null) try saveZig.loadChunkAreaFromFile(chunkArea.areaXY, chunkArea, state);
+    if (chunkArea.chunks == null) {
+        try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[threadIndex], areaKey);
+    }
 }
 
 pub fn isChunkAreaInVisibleData(visibleData: mapZig.VisibleChunksData, areaXY: ChunkAreaXY) bool {
@@ -255,7 +257,7 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
                 const areaKey = getKeyForAreaXY(areaXY);
                 const optChunkArea = state.chunkAreas.getPtr(areaKey);
                 if (optChunkArea) |area| {
-                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, 0, state);
                     area.visible = isVisible;
                 }
             }

@@ -14,6 +14,7 @@ const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
 const spritePathVulkanZig = @import("spritePathVulkan.zig");
 const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxVulkan.zig");
 const codePerformanceZig = @import("../codePerformance.zig");
+const chunkAreaZig = @import("../chunkArea.zig");
 
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
@@ -224,15 +225,23 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     codePerformanceZig.endMeasure("      sprite init", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure("      sprite entity count", &state.codePerformanceData);
+    var currentAreaXY: ?chunkAreaZig.ChunkAreaXY = null;
+    var currentChunkArea: ?*chunkAreaZig.ChunkArea = null;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
-            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                .{
-                    .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
-                    .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
-                },
-                state,
-            );
+            const chunkXY: mapZig.ChunkXY = .{ .chunkX = chunkVisible.left + @as(i32, @intCast(x)), .chunkY = chunkVisible.top + @as(i32, @intCast(y)) };
+            const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+            if (currentAreaXY == null or currentAreaXY.?.areaX != areaXY.areaX or currentAreaXY.?.areaY != areaXY.areaY) {
+                currentAreaXY = areaXY;
+                const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+                currentChunkArea = state.chunkAreas.getPtr(areaKey);
+                if (currentChunkArea == null or currentChunkArea.?.chunks == null) {
+                    try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[0], areaKey);
+                }
+            }
+            if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
+            const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
+
             chunk.lastPaintGameTime = state.gameTimeMs;
             entityPaintCountLayer1Citizen += chunk.citizens.items.len;
             entityPaintCountLayer1 += chunk.buildings.items.len;
@@ -278,13 +287,15 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     if (simple) {
         for (0..chunkVisible.columns) |x| {
             for (0..chunkVisible.rows) |y| {
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                    .{
-                        .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
-                        .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
-                    },
-                    state,
-                );
+                const chunkXY: mapZig.ChunkXY = .{ .chunkX = chunkVisible.left + @as(i32, @intCast(x)), .chunkY = chunkVisible.top + @as(i32, @intCast(y)) };
+                const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+                if (currentAreaXY == null or currentAreaXY.?.areaX != areaXY.areaX or currentAreaXY.?.areaY != areaXY.areaY) {
+                    currentAreaXY = areaXY;
+                    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+                    currentChunkArea = state.chunkAreas.getPtr(areaKey);
+                }
+                if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
+                const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 for (chunk.citizens.items) |*citizen| {
                     vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
@@ -316,13 +327,15 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     } else {
         for (0..chunkVisible.columns) |x| {
             for (0..chunkVisible.rows) |y| {
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                    .{
-                        .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
-                        .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
-                    },
-                    state,
-                );
+                const chunkXY: mapZig.ChunkXY = .{ .chunkX = chunkVisible.left + @as(i32, @intCast(x)), .chunkY = chunkVisible.top + @as(i32, @intCast(y)) };
+                const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+                if (currentAreaXY == null or currentAreaXY.?.areaX != areaXY.areaX or currentAreaXY.?.areaY != areaXY.areaY) {
+                    currentAreaXY = areaXY;
+                    const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+                    currentChunkArea = state.chunkAreas.getPtr(areaKey);
+                }
+                if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
+                const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 if (!doComplexCitizen) {
                     for (chunk.citizens.items) |*citizen| {
                         vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };

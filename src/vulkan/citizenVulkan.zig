@@ -8,6 +8,7 @@ const paintVulkanZig = @import("paintVulkan.zig");
 const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
 const windowSdlZig = @import("../windowSdl.zig");
+const chunkAreaZig = @import("../chunkArea.zig");
 
 pub const VkCitizen = struct {
     graphicsPipeline: vk.VkPipeline = undefined,
@@ -84,15 +85,19 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
     }
 
     var index: u32 = 0;
+    var currentAreaXY: ?chunkAreaZig.ChunkAreaXY = null;
+    var currentChunkArea: ?*chunkAreaZig.ChunkArea = null;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
-            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(
-                .{
-                    .chunkX = chunkVisible.left + @as(i32, @intCast(x)),
-                    .chunkY = chunkVisible.top + @as(i32, @intCast(y)),
-                },
-                state,
-            );
+            const chunkXY: mapZig.ChunkXY = .{ .chunkX = chunkVisible.left + @as(i32, @intCast(x)), .chunkY = chunkVisible.top + @as(i32, @intCast(y)) };
+            const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
+            if (currentAreaXY == null or currentAreaXY.?.areaX != areaXY.areaX or currentAreaXY.?.areaY != areaXY.areaY) {
+                currentAreaXY = areaXY;
+                const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
+                currentChunkArea = state.chunkAreas.getPtr(areaKey);
+            }
+            if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
+            const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
             for (chunk.citizens.items) |*citizen| {
                 const animationTimer = if (citizen.nextThinkingAction != .idle and citizen.nextThinkingTickTimeMs > state.gameTimeMs) citizen.nextThinkingTickTimeMs - state.gameTimeMs else state.gameTimeMs;
                 vkState.citizen.vertices[index] = .{

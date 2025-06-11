@@ -149,6 +149,10 @@ pub fn deleteSave(allocator: std.mem.Allocator) !void {
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
     if ((state.testData != null and state.testData.?.skipSaveAndLoad)) return;
+    if (chunkArea.chunks == null) {
+        std.debug.print("should not happen. Tried to save chunkArea which is already unloaded.\n", .{});
+        return;
+    }
     std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
@@ -167,7 +171,9 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
                 .chunkY = (@as(i32, @intCast(areaChunkY)) + chunkArea.areaXY.areaY * chunkAreaZig.ChunkArea.SIZE),
             };
             const writeValueChunkXyIndex: usize = (areaChunkX * chunkAreaZig.ChunkArea.SIZE + areaChunkY) * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH;
-            const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
+            const chunkIndex = mapZig.getChunkIndexForChunkXY(chunkXY);
+            const chunk = &chunkArea.chunks.?[chunkIndex];
+
             for (chunk.trees.items) |tree| {
                 const writeValueIndex: usize = writeValueChunkXyIndex + positionToWriteIndexTilePart(tree.position);
                 var writeValue: u8 = SAVE_TREE;

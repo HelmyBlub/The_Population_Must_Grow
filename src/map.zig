@@ -235,8 +235,16 @@ pub fn getChunkByChunkXYWithRequestForLoad(chunkXY: ChunkXY, threadIndex: usize,
             return &chunks[getChunkIndexForChunkXY(chunkXY)];
         }
     }
-    try state.threadData[threadIndex].requestToLoadChunkAreaKeys.append(areaKey);
+
+    try appendRequestToLoadChunkAreaKey(&state.threadData[threadIndex], areaKey);
     return null;
+}
+
+pub fn appendRequestToLoadChunkAreaKey(threadData: *main.ThreadData, areaKey: u64) !void {
+    for (threadData.requestToLoadChunkAreaKeys.items) |key| {
+        if (key == areaKey) return;
+    }
+    try threadData.requestToLoadChunkAreaKeys.append(areaKey);
 }
 
 pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.ChatSimState) !?*MapChunk {
@@ -577,7 +585,7 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
     try chunk.trees.append(tree);
     try chunk.buildOrders.append(.{ .position = tree.position, .materialCount = 1 });
     if (tree.regrow) {
-        try addTickPosition(chunk.chunkXY, state);
+        try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, 0, state);
     }
     return true;
 }
@@ -586,7 +594,7 @@ pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.Chat
     const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
     state.threadData[threadIndex].citizensAddedThisTick += 1;
     try chunk.citizens.append(citizen);
-    try addTickPosition(chunk.chunkXY, state);
+    try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, threadIndex, state);
 }
 
 pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
@@ -594,7 +602,7 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, state);
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
-    try addTickPosition(chunk.chunkXY, state);
+    try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, 0, state);
     return true;
 }
 
@@ -643,7 +651,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
         try chunk.buildings.append(building);
         try chunk.buildOrders.append(.{ .position = building.position, .materialCount = 1 });
     }
-    try addTickPosition(chunk.chunkXY, state);
+    try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, 0, state);
     return true;
 }
 
@@ -783,10 +791,6 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
     }
 }
 
-pub fn addTickPosition(chunkXY: ChunkXY, state: *main.ChatSimState) !void {
-    try chunkAreaZig.checkIfAreaIsActive(chunkXY, state);
-}
-
 pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.potatoFields.items, 0..) |*field, i| {
@@ -797,14 +801,14 @@ pub fn getPotatoFieldOnPosition(position: main.Position, state: *main.ChatSimSta
     return null;
 }
 
-pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, state: *main.ChatSimState) !void {
+pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, threadIndex: usize, state: *main.ChatSimState) !void {
     const chunkAreaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunk.chunkXY);
     const citizenHomeChunkXY = getChunkXyForPosition(citizenHome);
     const chunkAreaXYCitizenHome = chunkAreaZig.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
     if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
         const areaKey = chunkAreaZig.getKeyForAreaXY(chunkAreaXY);
         if (state.chunkAreas.getPtr(areaKey)) |idleArea| {
-            if (idleArea.idleTypeData != .notIdle) try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, state);
+            if (idleArea.idleTypeData != .notIdle) try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, threadIndex, state);
         }
     }
     try chunk.queue.append(chunkQueueItem);
@@ -875,7 +879,7 @@ pub fn getBuildingOnPosition(position: main.Position, state: *main.ChatSimState)
     return null;
 }
 
-pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) !void {
+pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, threadIndex: usize, state: *main.ChatSimState) !void {
     const areaRectangleFromTileRectangle: MapTileRectangle = .{
         .topLeftTileXY = .{
             .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE),
@@ -891,7 +895,7 @@ pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main
                 .areaY = @as(i32, @intCast(y)) + areaRectangleFromTileRectangle.topLeftTileXY.tileY,
             });
             if (state.chunkAreas.getPtr(areaKey)) |idleArea| {
-                try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, state);
+                try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, threadIndex, state);
             }
         }
     }
@@ -960,7 +964,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
         .columnCount = tileCountColumns,
         .rowCount = tileCountRows,
     };
-    try unidleAffectedChunkAreas(tileRectangle, state);
+    try unidleAffectedChunkAreas(tileRectangle, 0, state);
 }
 
 pub fn getChunkIndexForChunkXY(chunkXY: ChunkXY) usize {
@@ -1077,7 +1081,7 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
     const citizen = main.Citizen.createCitizen(.{ .x = halveTileSize, .y = halveTileSize }, allocator);
     try spawnChunk.citizens.append(citizen);
     state.citizenCounterLastTick = 1;
-    try addTickPosition(spawnChunk.chunkXY, state);
+    try chunkAreaZig.checkIfAreaIsActive(spawnChunk.chunkXY, 0, state);
 }
 
 fn fixedRandom(x: f64, y: f64, seed: f64) f64 {
