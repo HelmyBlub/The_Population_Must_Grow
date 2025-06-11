@@ -948,7 +948,10 @@ pub fn pathfindAStar(
         neighbors.clearRetainingCapacity();
         var conChunk: ?*mapZig.MapChunk = null;
         for (current.rectangle.connectionIndexes.items) |conData| {
-            if (conChunk == null or conChunk.?.chunkXY.chunkX != conData.chunkXY.chunkX or conChunk.?.chunkXY.chunkY != conData.chunkXY.chunkY) conChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(conData.chunkXY, state)).?;
+            if (conChunk == null or conChunk.?.chunkXY.chunkX != conData.chunkXY.chunkX or conChunk.?.chunkXY.chunkY != conData.chunkXY.chunkY) {
+                conChunk = try mapZig.getChunkByChunkXYWithoutCreateOrLoad(conData.chunkXY, state);
+                if (conChunk == null) continue;
+            }
             if (conChunk.?.pathingData.graphRectangles.items.len <= conData.index) {
                 std.debug.print("beforePathfinding crash: {}, {}", .{ current.rectangle.tileRectangle, current.rectangle.index });
             }

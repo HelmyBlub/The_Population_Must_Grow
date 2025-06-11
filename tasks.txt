@@ -1,14 +1,9 @@
 tasks:
+- constant f10 results in crash 
+    - believe citizens can walk into unloaded chunk area and break pathfinding
 - load/save performance
-    - move loading chunks to its own thread
-        - make sure no race codition on adding/deleting entry for load/save
-        - x seperate lists
-            - main thread has index for current write index, current load index
-            - delete index = 0, write index = 1
-                - if deleteIndex == writeIndex - 1 => write index+=1.   d=0, w=2
-                - if deleteIndex empty and writeIndex= deleteIndex+2 => delete index +1.   d=1, w=2
-        - check deleteAndRestart. Might need to wait
-        - check fastRelease not ending up in endless loop because of data in thread not updating
+    - check deleteAndRestart. Might need to wait
+    - check fastRelease not ending up in endless loop because of data in thread not updating
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
 - bug: bighouse over work order normal house
