@@ -23,6 +23,7 @@ pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
 };
 
 pub const chunkKeyOrder: [ChunkArea.SIZE][ChunkArea.SIZE]usize = setupChunkAreaKeyOrder();
+pub const MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD = 30_000;
 pub const ChunkArea: type = struct {
     areaXY: ChunkAreaXY,
     chunks: ?[]mapZig.MapChunk,
@@ -31,6 +32,7 @@ pub const ChunkArea: type = struct {
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
     visible: bool = false,
+    dontUnloadBeforeTime: u32,
     pub const SIZE = 20;
 };
 
@@ -128,6 +130,7 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState
         .areaXY = areaXY,
         .currentChunkIndex = 0,
         .chunks = undefined,
+        .dontUnloadBeforeTime = state.gameTimeMs + MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD,
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
     if ((state.testData == null or !state.testData.?.skipSaveAndLoad) and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
@@ -265,12 +268,20 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     if (state.testData == null or !state.testData.?.skipSaveAndLoad) {
         for (0..state.usedThreadsCount) |threadIndex| {
             const threadData = &state.threadData[threadIndex];
-            while (0 < threadData.recentlyRemovedChunkAreaKeys.items.len) {
-                const removedKey = threadData.recentlyRemovedChunkAreaKeys.pop().?;
-                const chunkArea = state.chunkAreas.getPtr(removedKey).?;
+            var currentIndex: usize = 0;
+            while (currentIndex < threadData.recentlyRemovedChunkAreaKeys.items.len) {
+                const currentKey = threadData.recentlyRemovedChunkAreaKeys.items[currentIndex];
+                const chunkArea = state.chunkAreas.getPtr(currentKey).?;
                 if (chunkArea.idleTypeData == .idle and !chunkArea.visible and chunkArea.chunks != null) {
-                    try saveZig.saveChunkAreaToFile(chunkArea, state);
-                    try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
+                    if (chunkArea.dontUnloadBeforeTime < state.gameTimeMs) {
+                        try saveZig.saveChunkAreaToFile(chunkArea, state);
+                        try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
+                        _ = threadData.recentlyRemovedChunkAreaKeys.swapRemove(currentIndex);
+                    } else {
+                        currentIndex += 1;
+                    }
+                } else {
+                    _ = threadData.recentlyRemovedChunkAreaKeys.swapRemove(currentIndex);
                 }
             }
         }

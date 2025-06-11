@@ -336,6 +336,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
     state.ticksRemainingBeforePaint = 0;
     const totalStartTime = std.time.microTimestamp();
     var nextCpuPerCentUpdateTimeMs: i64 = 0;
+    var tickStartedTime: i64 = 0;
     mainLoop: while (!state.gameEnd) {
         try codePerformanceZig.startMeasure("main loop", &state.codePerformanceData);
         state.tickStartTimeMicroSeconds = std.time.microTimestamp();
@@ -343,6 +344,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
         try windowSdlZig.handleEvents(state);
         try mapZig.visibleAndAdjacentChunkRectangle(state);
         try chunkAreaZig.optimizeChunkAreaAssignments(state);
+        tickStartedTime = std.time.microTimestamp();
         while (state.ticksRemainingBeforePaint >= 1) {
             try tick(state);
             state.ticksRemainingBeforePaint -= 1;
@@ -352,7 +354,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
             }
             if (state.gameEnd) break :mainLoop;
         }
-        const passedTickTime = @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds)));
+        const passedTickTime = @as(u64, @intCast((std.time.microTimestamp() - tickStartedTime)));
         try codePerformanceZig.startMeasure("input tick", &state.codePerformanceData);
         inputZig.tick(state);
         codePerformanceZig.endMeasure("input tick", &state.codePerformanceData);
@@ -628,6 +630,14 @@ fn getTotalChunkAreaCount(threadDatas: []ThreadData) usize {
     return result;
 }
 
+///only appends if not contained already
+fn appendRecentlyRemovedChunkAreaKeys(threadData: *ThreadData, areaKey: u64) !void {
+    for (threadData.recentlyRemovedChunkAreaKeys.items) |key| {
+        if (key == areaKey) return;
+    }
+    try threadData.recentlyRemovedChunkAreaKeys.append(areaKey);
+}
+
 fn tick(state: *ChatSimState) !void {
     try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
@@ -641,6 +651,7 @@ fn tick(state: *ChatSimState) !void {
             chunkArea.tickedCitizenCounter = 0;
             chunkArea.lastTickIdleTypeData = chunkArea.idleTypeData;
             chunkArea.idleTypeData = .idle;
+            chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
             if (i == 0) continue; //0 is main thread
             if (threadData.thread == null) {
                 threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
@@ -649,9 +660,9 @@ fn tick(state: *ChatSimState) !void {
         for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
             const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
             const optChunkArea = state.chunkAreas.getPtr(areaKey);
-            std.debug.print("request load {} {}\n", .{ areaXY.areaX, areaXY.areaY });
             if (optChunkArea) |chunkArea| {
                 if (chunkArea.chunks == null) {
+                    std.debug.print("request load {} {}\n", .{ areaXY.areaX, areaXY.areaY });
                     try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
                     chunkArea.idleTypeData = .idle;
                 }
@@ -689,7 +700,7 @@ fn tick(state: *ChatSimState) !void {
             }
             if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                 const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
-                try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
+                try appendRecentlyRemovedChunkAreaKeys(threadData, removedKey);
             } else {
                 keyIndex += 1;
             }
@@ -744,7 +755,7 @@ fn tick(state: *ChatSimState) !void {
                 const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
                 if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                     const removedKey = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
-                    try mainThreadData.recentlyRemovedChunkAreaKeys.append(removedKey);
+                    try appendRecentlyRemovedChunkAreaKeys(mainThreadData, removedKey);
                 } else {
                     keyIndex += 1;
                 }
@@ -848,7 +859,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                 const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
                 if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
                     const removedKey = threadData.chunkAreaKeys.swapRemove(keyIndex);
-                    try threadData.recentlyRemovedChunkAreaKeys.append(removedKey);
+                    try appendRecentlyRemovedChunkAreaKeys(threadData, removedKey);
                 } else {
                     keyIndex += 1;
                 }

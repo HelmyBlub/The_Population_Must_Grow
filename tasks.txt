@@ -1,14 +1,7 @@
 tasks:
-- bug: empty chunkArea, missing chunks, crashing
-    - reproduce
-        - f10 -> restart. f8 -> wait until everything finished. -> move down until f1 info 0 citizens ticked. move up again
-    - saw a double save in console? this should not happen?
-    - maybe related to copy alot?
-    - seem to happen if two thread load the same chunk
-        - seems to happen if chunks are unloaded in which citizens from other chunks and different threads are and than both other threads want to load the same chunkArea again
-- check rehash chunkAreas
-- bug: not all chunks ticked. Not all buildings where being build
 - save/load part of tick measurement? very bad?
+- check request load not ending up in direct unload
+- bug: not all chunks ticked. Not all buildings where being build
 - load/save performance
 - bug: bighouse over work order normal house
 - check performance for chunks in chunkAreas
@@ -61,11 +54,8 @@ tasks:
 
   
 Some data:
-- FPS: 120, citizens: 33769, gameTime: 330000, end FPS: 76.31871 (09.06.2025)
+ -FPS: 106, citizens: 33029, gameTime: 330000, end FPS: 65.15112 (11.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 104, citizens: 33027, gameTime: 330000, end FPS: 63.83838 (chunks into chunkArea)
-- FPS: 107, citizens: 33026, gameTime: 330000, end FPS: 67.2107 (pathfinding less chunk loads more if)
-
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

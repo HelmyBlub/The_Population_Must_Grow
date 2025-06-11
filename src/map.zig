@@ -1049,6 +1049,7 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
         .areaXY = areaXY,
         .currentChunkIndex = 0,
         .chunks = undefined,
+        .dontUnloadBeforeTime = state.gameTimeMs,
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
     chunkArea.chunks = try state.allocator.alloc(MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
