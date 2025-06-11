@@ -5,6 +5,7 @@ const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 
+pub const DEBUG_INFO_SAVE = false;
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
 const SAVE_TREE = 2;
@@ -153,7 +154,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
         std.debug.print("should not happen. Tried to save chunkArea which is already unloaded.\n", .{});
         return;
     }
-    std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
+    if (DEBUG_INFO_SAVE) std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
@@ -367,7 +368,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, chunkArea: *chunk
 
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
-    std.debug.print("loaded area {} {}\n", .{ areaXY.areaX, areaXY.areaY });
+    if (DEBUG_INFO_SAVE) std.debug.print("loaded area {} {}\n", .{ areaXY.areaX, areaXY.areaY });
     const reader = file.reader();
     var readValues: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
     _ = try reader.readAll(&readValues);
@@ -375,14 +376,14 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, chunkArea: *chunk
     var currentChunkXY: mapZig.ChunkXY = .{ .chunkX = 0, .chunkY = 0 };
     var currentIndex: usize = mapZig.getChunkIndexForChunkXY(currentChunkXY);
     var currenChunk: ?mapZig.MapChunk = null;
-    chunkArea.chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
+    const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
     var unknownLoadValue: ?u8 = null;
     for (readValues, 0..) |value, index| {
         const tileXYIndex = @mod(index, mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH);
         if (tileXYIndex == 0) {
             const chunkInAreaIndex = @divFloor(index, mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH);
             if (currenChunk) |chunk| {
-                chunkArea.chunks.?[currentIndex] = chunk;
+                chunks[currentIndex] = chunk;
             }
             currentChunkXY = .{
                 .chunkX = areaXY.areaX * chunkAreaZig.ChunkArea.SIZE + @as(i32, @intCast(@divFloor(chunkInAreaIndex, chunkAreaZig.ChunkArea.SIZE))),
@@ -608,8 +609,9 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, chunkArea: *chunk
     }
     if (unknownLoadValue) |value| std.debug.print("unknown load value: {d} in area {} {}\n", .{ value, areaXY.areaX, areaXY.areaY });
     if (currenChunk) |chunk| {
-        chunkArea.chunks.?[currentIndex] = chunk;
+        chunks[currentIndex] = chunk;
     }
+    chunkArea.chunks = chunks;
     try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
     chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
 }

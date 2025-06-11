@@ -1,5 +1,6 @@
 tasks:
 - save/load part of tick measurement? very bad?
+    - move loading chunks to its own thread
 - check request load not ending up in direct unload
 - bug: not all chunks ticked. Not all buildings where being build
 - load/save performance

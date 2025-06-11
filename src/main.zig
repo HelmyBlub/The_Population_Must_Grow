@@ -662,12 +662,12 @@ fn tick(state: *ChatSimState) !void {
             const optChunkArea = state.chunkAreas.getPtr(areaKey);
             if (optChunkArea) |chunkArea| {
                 if (chunkArea.chunks == null) {
-                    std.debug.print("request ", .{}); // load function will log more text
+                    if (saveZig.DEBUG_INFO_SAVE) std.debug.print("request ", .{}); // load function will log more text
                     try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
                     chunkArea.idleTypeData = .idle;
                 }
             } else {
-                std.debug.print("request ", .{}); // load function will log more text
+                if (saveZig.DEBUG_INFO_SAVE) std.debug.print("request ", .{}); // load function will log more text
                 _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
             }
         }
