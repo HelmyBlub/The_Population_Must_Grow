@@ -215,7 +215,9 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, state: *main.Cha
     var optChunkArea = state.chunkAreas.getPtr(areaKey);
     if (optChunkArea) |chunkArea| {
         if (chunkArea.chunks == null) {
-            try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
+            chunkArea.chunks = try saveZig.loadChunkAreaFromFile(areaXY, state);
+            try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
+            chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
             chunkArea.idleTypeData = .idle;
         }
     } else {
@@ -991,8 +993,7 @@ pub fn getChunkXyForPosition(position: main.Position) ChunkXY {
     };
 }
 
-pub fn createEmptyChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
-    const allocator = state.allocator;
+pub fn createEmptyChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator) !MapChunk {
     const chunk: MapChunk = .{
         .chunkXY = chunkXY,
         .buildings = std.ArrayList(Building).init(allocator),
@@ -1022,7 +1023,7 @@ pub fn destroyChunk(chunk: *MapChunk) void {
 }
 
 pub fn createChunk(chunkXY: ChunkXY, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !MapChunk {
-    var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state);
+    var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state.allocator);
     mapChunk.pathingData = try main.pathfindingZig.createChunkData(chunkXY, areaXY, state.allocator, state);
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
@@ -1061,7 +1062,7 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
     for (0..chunkAreaZig.ChunkArea.SIZE) |chunkX| {
         for (0..chunkAreaZig.ChunkArea.SIZE) |chunkY| {
             if (chunkX == spawnChunkXY.chunkX and chunkY == spawnChunkXY.chunkY) {
-                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createEmptyChunk(spawnChunkXY, state);
+                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createEmptyChunk(spawnChunkXY, state.allocator);
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]].pathingData = try main.pathfindingZig.createChunkData(spawnChunkXY, areaXY, state.allocator, state);
             } else {
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createChunk(.{

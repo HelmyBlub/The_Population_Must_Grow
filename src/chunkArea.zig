@@ -33,6 +33,7 @@ pub const ChunkArea: type = struct {
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
     visible: bool = false,
     dontUnloadBeforeTime: u32,
+    requestedToLoad: bool = false,
     pub const SIZE = 20;
 };
 
@@ -134,21 +135,28 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
     if ((state.testData == null or !state.testData.?.skipSaveAndLoad) and try saveZig.chunkAreaFileExists(areaXY, state.allocator)) {
-        try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
+        chunkArea.chunks = try saveZig.loadChunkAreaFromFile(areaXY, state);
+        try setupPathingForLoadedChunkArea(areaXY, state);
+        chunkArea.dontUnloadBeforeTime = state.gameTimeMs + MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
         loadedFromFile = true;
     } else {
-        chunkArea.chunks = try state.allocator.alloc(mapZig.MapChunk, ChunkArea.SIZE * ChunkArea.SIZE);
-        for (0..ChunkArea.SIZE) |chunkX| {
-            for (0..ChunkArea.SIZE) |chunkY| {
-                chunkArea.chunks.?[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
-                    .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * ChunkArea.SIZE,
-                    .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * ChunkArea.SIZE,
-                }, areaXY, state);
-            }
-        }
-        try setupPathingForLoadedChunkArea(areaXY, state);
+        chunkArea.chunks = try createChunkAreaDataWhenNoFile(chunkArea.areaXY, state);
+        try setupPathingForLoadedChunkArea(chunkArea.areaXY, state);
     }
     return loadedFromFile;
+}
+
+pub fn createChunkAreaDataWhenNoFile(areaXY: ChunkAreaXY, state: *main.ChatSimState) ![]mapZig.MapChunk {
+    const chunks = try state.allocator.alloc(mapZig.MapChunk, ChunkArea.SIZE * ChunkArea.SIZE);
+    for (0..ChunkArea.SIZE) |chunkX| {
+        for (0..ChunkArea.SIZE) |chunkY| {
+            chunks[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
+                .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * ChunkArea.SIZE,
+                .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * ChunkArea.SIZE,
+            }, areaXY, state);
+        }
+    }
+    return chunks;
 }
 
 fn setupChunkAreaKeyOrder() [ChunkArea.SIZE][ChunkArea.SIZE]usize {

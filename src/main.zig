@@ -52,6 +52,7 @@ pub const ChatSimState: type = struct {
     maxThreadCount: usize,
     usedThreadsCount: usize,
     minCitizenPerThread: u32 = 15000,
+    saveAndLoadThread: saveZig.SaveAndLoadThread = undefined,
     threadData: []ThreadData = undefined,
     autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
@@ -181,6 +182,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
             .measureData = .{},
         };
     }
+    try saveZig.createSaveAndLoadThread(state);
     try codePerformanceZig.init(state);
     const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
     if (!couldLoadGeneralData) try mapZig.createSpawnArea(allocator, state);
@@ -638,11 +640,48 @@ fn appendRecentlyRemovedChunkAreaKeys(threadData: *ThreadData, areaKey: u64) !vo
     try threadData.recentlyRemovedChunkAreaKeys.append(areaKey);
 }
 
+fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
+    for (state.threadData) |*threadData| {
+        for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
+            const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
+            var chunkArea = state.chunkAreas.getPtr(areaKey);
+            if (chunkArea == null) {
+                try state.chunkAreas.put(areaKey, .{
+                    .areaXY = areaXY,
+                    .currentChunkIndex = 0,
+                    .chunks = null,
+                    .dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD,
+                });
+                chunkArea = state.chunkAreas.getPtr(areaKey);
+            }
+            if (!chunkArea.?.requestedToLoad) {
+                chunkArea.?.requestedToLoad = true;
+                try state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex].loadAreaKey.append(areaKey);
+            }
+        }
+        const nextAddIndex = @mod(state.saveAndLoadThread.addDataIndex + 1, saveZig.SaveAndLoadThread.DATA_LEN);
+        if (nextAddIndex != state.saveAndLoadThread.saveAndLoadThreadDataIndex) {
+            try state.chunkAreas.ensureUnusedCapacity(40);
+            state.saveAndLoadThread.addDataIndex = nextAddIndex;
+            const saveAndLoadData = &state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex];
+            for (saveAndLoadData.loadedAreaData.items) |areaChunksData| {
+                const chunkArea = state.chunkAreas.getPtr(areaChunksData.areaKey).?;
+                chunkArea.chunks = areaChunksData.chunks;
+                const areaXY = chunkAreaZig.getAreaXyForKey(areaChunksData.areaKey);
+                try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
+                chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
+                chunkArea.requestedToLoad = false;
+            }
+            saveAndLoadData.loadedAreaData.clearRetainingCapacity();
+        }
+        threadData.requestToLoadChunkAreaKeys.clearRetainingCapacity();
+    }
+}
+
 fn tick(state: *ChatSimState) !void {
     try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
     try testZig.tick(state);
-
     for (state.threadData, 0..) |*threadData, i| {
         try threadData.chunkAreaKeys.ensureUnusedCapacity(10);
         for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
@@ -657,23 +696,8 @@ fn tick(state: *ChatSimState) !void {
                 threadData.thread = try std.Thread.spawn(.{}, tickThreadChunks, .{ i, state });
             }
         }
-        for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
-            const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
-            const optChunkArea = state.chunkAreas.getPtr(areaKey);
-            if (optChunkArea) |chunkArea| {
-                if (chunkArea.chunks == null) {
-                    if (saveZig.DEBUG_INFO_SAVE) std.debug.print("request ", .{}); // load function will log more text
-                    try saveZig.loadChunkAreaFromFile(areaXY, chunkArea, state);
-                    chunkArea.idleTypeData = .idle;
-                }
-            } else {
-                if (saveZig.DEBUG_INFO_SAVE) std.debug.print("request ", .{}); // load function will log more text
-                _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, state);
-            }
-        }
-        threadData.requestToLoadChunkAreaKeys.clearRetainingCapacity();
     }
-    try state.chunkAreas.ensureUnusedCapacity(40);
+    try handleRequestToLoadChunkAreaKeys(state);
 
     if (state.usedThreadsCount == 1) {
         state.wasSingleCore = true;
@@ -995,6 +1019,7 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
 
 pub fn destroyGameState(state: *ChatSimState) void {
     std.debug.print("started destory\n", .{});
+    saveZig.destroySaveAndLoadThread(state);
     saveZig.saveGeneralDataToFile(state) catch {
         std.debug.print("failed to save general data\n", .{});
     };
