@@ -1,12 +1,23 @@
 tasks:
+- bug: infinite growing tree/potato crashed vulkan paint
+    - how to reproduce, does not work every time. maybe every 3rd time
+        - start game. 3citizens in area1. one potate in left area. 
+            - directly go to 2 threads. Moving camera with keys directly to where chunk with potato not visible and citiznes still ticking
+            - either bugged data will happen or not. 
+        - somehow while moving camera chunk stopped ticking although last info was it is not idle
+                areax -1 0 not idle 0
+                areax -1 0 chunkArea.ChunkAreaIdleTypeData{ .notIdle = void } 0
+                printSomeInfo
+                chunkArea -1 0, chunkArea.ChunkAreaIdleTypeData{ .idle = void }
+                    chunk -1 0, 1, 1
+                    potato map.PotatoField{ .position = main.Position{ .x = -1e1, .y = 1e1 }, .citizenOnTheWay = 0, .growStartTimeMs = 6755840, .fullyGrown = false }
+
+
+
 - bug: memory leak
     - D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:464:45: 0x7ff707340e0d in loadChunkAreaFromFile (zig.exe.obj)
             const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
-- bug: infinite growing tree/potato crashed vulkan paint
-    - had some minimal case with 2 citizens and one potato field in other chunkArea
-    - unknown how to reproduce
-        - somehow reprdouce with 2 threads and high speed up and moving camera around citizens being ticked and not ticked
-        - assume restart is responsible and not cleaning up somehow
+
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
 - bug: bighouse over work order normal house
