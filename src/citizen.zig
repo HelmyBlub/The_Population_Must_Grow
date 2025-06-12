@@ -347,7 +347,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimStat
     if (optBuilding != null and optBuilding.?.inConstruction) {
         const building = optBuilding.?;
         if (main.calculateDistance(citizen.position, citizen.buildingPosition.?) < mapZig.GameMap.TILE_SIZE / 2) {
-            if (try mapZig.canBuildOrWaitForTreeCutdown(citizen.buildingPosition.?, state)) {
+            if (try mapZig.canBuildOrWaitForTreeCutdown(citizen.buildingPosition.?, threadIndex, state)) {
                 citizen.nextThinkingTickTimeMs = state.gameTimeMs + 3000;
                 citizen.nextThinkingAction = .buildingFinished;
                 building.constructionStartedTime = state.gameTimeMs;
@@ -394,7 +394,7 @@ fn buildingFinished(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimS
 fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
     if (try mapZig.getPotatoFieldOnPosition(citizen.farmPosition.?, state)) |farmData| {
         if (main.calculateDistance(farmData.potatoField.position, citizen.position) <= mapZig.GameMap.TILE_SIZE / 2) {
-            if (try mapZig.canBuildOrWaitForTreeCutdown(citizen.farmPosition.?, state)) {
+            if (try mapZig.canBuildOrWaitForTreeCutdown(citizen.farmPosition.?, threadIndex, state)) {
                 citizen.nextThinkingTickTimeMs = state.gameTimeMs + 1500;
                 citizen.nextThinkingAction = .potatoPlantFinished;
             }

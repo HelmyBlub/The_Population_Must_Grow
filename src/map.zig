@@ -266,6 +266,16 @@ pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, state: *
     return try getChunkAndCreateIfNotExistsForChunkXY(chunkXY, state);
 }
 
+pub fn getChunkByPositionWithRequestForLoad(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?*MapChunk {
+    const chunkXY = getChunkXyForPosition(position);
+    return try getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+}
+
+pub fn getChunkByPositionWithoutCreateOrLoad(position: main.Position, state: *main.ChatSimState) !?*MapChunk {
+    const chunkXY = getChunkXyForPosition(position);
+    return try getChunkByChunkXYWithoutCreateOrLoad(chunkXY, state);
+}
+
 pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.ChatSimState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
     for (chunk.trees.items, 0..) |tree, i| {
@@ -387,12 +397,13 @@ pub fn getObjectOnPosition(position: main.Position, state: *main.ChatSimState) !
     return null;
 }
 
-pub fn canBuildOrWaitForTreeCutdown(position: main.Position, state: *main.ChatSimState) !bool {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, state);
-    for (chunk.trees.items, 0..) |tree, i| {
+pub fn canBuildOrWaitForTreeCutdown(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !bool {
+    const chunk = try getChunkByPositionWithRequestForLoad(position, threadIndex, state);
+    if (chunk == null) return false;
+    for (chunk.?.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             if (tree.citizenOnTheWay) return false;
-            removeTree(i, chunk);
+            removeTree(i, chunk.?);
             return true;
         }
     }

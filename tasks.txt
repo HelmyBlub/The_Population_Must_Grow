@@ -1,4 +1,8 @@
 tasks:
+- bug: infinite growing tree/potato crashed vulkan paint
+    - had some minimal case with 2 citizens and one potato field in other chunkArea
+    - unknown how to reproduce
+        - somehow reprdouce with 2 threads and high speed up and moving camera around citizens being ticked and not ticked
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
 - bug: bighouse over work order normal house

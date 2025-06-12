@@ -948,7 +948,11 @@ pub fn pathfindAStar(
 }
 
 pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize, state: *main.ChatSimState) !?main.Position {
-    const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.position, state);
+    const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.position, state);
+    if (optChunk == null) {
+        return null;
+    }
+    const chunk = optChunk.?;
     var result: ?main.Position = null;
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
