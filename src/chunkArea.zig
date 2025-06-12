@@ -104,7 +104,7 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *
     const areaKey = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |area| {
         if (area.idleTypeData != .notIdle) {
-            try assignChunkAreaBackToThread(area, areaKey, threadIndex, state);
+            try state.threadData[threadIndex].requestToUnidleAreakey.append(areaKey);
         }
         return;
     }

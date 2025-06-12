@@ -144,22 +144,17 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
-                std.debug.print("printChunksNotIdleInfo\n", .{});
-                // var count: u32 = 0;
-                for (state.threadData) |*threadData| {
-                    for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
-                        const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
-                        std.debug.print(" chunkArea {},{}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
-                        // for (chunkArea.chunkKeyOrder) |chunkKey| {
-                        // const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(mapZig.getChunkXyForKey(chunkKey), state);
-                        // if (chunk.workingCitizenCounter == 0) continue;
-                        // for (chunk.citizens.items) |citizen| {
-                        //     if (citizen.nextThinkingAction == .idle or citizen.nextThinkingAction == .potatoHarvest or citizen.nextThinkingAction == .potatoEat or citizen.nextThinkingAction == .potatoEatFinished) continue;
-                        //     std.debug.print("   {}\n", .{citizen});
-                        //     count += 1;
-                        //     if (count > 100) return;
-                        // }
-                        // }
+                std.debug.print("printSomeInfo\n", .{});
+                const areaKey = chunkAreaZig.getKeyForAreaXY(.{ .areaX = -1, .areaY = 0 });
+                if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
+                    std.debug.print(" chunkArea {} {}, {}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, chunkArea.idleTypeData });
+                    if (chunkArea.chunks) |chunks| {
+                        const chunk = chunks[mapZig.getChunkIndexForChunkXY(.{ .chunkX = -1, .chunkY = 0 })];
+                        std.debug.print("    chunk {} {}, {}, {}\n", .{ chunk.chunkXY.chunkX, chunk.chunkXY.chunkY, chunk.queue.items.len, chunk.potatoFields.items.len });
+                        if (chunk.potatoFields.items.len > 0) {
+                            const potatoField = chunk.potatoFields.items[0];
+                            std.debug.print("       potato {}\n", .{potatoField});
+                        }
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {

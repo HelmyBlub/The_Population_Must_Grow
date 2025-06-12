@@ -821,7 +821,9 @@ pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citi
     if (chunkAreaXY.areaX != chunkAreaXYCitizenHome.areaX or chunkAreaXY.areaY != chunkAreaXYCitizenHome.areaY) {
         const areaKey = chunkAreaZig.getKeyForAreaXY(chunkAreaXY);
         if (state.chunkAreas.getPtr(areaKey)) |idleArea| {
-            if (idleArea.idleTypeData != .notIdle) try chunkAreaZig.assignChunkAreaBackToThread(idleArea, areaKey, threadIndex, state);
+            if (idleArea.idleTypeData != .notIdle) {
+                try state.threadData[threadIndex].requestToUnidleAreakey.append(areaKey);
+            }
         }
     }
     try chunk.queue.append(chunkQueueItem);

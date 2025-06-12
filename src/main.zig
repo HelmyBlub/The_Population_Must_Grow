@@ -72,6 +72,7 @@ pub const ThreadData = struct {
     chunkAreaKeys: std.ArrayList(u64),
     recentlyRemovedChunkAreaKeys: std.ArrayList(u64),
     requestToLoadChunkAreaKeys: std.ArrayList(u64),
+    requestToUnidleAreakey: std.ArrayList(u64),
     currentPathIndex: std.atomic.Value(usize),
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
@@ -178,6 +179,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
             .chunkAreaKeys = std.ArrayList(u64).init(allocator),
             .recentlyRemovedChunkAreaKeys = std.ArrayList(u64).init(allocator),
             .requestToLoadChunkAreaKeys = std.ArrayList(u64).init(allocator),
+            .requestToUnidleAreakey = std.ArrayList(u64).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
             .measureData = .{},
         };
@@ -215,6 +217,7 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
         threadData.chunkAreaKeys.clearAndFree();
         threadData.recentlyRemovedChunkAreaKeys.clearAndFree();
         threadData.requestToLoadChunkAreaKeys.clearAndFree();
+        threadData.requestToUnidleAreakey.clearAndFree();
     }
     try mapZig.createSpawnArea(state.allocator, state);
 }
@@ -640,6 +643,17 @@ fn appendRecentlyRemovedChunkAreaKeys(threadData: *ThreadData, areaKey: u64) !vo
     try threadData.recentlyRemovedChunkAreaKeys.append(areaKey);
 }
 
+fn handleRequestToUnidleAreas(state: *ChatSimState) !void {
+    for (state.threadData) |*threadData| {
+        for (threadData.requestToUnidleAreakey.items) |areaKey| {
+            if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
+                try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaKey, 0, state);
+            }
+        }
+        threadData.requestToUnidleAreakey.clearRetainingCapacity();
+    }
+}
+
 fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
     for (state.threadData) |*threadData| {
         for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
@@ -697,6 +711,7 @@ fn tick(state: *ChatSimState) !void {
             }
         }
     }
+    try handleRequestToUnidleAreas(state);
     try handleRequestToLoadChunkAreaKeys(state);
 
     if (state.usedThreadsCount == 1) {
@@ -1049,6 +1064,7 @@ pub fn destroyGameState(state: *ChatSimState) void {
         threadData.chunkAreaKeys.deinit();
         threadData.recentlyRemovedChunkAreaKeys.deinit();
         threadData.requestToLoadChunkAreaKeys.deinit();
+        threadData.requestToUnidleAreakey.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();
