@@ -685,7 +685,7 @@ fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
                 try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
                 chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
                 chunkArea.requestedToLoad = false;
-                chunkArea.idleTypeData = .notIdle;
+                try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, 0, state);
             }
             saveAndLoadData.loadedAreaData.clearRetainingCapacity();
         }
