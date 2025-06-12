@@ -1005,8 +1005,8 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
             if (currentRectangle.connectionIndexes.items.len == 0) break;
             const randomConnectionIndex: usize = @intFromFloat(rand.random().float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
             const randomCon = currentRectangle.connectionIndexes.items[randomConnectionIndex];
-            const conChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(randomCon.chunkXY, state)).?;
-            currentRectangle = &conChunk.pathingData.graphRectangles.items[randomCon.index];
+            const optConChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(randomCon.chunkXY, state));
+            if (optConChunk) |conChunk| currentRectangle = &conChunk.pathingData.graphRectangles.items[randomCon.index];
         }
         const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
         const homePos: main.Position = citizen.homePosition;
