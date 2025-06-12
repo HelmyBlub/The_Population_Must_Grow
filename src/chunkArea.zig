@@ -130,7 +130,7 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
         .currentChunkIndex = 0,
-        .chunks = undefined,
+        .chunks = null,
         .dontUnloadBeforeTime = state.gameTimeMs + MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD,
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
@@ -153,7 +153,7 @@ pub fn createChunkAreaDataWhenNoFile(areaXY: ChunkAreaXY, state: *main.ChatSimSt
             chunks[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
                 .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * ChunkArea.SIZE,
                 .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * ChunkArea.SIZE,
-            }, areaXY, state);
+            }, state);
         }
     }
     return chunks;
@@ -369,6 +369,9 @@ pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.ChatSimS
                         .rowCount = mapZig.GameMap.CHUNK_LENGTH,
                     },
                 };
+                if (chunk.pathingData.graphRectangles.items.len > 0) {
+                    std.debug.print("should not happen. multiple graph conenctions created\n", .{});
+                }
                 try chunk.pathingData.graphRectangles.append(chunkGraphRectangle);
                 const neighbors = [_]mapZig.ChunkXY{
                     .{ .chunkX = chunk.chunkXY.chunkX - 1, .chunkY = chunk.chunkXY.chunkY },

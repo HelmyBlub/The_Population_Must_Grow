@@ -1,9 +1,4 @@
 tasks:
-- constant f10 results in crash 
-    - believe citizens can walk into unloaded chunk area and break pathfinding
-- load/save performance
-    - check deleteAndRestart. Might need to wait
-    - check fastRelease not ending up in endless loop because of data in thread not updating
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
 - bug: bighouse over work order normal house
@@ -37,6 +32,7 @@ tasks:
 Some data:
 - FPS: 109, citizens: 32993, gameTime: 330000, end FPS: 67.35672 (12.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 106, citizens: 34138, gameTime: 330000, end FPS: 67.22983 (fixed duplicated pathing data issue)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

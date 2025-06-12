@@ -56,53 +56,6 @@ const Node = struct {
     priority: i32, // f(x) = g(x) + h(x) (with h() as the heuristic).
 };
 
-pub fn createChunkData(chunkXY: mapZig.ChunkXY, areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.Allocator, state: *main.ChatSimState) !PathfindingChunkData {
-    const chunkGraphRectangle: ChunkGraphRectangle = .{
-        .index = 0,
-        .chunkXY = chunkXY,
-        .connectionIndexes = std.ArrayList(GraphConnection).init(allocator),
-        .tileRectangle = .{
-            .topLeftTileXY = .{
-                .tileX = chunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
-                .tileY = chunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH,
-            },
-            .columnCount = mapZig.GameMap.CHUNK_LENGTH,
-            .rowCount = mapZig.GameMap.CHUNK_LENGTH,
-        },
-    };
-    var result: PathfindingChunkData = .{
-        .pathingData = undefined,
-        .graphRectangles = std.ArrayList(ChunkGraphRectangle).init(allocator),
-    };
-    try result.graphRectangles.append(chunkGraphRectangle);
-    for (0..result.pathingData.len) |i| {
-        result.pathingData[i] = chunkGraphRectangle.index;
-    }
-    const neighbors = [_]mapZig.ChunkXY{
-        .{ .chunkX = chunkXY.chunkX - 1, .chunkY = chunkXY.chunkY },
-        .{ .chunkX = chunkXY.chunkX + 1, .chunkY = chunkXY.chunkY },
-        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY - 1 },
-        .{ .chunkX = chunkXY.chunkX, .chunkY = chunkXY.chunkY + 1 },
-    };
-    for (neighbors) |neighbor| {
-        const neighborAreaXY = chunkAreaZig.getChunkAreaXyForChunkXy(neighbor);
-        const neighborAreaKey = chunkAreaZig.getKeyForAreaXY(neighborAreaXY);
-        if (state.chunkAreas.getPtr(neighborAreaKey)) |chunkArea| {
-            if (chunkArea.chunks == null) continue;
-            if (neighborAreaXY.areaX == areaXY.areaX and neighborAreaXY.areaY == areaXY.areaY and (neighbor.chunkX > chunkXY.chunkX or neighbor.chunkY > chunkXY.chunkY)) continue;
-            const neighborChunk = chunkArea.chunks.?[mapZig.getChunkIndexForChunkXY(neighbor)];
-            for (neighborChunk.pathingData.graphRectangles.items) |*neighborGraphRectangle| {
-                if (areRectanglesTouchingOnEdge(chunkGraphRectangle.tileRectangle, neighborGraphRectangle.tileRectangle)) {
-                    try neighborGraphRectangle.connectionIndexes.append(.{ .index = chunkGraphRectangle.index, .chunkXY = chunkXY });
-                    try result.graphRectangles.items[0].connectionIndexes.append(.{ .index = neighborGraphRectangle.index, .chunkXY = neighbor });
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
 pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, threadIndex: usize, state: *main.ChatSimState) !void {
     if (pathingType == mapZig.PathingType.blocking) {
         const chunkXYRectangles = getChunksOfRectangle(rectangle);

@@ -1003,7 +1003,10 @@ pub fn createEmptyChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator) !MapChun
         .citizens = std.ArrayList(main.Citizen).init(allocator),
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
         .pathes = std.ArrayList(main.Position).init(allocator),
-        .pathingData = undefined,
+        .pathingData = .{
+            .pathingData = undefined,
+            .graphRectangles = std.ArrayList(pathfindingZig.ChunkGraphRectangle).init(allocator),
+        },
         .queue = std.ArrayList(ChunkQueueItem).init(allocator),
     };
     return chunk;
@@ -1022,9 +1025,8 @@ pub fn destroyChunk(chunk: *MapChunk) void {
     pathfindingZig.destoryChunkData(&chunk.pathingData);
 }
 
-pub fn createChunk(chunkXY: ChunkXY, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !MapChunk {
+pub fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
     var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state.allocator);
-    mapChunk.pathingData = try main.pathfindingZig.createChunkData(chunkXY, areaXY, state.allocator, state);
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
             const random = fixedRandom(
@@ -1053,7 +1055,7 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
         .currentChunkIndex = 0,
-        .chunks = undefined,
+        .chunks = null,
         .dontUnloadBeforeTime = state.gameTimeMs,
     });
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
@@ -1063,12 +1065,11 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) 
         for (0..chunkAreaZig.ChunkArea.SIZE) |chunkY| {
             if (chunkX == spawnChunkXY.chunkX and chunkY == spawnChunkXY.chunkY) {
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createEmptyChunk(spawnChunkXY, state.allocator);
-                chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]].pathingData = try main.pathfindingZig.createChunkData(spawnChunkXY, areaXY, state.allocator, state);
             } else {
                 chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[chunkX][chunkY]] = try createChunk(.{
                     .chunkX = @as(i32, @intCast(chunkX)) + areaXY.areaX * chunkAreaZig.ChunkArea.SIZE,
                     .chunkY = @as(i32, @intCast(chunkY)) + areaXY.areaY * chunkAreaZig.ChunkArea.SIZE,
-                }, areaXY, state);
+                }, state);
             }
         }
     }
