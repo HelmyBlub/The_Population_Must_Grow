@@ -107,7 +107,7 @@ pub fn tick(state: *main.ChatSimState) !void {
                     },
                     .spawnFinishedHouseWithCitizen => |data| {
                         _ = try mapZig.placeHouse(mapZig.mapPositionToTileMiddlePosition(data), state, false, true, 0);
-                        if (try mapZig.getBuildingOnPosition(data, state)) |building| {
+                        if (try mapZig.getBuildingOnPosition(data, 0, state)) |building| {
                             try mapZig.finishBuilding(building, 0, state);
                         }
                     },
@@ -117,7 +117,7 @@ pub fn tick(state: *main.ChatSimState) !void {
                     },
                     .restart => {
                         //not a real restart yet
-                        const spawnChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, state);
+                        const spawnChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, 0, state);
                         const spawnCitizen = &spawnChunk.citizens.items[0];
                         spawnCitizen.position.x = 0;
                         spawnCitizen.position.y = 0;

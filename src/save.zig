@@ -205,7 +205,7 @@ pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
     for (0..activeChunkAreaKeysLength) |_| {
         const key = try reader.readInt(u64, .little);
         const areaXY = chunkAreaZig.getAreaXyForKey(key);
-        if (try chunkAreaZig.putChunkArea(areaXY, key, state)) {
+        if (try chunkAreaZig.putChunkArea(areaXY, key, 0, state)) {
             try state.threadData[0].chunkAreaKeys.append(key);
         }
     }
@@ -759,7 +759,7 @@ fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.Chat
                                 adjacentGraphConnection.index == graphRectangleIndex)
                             {
                                 _ = adjacentGraphRectangle.connectionIndexes.swapRemove(adjacentGraphConnectionIndex);
-                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkLeft.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkLeft.?, state);
+                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkLeft.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkLeft.?, 0, state);
                                 break;
                             }
                         }
@@ -773,7 +773,7 @@ fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.Chat
                                 adjacentGraphConnection.index == graphRectangleIndex)
                             {
                                 _ = adjacentGraphRectangle.connectionIndexes.swapRemove(adjacentGraphConnectionIndex);
-                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkRight.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkRight.?, state);
+                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkRight.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkRight.?, 0, state);
                                 break;
                             }
                         }
@@ -787,7 +787,7 @@ fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.Chat
                                 adjacentGraphConnection.index == graphRectangleIndex)
                             {
                                 _ = adjacentGraphRectangle.connectionIndexes.swapRemove(adjacentGraphConnectionIndex);
-                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkTop.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkTop.?, state);
+                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkTop.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkTop.?, 0, state);
                                 break;
                             }
                         }
@@ -801,7 +801,7 @@ fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.Chat
                                 adjacentGraphConnection.index == graphRectangleIndex)
                             {
                                 _ = adjacentGraphRectangle.connectionIndexes.swapRemove(adjacentGraphConnectionIndex);
-                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkBottom.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkBottom.?, state);
+                                try pathfindingZig.graphRectangleConnectionMovedUpdate(chunkBottom.?.pathingData.graphRectangles.items.len, graphConnection.index, chunkBottom.?, 0, state);
                                 break;
                             }
                         }

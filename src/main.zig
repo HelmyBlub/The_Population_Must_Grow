@@ -647,7 +647,7 @@ fn handleRequestToUnidleAreas(state: *ChatSimState) !void {
     for (state.threadData) |*threadData| {
         for (threadData.requestToUnidleAreakey.items) |areaKey| {
             if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
-                try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaKey, 0, state);
+                try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaKey, state);
             }
         }
         threadData.requestToUnidleAreakey.clearRetainingCapacity();
@@ -686,7 +686,7 @@ fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
                     try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
                     chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
                     chunkArea.requestedToLoad = false;
-                    try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, 0, state);
+                    try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, state);
                 } else {
                     std.debug.print("does this happen? loading a loaded area? {} {} {d}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, state.gameTimeMs });
                     for (areaChunksData.chunks) |*chunk| {
@@ -999,7 +999,7 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
         while (iterator > 0) {
             iterator -= 1;
             const buildOrder: *mapZig.BuildOrder = &chunk.buildOrders.items[iterator];
-            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, state);
+            const optMapObject: ?mapZig.MapObject = try mapZig.getObjectOnPosition(buildOrder.position, threadIndex, state);
             if (optMapObject) |mapObject| {
                 if (try Citizen.findCloseFreeCitizen(buildOrder.position, threadIndex, state)) |freeCitizenData| {
                     const freeCitizen = freeCitizenData.citizen;

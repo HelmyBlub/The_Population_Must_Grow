@@ -259,7 +259,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             const loopChunk = mapZig.getChunkXyForPosition(position);
             if (currentChunkXY == null or loopChunk.chunkX != currentChunkXY.?.chunkX or loopChunk.chunkY != currentChunkXY.?.chunkY) {
                 currentChunkXY = loopChunk;
-                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, state);
+                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, 0, state);
             }
             if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
                 try mapZig.demolishAnythingOnPosition(position, mapTileRectangle, state);
@@ -286,7 +286,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             }
         }
     }
-    try mapZig.unidleAffectedChunkAreas(mapTileRectangle, 0, state);
+    try mapZig.unidleAffectedChunkAreas(mapTileRectangle, state);
     if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
         try main.pathfindingZig.changePathingDataRectangle(mapTileRectangle, mapZig.PathingType.slow, 0, state);
     }

@@ -99,33 +99,27 @@ pub fn getAreaXyForKey(chunkKey: u64) ChunkAreaXY {
     return tempAreaXY;
 }
 
+pub fn appendRequestToUnidleChunkAreaKey(threadData: *main.ThreadData, areaKey: u64) !void {
+    for (threadData.requestToUnidleAreakey.items) |key| {
+        if (key == areaKey) return;
+    }
+    try threadData.requestToUnidleAreakey.append(areaKey);
+}
+
 pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *main.ChatSimState) !void {
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |area| {
         if (area.idleTypeData != .notIdle) {
-            try state.threadData[threadIndex].requestToUnidleAreakey.append(areaKey);
+            try appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
         }
         return;
     }
-    var threadWithLeastAreas: ?*main.ThreadData = null;
-    for (state.threadData, 0..) |*threadData, index| {
-        if (index >= state.usedThreadsCount) break;
-        if (threadWithLeastAreas == null or threadWithLeastAreas.?.chunkAreaKeys.items.len > threadData.chunkAreaKeys.items.len) {
-            threadWithLeastAreas = threadData;
-        }
-    }
-    if (threadWithLeastAreas) |thread| {
-        try thread.chunkAreaKeys.append(areaKey);
-        _ = try putChunkArea(areaXY, areaKey, state);
-        return;
-    }
-
-    std.debug.print("problem?: chunk area not handles\n", .{});
+    _ = try putChunkArea(areaXY, areaKey, threadIndex, state);
 }
 
 /// returns true if loaded from file
-pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState) !bool {
+pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !bool {
     var loadedFromFile = false;
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
@@ -143,6 +137,7 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, state: *main.ChatSimState
         chunkArea.chunks = try createChunkAreaDataWhenNoFile(chunkArea.areaXY, state);
         try setupPathingForLoadedChunkArea(chunkArea.areaXY, state);
     }
+    try appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
     return loadedFromFile;
 }
 
@@ -212,7 +207,8 @@ fn diagonalNumbering(x: u32, y: u32) usize {
     return @intCast(firstPart + @divExact(rest * (rest + 1), 2) + (halved - 1 - rest) * (rest + 1) + (halved - x - 1));
 }
 
-pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !void {
+/// should only be done by main thread when not ticking
+pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.ChatSimState) !void {
     chunkArea.idleTypeData = .notIdle;
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
@@ -226,7 +222,7 @@ pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, threadIn
     }
     try threadWithLeastAreas.?.chunkAreaKeys.append(areaKey);
     if (chunkArea.chunks == null) {
-        try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[threadIndex], areaKey);
+        try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[0], areaKey);
     }
 }
 
@@ -265,7 +261,7 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
                 const areaKey = getKeyForAreaXY(areaXY);
                 const optChunkArea = state.chunkAreas.getPtr(areaKey);
                 if (optChunkArea) |area| {
-                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, 0, state);
+                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
                     area.visible = isVisible;
                 }
             }
