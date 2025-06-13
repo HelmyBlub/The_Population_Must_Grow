@@ -115,12 +115,11 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *
         }
         return;
     }
-    _ = try putChunkArea(areaXY, areaKey, threadIndex, state);
+    try putChunkArea(areaXY, areaKey, threadIndex, state);
 }
 
 /// returns true if loaded from file
-pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !bool {
-    var loadedFromFile = false;
+pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !void {
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
         .currentChunkIndex = 0,
@@ -132,13 +131,11 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state
         chunkArea.chunks = try saveZig.loadChunkAreaFromFile(areaXY, state);
         try setupPathingForLoadedChunkArea(areaXY, state);
         chunkArea.dontUnloadBeforeTime = state.gameTimeMs + MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
-        loadedFromFile = true;
     } else {
         chunkArea.chunks = try createChunkAreaDataWhenNoFile(chunkArea.areaXY, state);
         try setupPathingForLoadedChunkArea(chunkArea.areaXY, state);
     }
     try appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
-    return loadedFromFile;
 }
 
 pub fn createChunkAreaDataWhenNoFile(areaXY: ChunkAreaXY, state: *main.ChatSimState) ![]mapZig.MapChunk {

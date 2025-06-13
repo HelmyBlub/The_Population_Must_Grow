@@ -5,7 +5,6 @@ tasks:
             - check copy past sets area to waiting for citizen
     - reproduce steps:
         - very long thin copy paste area. stuff not visible might not be seen.
-        - continue: not every area is added to thread on copy paste
 
 - unload/load logic should only unload chunks with all idle neigbors
 
@@ -47,6 +46,8 @@ Some data:
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - FPS: 111, citizens: 32159, gameTime: 330000, end FPS: 70.691605 (waiting for citizens logic change/fix)
 - FPS: 111, citizens: 31580, gameTime: 330000, end FPS: 73.10323 (added missing case for put area back to ticking resulting in more requried code changes)
+- FPS: 112, citizens: 31580, gameTime: 330000, end FPS: 72.661285 (bugfix area not beeing added back to ticking if build order assigned)
+
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter

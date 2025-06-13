@@ -219,10 +219,10 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usi
             try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
             chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
             chunkArea.idleTypeData = .idle;
+            try chunkAreaZig.appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
         }
     } else {
-        _ = try chunkAreaZig.putChunkArea(areaXY, areaKey, threadIndex, state);
-
+        try chunkAreaZig.putChunkArea(areaXY, areaKey, threadIndex, state);
         optChunkArea = state.chunkAreas.getPtr(areaKey);
     }
     const chunkIndex = getChunkIndexForChunkXY(chunkXY);

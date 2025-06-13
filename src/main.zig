@@ -1011,6 +1011,8 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
+                            const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
+                            try chunkAreaZig.appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], chunkAreaZig.getKeyForAreaXY(citizenAreaXY));
                         },
                         mapZig.MapObject.bigBuilding => |building| {
                             freeCitizen.buildingPosition = building.position;
@@ -1023,6 +1025,8 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                                 _ = chunk.buildOrders.pop();
                             }
                             freeCitizenData.chunk.workingCitizenCounter += 1;
+                            const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
+                            try chunkAreaZig.appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], chunkAreaZig.getKeyForAreaXY(citizenAreaXY));
                         },
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;
@@ -1030,6 +1034,8 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
+                            const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
+                            try chunkAreaZig.appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], chunkAreaZig.getKeyForAreaXY(citizenAreaXY));
                         },
                         mapZig.MapObject.tree => |tree| {
                             freeCitizen.treePosition = tree.position;
@@ -1037,6 +1043,8 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                             freeCitizen.moveTo.clearAndFree();
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
+                            const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
+                            try chunkAreaZig.appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], chunkAreaZig.getKeyForAreaXY(citizenAreaXY));
                         },
                         mapZig.MapObject.path => {
                             _ = chunk.buildOrders.pop();

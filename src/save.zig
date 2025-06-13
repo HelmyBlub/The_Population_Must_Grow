@@ -205,9 +205,7 @@ pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
     for (0..activeChunkAreaKeysLength) |_| {
         const key = try reader.readInt(u64, .little);
         const areaXY = chunkAreaZig.getAreaXyForKey(key);
-        if (try chunkAreaZig.putChunkArea(areaXY, key, 0, state)) {
-            try state.threadData[0].chunkAreaKeys.append(key);
-        }
+        try chunkAreaZig.putChunkArea(areaXY, key, 0, state);
     }
     return true;
 }
