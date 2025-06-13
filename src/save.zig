@@ -238,7 +238,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
         std.debug.print("should not happen. Tried to save chunkArea which is already unloaded.\n", .{});
         return;
     }
-    if (DEBUG_INFO_SAVE) std.debug.print("save {d} {d} \n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY });
+    if (DEBUG_INFO_SAVE) std.debug.print("save {d} {d}, {}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, state.gameTimeMs });
     const filepath = try getFileNameForAreaXy(chunkArea.areaXY, state.allocator);
     defer state.allocator.free(filepath);
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
@@ -453,7 +453,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
 
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
-    if (DEBUG_INFO_SAVE) std.debug.print("loaded area {} {}\n", .{ areaXY.areaX, areaXY.areaY });
+    if (DEBUG_INFO_SAVE) std.debug.print("loaded area {} {}, {d}\n", .{ areaXY.areaX, areaXY.areaY, state.gameTimeMs });
     const reader = file.reader();
     var readValues: [chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_LENGTH * mapZig.GameMap.CHUNK_LENGTH]u8 = undefined;
     _ = try reader.readAll(&readValues);

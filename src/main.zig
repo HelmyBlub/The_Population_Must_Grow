@@ -668,7 +668,7 @@ fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
                 });
                 chunkArea = state.chunkAreas.getPtr(areaKey);
             }
-            if (!chunkArea.?.requestedToLoad) {
+            if (!chunkArea.?.requestedToLoad and chunkArea.?.chunks == null) {
                 chunkArea.?.requestedToLoad = true;
                 try state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex].loadAreaKey.append(areaKey);
             }
@@ -680,12 +680,21 @@ fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
             const saveAndLoadData = &state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex];
             for (saveAndLoadData.loadedAreaData.items) |areaChunksData| {
                 const chunkArea = state.chunkAreas.getPtr(areaChunksData.areaKey).?;
-                chunkArea.chunks = areaChunksData.chunks;
-                const areaXY = chunkAreaZig.getAreaXyForKey(areaChunksData.areaKey);
-                try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
-                chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
-                chunkArea.requestedToLoad = false;
-                try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, 0, state);
+                if (chunkArea.chunks == null) {
+                    chunkArea.chunks = areaChunksData.chunks;
+                    const areaXY = chunkAreaZig.getAreaXyForKey(areaChunksData.areaKey);
+                    try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
+                    chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
+                    chunkArea.requestedToLoad = false;
+                    try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, 0, state);
+                } else {
+                    std.debug.print("does this happen? loading a loaded area? {} {} {d}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, state.gameTimeMs });
+                    for (areaChunksData.chunks) |*chunk| {
+                        mapZig.destroyChunk(chunk);
+                    }
+                    state.allocator.free(areaChunksData.chunks);
+                    chunkArea.requestedToLoad = false;
+                }
             }
             saveAndLoadData.loadedAreaData.clearRetainingCapacity();
         }

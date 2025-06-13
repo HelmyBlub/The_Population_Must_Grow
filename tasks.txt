@@ -1,19 +1,4 @@
 tasks:
-- bug: infinite growing tree/potato crashed vulkan paint
-    - how to reproduce, does not work every time. maybe every 3rd time
-        - start game. 3citizens in area1. one potate in left area. 
-            - directly go to 2 threads. Moving camera with keys directly to where chunk with potato not visible and citiznes still ticking
-            - either bugged data will happen or not. 
-        - somehow while moving camera chunk stopped ticking although last info was it is not idle
-                areax -1 0 not idle 0
-                areax -1 0 chunkArea.ChunkAreaIdleTypeData{ .notIdle = void } 0
-                printSomeInfo
-                chunkArea -1 0, chunkArea.ChunkAreaIdleTypeData{ .idle = void }
-                    chunk -1 0, 1, 1
-                    potato map.PotatoField{ .position = main.Position{ .x = -1e1, .y = 1e1 }, .citizenOnTheWay = 0, .growStartTimeMs = 6755840, .fullyGrown = false }
-
-
-
 - bug: memory leak
     - D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:464:45: 0x7ff707340e0d in loadChunkAreaFromFile (zig.exe.obj)
             const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
@@ -26,6 +11,7 @@ tasks:
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - save on crash/panic?
+- check copy past sets area to waiting for citizen
 
 - UI: reset 
 - UI: sound volume setting
@@ -49,10 +35,9 @@ tasks:
 
   
 Some data:
-- FPS: 109, citizens: 32993, gameTime: 330000, end FPS: 67.35672 (12.06.2025)
+- FPS: 105, citizens: 34091, gameTime: 330000, end FPS: 66.840126 (13.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 106, citizens: 34138, gameTime: 330000, end FPS: 67.22983 (fixed duplicated pathing data issue)
-- FPS: 105, citizens: 34093, gameTime: 330000, end FPS: 65.335785 (new request for unidle)
+
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
