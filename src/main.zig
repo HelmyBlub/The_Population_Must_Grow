@@ -734,7 +734,11 @@ fn tick(state: *ChatSimState) !void {
         var keyIndex: usize = 0;
         while (keyIndex < threadData.chunkAreaKeys.items.len) {
             const chunkArea = state.chunkAreas.getPtr(threadData.chunkAreaKeys.items[keyIndex]).?;
-            if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) or chunkArea.chunks == null) {
+            if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs)) {
+                chunkArea.idleTypeData = chunkArea.lastTickIdleTypeData;
+                keyIndex += 1;
+                continue;
+            } else if (chunkArea.chunks == null) {
                 keyIndex += 1;
                 continue;
             }
@@ -779,7 +783,13 @@ fn tick(state: *ChatSimState) !void {
 
                 for (mainThreadData.chunkAreaKeys.items) |chunkAreaKey| {
                     const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
-                    if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) or chunkArea.chunks == null) continue;
+                    if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs)) {
+                        chunkArea.idleTypeData = chunkArea.lastTickIdleTypeData;
+                        continue;
+                    } else if (chunkArea.chunks == null) {
+                        continue;
+                    }
+
                     var chunkIndex = chunkArea.currentChunkIndex;
                     while (areaLen > chunkIndex and chunkIndex <= allowedPathIndex) {
                         const idleTypeData = try tickSingleChunk(chunkIndex, 0, chunkArea, state);
@@ -881,7 +891,13 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
                     var allChunkAreasDone = true;
                     for (threadData.chunkAreaKeys.items) |chunkAreaKey| {
                         const chunkArea = state.chunkAreas.getPtr(chunkAreaKey).?;
-                        if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs) or chunkArea.chunks == null) continue;
+                        if ((chunkArea.lastTickIdleTypeData == .waitingForCitizens and chunkArea.lastTickIdleTypeData.waitingForCitizens > state.gameTimeMs)) {
+                            chunkArea.idleTypeData = chunkArea.lastTickIdleTypeData;
+                            continue;
+                        } else if (chunkArea.chunks == null) {
+                            continue;
+                        }
+
                         var chunkIndex = chunkArea.currentChunkIndex;
                         while (areaLen > chunkIndex and chunkIndex <= allowedPathIndex) {
                             const idleTypeData = try tickSingleChunk(chunkIndex, threadNumber, chunkArea, state);

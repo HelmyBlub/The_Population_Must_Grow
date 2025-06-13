@@ -1,7 +1,6 @@
 tasks:
-- bug: memory leak
-    - D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:464:45: 0x7ff707340e0d in loadChunkAreaFromFile (zig.exe.obj)
-            const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
+- unload/load logic should only unload chunks with all idle neigbors
+- check copy past sets area to waiting for citizen
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
@@ -11,8 +10,9 @@ tasks:
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - save on crash/panic?
-- check copy past sets area to waiting for citizen
 
+
+- on game load with many citizens don't show "surpassed citizen count" message
 - UI: reset 
 - UI: sound volume setting
 - check: make map round?
@@ -37,7 +37,7 @@ tasks:
 Some data:
 - FPS: 105, citizens: 34091, gameTime: 330000, end FPS: 66.840126 (13.06.2025)
 - ~102_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
+- FPS: 111, citizens: 32159, gameTime: 330000, end FPS: 70.691605 (waiting for citizens logic change/fix)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
