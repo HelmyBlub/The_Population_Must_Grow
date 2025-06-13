@@ -791,16 +791,6 @@ fn tick(state: *ChatSimState) !void {
                 }
                 mainThreadData.currentPathIndex.store(highestFinishedPathIndex, .seq_cst);
             }
-            var keyIndex: usize = 0;
-            while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
-                const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
-                if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
-                    const removedKey = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
-                    try appendRecentlyRemovedChunkAreaKeys(mainThreadData, removedKey);
-                } else {
-                    keyIndex += 1;
-                }
-            }
 
             var minIndex = mainThreadData.currentPathIndex.load(.unordered);
             if (minIndex >= chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE) break;
@@ -814,6 +804,17 @@ fn tick(state: *ChatSimState) !void {
                 state.activeChunkAllowedPathIndex.store(minIndex, .unordered);
             }
         }
+        var keyIndex: usize = 0;
+        while (keyIndex < mainThreadData.chunkAreaKeys.items.len) {
+            const chunkArea = state.chunkAreas.getPtr(mainThreadData.chunkAreaKeys.items[keyIndex]).?;
+            if (chunkArea.idleTypeData == .idle and !chunkArea.visible) {
+                const removedKey = mainThreadData.chunkAreaKeys.swapRemove(keyIndex);
+                try appendRecentlyRemovedChunkAreaKeys(mainThreadData, removedKey);
+            } else {
+                keyIndex += 1;
+            }
+        }
+
         for (1..state.usedThreadsCount) |i| {
             while (!state.threadData[i].finishedTick) {
                 state.threadData[i].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
