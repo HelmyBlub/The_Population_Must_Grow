@@ -11,6 +11,7 @@ const codePerformanceZig = @import("codePerformance.zig");
 const imageZig = @import("image.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 const saveZig = @import("save.zig");
+const countryPopulationDataZig = @import("countryPopulationData.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -220,6 +221,7 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
         threadData.requestToUnidleAreakey.clearAndFree();
     }
     try mapZig.createSpawnArea(state.allocator, state);
+    state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len - 1;
 }
 
 pub fn setupRectangleData(state: *ChatSimState) void {

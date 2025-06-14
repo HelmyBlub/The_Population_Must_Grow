@@ -1,12 +1,7 @@
 tasks:
-- problem:
-    - not all copy pasted to area are finished when not visible
-        - maybe reason
-            - check copy past sets area to waiting for citizen
-    - reproduce steps:
-        - very long thin copy paste area. stuff not visible might not be seen.
-
 - unload/load logic should only unload chunks with all idle neigbors
+- problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
+- test 600_000 citizens with quitting and starting game. Everything should still work
 
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
