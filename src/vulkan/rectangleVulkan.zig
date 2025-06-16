@@ -17,7 +17,7 @@ pub const VkRectangle = struct {
     pub const MAX_VERTICES = 8 * 1200;
 };
 
-pub fn initRectangle(state: *main.ChatSimState) !void {
+pub fn initRectangle(state: *main.GameState) !void {
     try createGraphicsPipeline(&state.vkState, state.allocator);
     try createVertexBuffer(&state.vkState, state.allocator);
 }
@@ -30,7 +30,7 @@ pub fn destroyRectangle(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Al
     allocator.free(vkState.rectangle.vertices);
 }
 
-pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.ChatSimState) !void {
+pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.GameState) !void {
     state.vkState.rectangle.verticeCount = 0;
     const recVertCount = 8;
     for (rectangles) |optRectangle| {
@@ -60,7 +60,7 @@ pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory);
 }
 
-pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     if (state.vkState.rectangle.verticeCount <= 0) return;
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);

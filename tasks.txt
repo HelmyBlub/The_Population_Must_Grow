@@ -1,8 +1,7 @@
 tasks:
-- on game load with many citizens don't show "surpassed citizen count" message
+- rename ChatSimState
 - test 600_000 citizens with quitting and starting game. Everything should still work
 - bug: fast repeat restart crash
-- rename ChatSimState
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build

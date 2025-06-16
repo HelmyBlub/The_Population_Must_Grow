@@ -36,7 +36,7 @@ pub const KeyBinding = struct {
     displayChar: u8,
 };
 
-pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
+pub fn initDefaultKeyBindings(state: *main.GameState) !void {
     state.keyboardInfo.keybindings = try state.allocator.alloc(KeyBinding, 12);
     state.keyboardInfo.keybindings[0] = .{ .sdlScanCode = sdl.SDL_SCANCODE_1, .displayChar = '1', .action = ActionType.buildPath };
     state.keyboardInfo.keybindings[1] = .{ .sdlScanCode = sdl.SDL_SCANCODE_2, .displayChar = '2', .action = ActionType.buildHouse };
@@ -52,11 +52,11 @@ pub fn initDefaultKeyBindings(state: *main.ChatSimState) !void {
     state.keyboardInfo.keybindings[11] = .{ .sdlScanCode = sdl.SDL_SCANCODE_KP_1, .displayChar = '-', .action = ActionType.zoomOut };
 }
 
-pub fn destroy(state: *main.ChatSimState) void {
+pub fn destroy(state: *main.GameState) void {
     state.allocator.free(state.keyboardInfo.keybindings);
 }
 
-pub fn tick(state: *main.ChatSimState) void {
+pub fn tick(state: *main.GameState) void {
     const keyboardInfo = state.keyboardInfo;
     if (keyboardInfo.cameraMoveX != 0) {
         state.camera.position.x += keyboardInfo.cameraMoveX / state.camera.zoom;
@@ -66,7 +66,7 @@ pub fn tick(state: *main.ChatSimState) void {
     }
 }
 
-pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
+pub fn executeAction(actionType: ActionType, state: *main.GameState) !void {
     var buildModeChanged = false;
     switch (actionType) {
         ActionType.buildHouse => {
@@ -133,7 +133,7 @@ pub fn executeAction(actionType: ActionType, state: *main.ChatSimState) !void {
     }
 }
 
-pub fn executeActionByKeybind(sdlScanCode: c_uint, state: *main.ChatSimState) !void {
+pub fn executeActionByKeybind(sdlScanCode: c_uint, state: *main.GameState) !void {
     var optActionType: ?ActionType = null;
     for (state.keyboardInfo.keybindings) |keybind| {
         if (keybind.sdlScanCode == sdlScanCode) {

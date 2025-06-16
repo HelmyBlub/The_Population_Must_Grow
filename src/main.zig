@@ -19,7 +19,7 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_vulkan.h");
 });
 
-pub const ChatSimState: type = struct {
+pub const GameState: type = struct {
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
     desiredGameSpeed: f32,
@@ -143,7 +143,7 @@ pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     return @floatCast(@sqrt(diffX * diffX + diffY * diffY));
 }
 
-pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, randomSeed: ?u64, isTest: bool) !void {
+pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSeed: ?u64, isTest: bool) !void {
     var seed: u64 = undefined;
     if (randomSeed) |randSeed| {
         seed = randSeed;
@@ -152,7 +152,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     }
     const prng = std.Random.DefaultPrng.init(seed);
 
-    state.* = ChatSimState{
+    state.* = GameState{
         .desiredGameSpeed = 1,
         .actualGameSpeed = 1,
         .paintIntervalMs = 16,
@@ -195,7 +195,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *ChatSimState, rando
     try inputZig.executeAction(inputZig.ActionType.buildPath, state);
 }
 
-pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
+pub fn deleteSaveAndRestart(state: *GameState) !void {
     try saveZig.deleteSave(state.allocator);
     state.citizenCounter = 1;
     state.camera = .{
@@ -228,7 +228,7 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
     state.soundMixer.mutex.unlock();
 }
 
-pub fn setupRectangleData(state: *ChatSimState) void {
+pub fn setupRectangleData(state: *GameState) void {
     if (state.copyAreaRectangle) |copyAreaRectangle| {
         state.rectangles[1] = .{
             .color = .{ 1, 0, 0 },
@@ -325,25 +325,25 @@ pub fn setupRectangleData(state: *ChatSimState) void {
     }
 }
 
-fn initPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
+fn initPaintVulkanAndWindowSdl(state: *GameState) !void {
     try windowSdlZig.initWindowSdl();
     try paintVulkanZig.initVulkan(state);
 }
 
-fn destroyPaintVulkanAndWindowSdl(state: *ChatSimState) !void {
+fn destroyPaintVulkanAndWindowSdl(state: *GameState) !void {
     try paintVulkanZig.destroyPaintVulkan(&state.vkState, state.allocator);
     windowSdlZig.destroyWindowSdl();
 }
 
 fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     std.debug.print("game run start\n", .{});
-    var state: ChatSimState = undefined;
+    var state: GameState = undefined;
     try createGameState(allocator, &state, null, isTest);
     defer destroyGameState(&state);
     try mainLoop(&state);
 }
 
-pub fn mainLoop(state: *ChatSimState) !void {
+pub fn mainLoop(state: *GameState) !void {
     state.ticksRemainingBeforePaint = 0;
     const totalStartTime = std.time.microTimestamp();
     var nextCpuPerCentUpdateTimeMs: i64 = 0;
@@ -403,7 +403,7 @@ pub fn mainLoop(state: *ChatSimState) !void {
     std.debug.print("mainloop finished. gameEnd = true\n", .{});
 }
 
-fn autoBalanceActualGameSpeed(state: *ChatSimState) void {
+fn autoBalanceActualGameSpeed(state: *GameState) void {
     if (state.desiredGameSpeed > 1 and state.gameTimeMs - state.lastAutoGameSpeedChangeTime > @as(u32, @intFromFloat(500 * state.actualGameSpeed))) {
         const targetFrameRate: f32 = 1000.0 / @as(f32, @floatFromInt(state.paintIntervalMs));
         if (targetFrameRate * 0.9 > state.fpsCounter) {
@@ -445,7 +445,7 @@ fn autoBalanceActualGameSpeed(state: *ChatSimState) void {
     }
 }
 
-pub fn setZoom(zoom: f32, state: *ChatSimState, toMouse: bool) void {
+pub fn setZoom(zoom: f32, state: *GameState, toMouse: bool) void {
     var limitedZoom = zoom;
     if (limitedZoom > 10) {
         limitedZoom = 10;
@@ -467,7 +467,7 @@ pub fn setZoom(zoom: f32, state: *ChatSimState, toMouse: bool) void {
     }
 }
 
-pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
+pub fn setGameSpeed(speed: f32, state: *GameState) void {
     var limitedSpeed = speed;
     if (limitedSpeed > 64) {
         limitedSpeed = 64;
@@ -482,7 +482,7 @@ pub fn setGameSpeed(speed: f32, state: *ChatSimState) void {
     state.desiredGameSpeed = limitedSpeed;
 }
 
-fn autoBalanceThreadCount(state: *ChatSimState) !void {
+fn autoBalanceThreadCount(state: *GameState) !void {
     if (state.maxThreadCount > 1 and state.autoBalanceThreadCount) {
         const minimalPerCentDiffernceReq = 1.025;
         var totalTickedCitizens: usize = 0;
@@ -570,7 +570,7 @@ fn autoBalanceThreadCount(state: *ChatSimState) !void {
     }
 }
 
-fn getStablePerformancePerTickedCitizenValue(state: *ChatSimState, totalTickedCitizensCounter: usize) ?f32 {
+fn getStablePerformancePerTickedCitizenValue(state: *GameState, totalTickedCitizensCounter: usize) ?f32 {
     if (@abs(@as(i32, @intCast(totalTickedCitizensCounter)) - @as(i32, @intCast(state.totalTickedCitizensSmoothed))) > @divFloor(totalTickedCitizensCounter, 20)) {
         // check if citizens count changed too much. Than consider it not stable
         return null;
@@ -578,7 +578,7 @@ fn getStablePerformancePerTickedCitizenValue(state: *ChatSimState, totalTickedCi
     return state.tickDurationSmoothedMircoSeconds / @as(f32, @floatFromInt(state.totalTickedCitizensSmoothed));
 }
 
-pub fn changeUsedThreadCount(newThreadCount: usize, state: *ChatSimState) !void {
+pub fn changeUsedThreadCount(newThreadCount: usize, state: *GameState) !void {
     const oldCount = state.usedThreadsCount;
     if (oldCount == newThreadCount) return;
     if (newThreadCount > state.maxThreadCount) {
@@ -649,7 +649,7 @@ fn appendRecentlyRemovedChunkAreaKeys(threadData: *ThreadData, areaKey: u64) !vo
     try threadData.recentlyRemovedChunkAreaKeys.append(areaKey);
 }
 
-fn handleRequestToUnidleAreas(state: *ChatSimState) !void {
+fn handleRequestToUnidleAreas(state: *GameState) !void {
     for (state.threadData) |*threadData| {
         for (threadData.requestToUnidleAreakey.items) |areaKey| {
             if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
@@ -660,7 +660,7 @@ fn handleRequestToUnidleAreas(state: *ChatSimState) !void {
     }
 }
 
-fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
+fn handleRequestToLoadChunkAreaKeys(state: *GameState) !void {
     for (state.threadData) |*threadData| {
         for (threadData.requestToLoadChunkAreaKeys.items) |areaKey| {
             const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
@@ -708,7 +708,7 @@ fn handleRequestToLoadChunkAreaKeys(state: *ChatSimState) !void {
     }
 }
 
-fn tick(state: *ChatSimState) !void {
+fn tick(state: *GameState) !void {
     try codePerformanceZig.startMeasure("tick total", &state.codePerformanceData);
     state.gameTimeMs += state.tickIntervalMs;
     try testZig.tick(state);
@@ -876,7 +876,7 @@ fn tick(state: *ChatSimState) !void {
     codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
 
-fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
+fn tickThreadChunks(threadNumber: usize, state: *GameState) !void {
     const areaLen = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
     while (true) {
         if (state.gameEnd) return;
@@ -955,7 +955,7 @@ fn tickThreadChunks(threadNumber: usize, state: *ChatSimState) !void {
     }
 }
 
-fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZig.ChunkArea, state: *ChatSimState) !chunkAreaZig.ChunkAreaIdleTypeData {
+fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZig.ChunkArea, state: *GameState) !chunkAreaZig.ChunkAreaIdleTypeData {
     // if (state.gameTimeMs == 16 * 60 * 250) {
     //     std.debug.print("test1 \n", .{});
     // }
@@ -1073,7 +1073,7 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
     return result;
 }
 
-pub fn destroyGameState(state: *ChatSimState) void {
+pub fn destroyGameState(state: *GameState) void {
     std.debug.print("started destory\n", .{});
     saveZig.destroySaveAndLoadThread(state);
     saveZig.saveGeneralDataToFile(state) catch {

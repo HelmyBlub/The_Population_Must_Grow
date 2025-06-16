@@ -50,7 +50,7 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
     height.* = @intCast(h);
 }
 
-pub fn handleEvents(state: *main.ChatSimState) !void {
+pub fn handleEvents(state: *main.GameState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
         if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
@@ -179,7 +179,7 @@ pub fn handleEvents(state: *main.ChatSimState) !void {
     }
 }
 
-fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
+fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.GameState) !void {
     if (state.buildMode != mapZig.BUILD_MODE_DRAW) return;
     if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mouseInfo.mapDown != null) {
         if (state.mouseInfo.leftButtonPressedTimeMs != null) {
@@ -189,7 +189,7 @@ fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
     }
 }
 
-fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !void {
+fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void {
     if (state.buildMode != mapZig.BUILD_MODE_DRAG_RECTANGLE) return;
 
     if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
@@ -247,7 +247,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.ChatSimState) !v
     }
 }
 
-pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *main.ChatSimState) !void {
+pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, state: *main.GameState) !void {
     var chunk: *mapZig.MapChunk = undefined;
     var currentChunkXY: ?mapZig.ChunkXY = null;
     for (0..mapTileRectangle.columnCount) |x| {

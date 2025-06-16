@@ -145,7 +145,7 @@ pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
     }
 }
 
-fn initUiButtons(state: *main.ChatSimState) !void {
+fn initUiButtons(state: *main.GameState) !void {
     const buttonCountMax = 15;
     state.vkState.buildOptionsUx.uiButtons = try state.allocator.alloc(UiButton, buttonCountMax);
     var buttonCounter: usize = 0;
@@ -314,7 +314,7 @@ fn initUiButtons(state: *main.ChatSimState) !void {
     setupUiButtonLocations(&state.vkState);
 }
 
-pub fn mouseMove(state: *main.ChatSimState) !void {
+pub fn mouseMove(state: *main.GameState) !void {
     const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y);
     for (state.vkState.buildOptionsUx.uiButtons, 0..) |uiButton, index| {
         if (uiButton.pos.x <= vulkanMousePos.x and uiButton.pos.x + uiButton.width >= vulkanMousePos.x and
@@ -330,7 +330,7 @@ pub fn mouseMove(state: *main.ChatSimState) !void {
 }
 
 /// returns true if a button was clicked
-pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.PositionF32) !bool {
+pub fn mouseClick(state: *main.GameState, mouseWindowPosition: main.PositionF32) !bool {
     const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(mouseWindowPosition.x, mouseWindowPosition.y);
     for (state.vkState.buildOptionsUx.uiButtons) |uiButton| {
         if (uiButton.pos.x <= vulkanMousePos.x and uiButton.pos.x + uiButton.width >= vulkanMousePos.x and
@@ -346,7 +346,7 @@ pub fn mouseClick(state: *main.ChatSimState, mouseWindowPosition: main.PositionF
     return false;
 }
 
-pub fn init(state: *main.ChatSimState) !void {
+pub fn init(state: *main.GameState) !void {
     try createVertexBuffers(&state.vkState, state.allocator);
     try createGraphicsPipeline(&state.vkState, state.allocator);
     try initUiButtons(state);
@@ -412,7 +412,7 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
     );
 }
 
-pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.ChatSimState) !void {
+pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.GameState) !void {
     for (state.vkState.buildOptionsUx.uiButtons, 0..) |uiButton, uiButtonIndex| {
         if (uiButton.type == .action and uiButton.type.action == actionType) {
             state.vkState.buildOptionsUx.selectedButtonIndex = uiButtonIndex;
@@ -422,7 +422,7 @@ pub fn setSelectedButtonIndex(actionType: inputZig.ActionType, state: *main.Chat
     }
 }
 
-pub fn setupVertices(state: *main.ChatSimState) !void {
+pub fn setupVertices(state: *main.GameState) !void {
     const unselectedFillColor: [3]f32 = .{ 0.75, 0.75, 0.75 };
     const selectedFillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
     const mouseHoverFillColor: [3]f32 = .{ 0, 0, 1 };
@@ -565,7 +565,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory);
 }
 
-pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     if (state.vkState.buildOptionsUx.triangles.verticeCount <= 0) return;
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.triangleGraphicsPipeline);

@@ -40,7 +40,7 @@ pub const VkCitizenPopulationCounterUx = struct {
     const MESSAGE_SURPASSED_DURATION = 5000;
 };
 
-pub fn init(state: *main.ChatSimState) !void {
+pub fn init(state: *main.GameState) !void {
     try createVertexBuffers(&state.vkState, state.allocator);
 }
 
@@ -87,13 +87,13 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
     );
 }
 
-pub fn updateCountryPopulationIndexOnGameLoad(state: *main.ChatSimState) void {
+pub fn updateCountryPopulationIndexOnGameLoad(state: *main.GameState) void {
     while (state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex > 0 and state.citizenCounter > countryPopulationDataZig.WORLD_POPULATION[state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex].population) {
         state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex -= 1;
     }
 }
 
-pub fn setupVertices(state: *main.ChatSimState) !void {
+pub fn setupVertices(state: *main.GameState) !void {
     const fillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
     const borderColor: [3]f32 = .{ 0, 0, 0 };
     const popCounterUx = &state.vkState.citizenPopulationCounterUx;
@@ -215,7 +215,7 @@ pub fn setupVertices(state: *main.ChatSimState) !void {
 }
 
 /// returns vulkan surface width of text
-fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f64 {
+fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) f64 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     var xOffset: f64 = 0;
@@ -235,7 +235,7 @@ fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: 
     return xOffset;
 }
 
-fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
+fn paintNumber(number: u32, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
     const numberAsString = try std.fmt.bufPrint(&buf, "{}", .{number});
@@ -279,7 +279,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.citizenPopulationCounterUx.font.vertexBufferMemory);
 }
 
-pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     try setupVertices(state);
     if (state.vkState.citizenPopulationCounterUx.triangles.verticeCount <= 0) return;
     const vkState = &state.vkState;

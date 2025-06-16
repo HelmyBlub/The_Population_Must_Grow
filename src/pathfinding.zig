@@ -56,7 +56,7 @@ const Node = struct {
     priority: i32, // f(x) = g(x) + h(x) (with h() as the heuristic).
 };
 
-pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingType: mapZig.PathingType, threadIndex: usize, state: *main.GameState) !void {
     if (pathingType == mapZig.PathingType.blocking) {
         const chunkXYRectangles = getChunksOfRectangle(rectangle);
 
@@ -120,7 +120,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
     }
 }
 
-fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZig.MapTileRectangle, threadIndex: usize, state: *main.ChatSimState) !void {
+fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZig.MapTileRectangle, threadIndex: usize, state: *main.GameState) !void {
     // check each tile if blocking and if it should not block anymore
     if (PATHFINDING_DEBUG) std.debug.print("checkForPathingBlockRemovalsInChunk {}\n", .{rectangle});
     for (0..rectangle.columnCount) |x| {
@@ -174,7 +174,7 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
     }
 }
 
-fn clearChunkGraph(chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) !void {
+fn clearChunkGraph(chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) !void {
     if (chunk.buildings.items.len > 0 or chunk.bigBuildings.items.len > 0) return;
     if (PATHFINDING_DEBUG) std.debug.print("clear chunk graph {}\n", .{chunk.chunkXY});
 
@@ -236,7 +236,7 @@ fn getOverlappingRectangle(rect1: mapZig.MapTileRectangle, rect2: mapZig.MapTile
     };
 }
 
-fn getPathingIndexesForUniqueGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) ![]usize {
+fn getPathingIndexesForUniqueGraphRectanglesOfRectangle(rectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) ![]usize {
     state.threadData[threadIndex].pathfindingTempData.tempUsizeList.clearRetainingCapacity();
     state.threadData[threadIndex].pathfindingTempData.tempUsizeList2.clearRetainingCapacity();
 
@@ -327,7 +327,7 @@ fn getChunksOfRectangle(rectangle: mapZig.MapTileRectangle) [4]?mapZig.MapTileRe
     return chunkXYRectangles;
 }
 
-fn splitGraphRectangle(rectangle: mapZig.MapTileRectangle, graphIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) !void {
+fn splitGraphRectangle(rectangle: mapZig.MapTileRectangle, graphIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) !void {
     var graphRectangleForUpdateIndex: usize = 0;
     var graphRectangleForUpdateIndexes = [_]?usize{ null, null, null, null };
     const toSplitGraphRectangle = chunk.pathingData.graphRectangles.items[graphIndex];
@@ -478,7 +478,7 @@ pub fn areRectanglesTouchingOnEdge(rect1: mapZig.MapTileRectangle, rect2: mapZig
 }
 
 /// returns true if something merged
-fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) !bool {
+fn checkForGraphMergeAndDoIt(graphRectForMergeCheckIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) !bool {
     const graphRectForMergeCheck = chunk.pathingData.graphRectangles.items[graphRectForMergeCheckIndex];
     if (try checkMergeGraphRectangles(graphRectForMergeCheck.tileRectangle, chunk, threadIndex, state)) |mergeIndex| {
         const mergedToGraphRectangle = &chunk.pathingData.graphRectangles.items[mergeIndex];
@@ -551,7 +551,7 @@ fn connectionsIndexesContains(connections: []GraphConnection, check: GraphConnec
 }
 
 /// returns merge graph rectangle index
-fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) !?usize {
+fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) !?usize {
     //do right merge check
     if (@mod(tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), mapZig.GameMap.CHUNK_LENGTH) != 0) { //don't merge with other chunk
         const optRightGraphRectangleIndex = chunk.pathingData.pathingData[getPathingIndexForTileXY(.{ .tileX = tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(tileRectangle.columnCount)), .tileY = tileRectangle.topLeftTileXY.tileY })];
@@ -613,7 +613,7 @@ fn checkMergeGraphRectangles(tileRectangle: mapZig.MapTileRectangle, chunk: *map
     return null;
 }
 
-fn swapRemoveGraphIndex(toRemoveGraph: GraphConnection, threadIndex: usize, state: *main.ChatSimState) !void {
+fn swapRemoveGraphIndex(toRemoveGraph: GraphConnection, threadIndex: usize, state: *main.GameState) !void {
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(toRemoveGraph.chunkXY, threadIndex, state);
     const removedGraph = chunk.pathingData.graphRectangles.swapRemove(toRemoveGraph.index);
     if (PATHFINDING_DEBUG) {
@@ -643,7 +643,7 @@ fn swapRemoveGraphIndex(toRemoveGraph: GraphConnection, threadIndex: usize, stat
     try setPaththingDataRectangle(chunk.pathingData.graphRectangles.items[toRemoveGraph.index].tileRectangle, toRemoveGraph.index, threadIndex, state);
 }
 
-pub fn graphRectangleConnectionMovedUpdate(oldIndex: usize, newIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn graphRectangleConnectionMovedUpdate(oldIndex: usize, newIndex: usize, chunk: *mapZig.MapChunk, threadIndex: usize, state: *main.GameState) !void {
     if (oldIndex <= newIndex) return;
     const newAtIndex = &chunk.pathingData.graphRectangles.items[newIndex];
     if (PATHFINDING_DEBUG) {
@@ -668,7 +668,7 @@ pub fn graphRectangleConnectionMovedUpdate(oldIndex: usize, newIndex: usize, chu
 }
 
 /// assumes to be only in one chunk
-fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, newIndex: ?usize, threadIndex: usize, state: *main.ChatSimState) !void {
+fn setPaththingDataRectangle(rectangle: mapZig.MapTileRectangle, newIndex: ?usize, threadIndex: usize, state: *main.GameState) !void {
     const chunkXY = mapZig.getChunkXyForTileXy(rectangle.topLeftTileXY);
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(chunkXY, threadIndex, state);
     for (0..rectangle.columnCount) |x| {
@@ -831,7 +831,7 @@ pub fn pathfindAStar(
     goalTile: mapZig.TileXY,
     citizen: *main.Citizen,
     threadIndex: usize,
-    state: *main.ChatSimState,
+    state: *main.GameState,
 ) !bool {
     const startTile = mapZig.mapPositionToTileXy(citizen.position);
     if (startTile.tileX == goalTile.tileX and startTile.tileY == goalTile.tileY) {
@@ -947,7 +947,7 @@ pub fn pathfindAStar(
     return false;
 }
 
-pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize, state: *main.ChatSimState) !?main.Position {
+pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize, state: *main.GameState) !?main.Position {
     const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.position, state);
     if (optChunk == null) {
         return null;
@@ -989,7 +989,7 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
     return result;
 }
 
-pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
+pub fn paintDebugPathfindingVisualization(state: *main.GameState) !void {
     if (!PATHFINDING_DEBUG) return;
     const recVertCount = 8;
     const graphRectangleColor = [_]f32{ 1, 0, 0 };
@@ -1072,7 +1072,7 @@ pub fn paintDebugPathfindingVisualization(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn paintDebugPathfindingVisualizationFont(state: *main.ChatSimState) !void {
+pub fn paintDebugPathfindingVisualizationFont(state: *main.GameState) !void {
     if (!PATHFINDING_DEBUG) return;
     const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(state.camera.position, 0, state);
     for (chunk.pathingData.pathingData, 0..) |optGraphIndex, i| {
@@ -1084,11 +1084,11 @@ pub fn paintDebugPathfindingVisualizationFont(state: *main.ChatSimState) !void {
     }
 }
 
-fn isTilePathBlocking(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.ChatSimState) !bool {
+fn isTilePathBlocking(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.GameState) !bool {
     return try getChunkGraphRectangleIndexForTileXY(tileXY, threadIndex, state) == null;
 }
 
-fn getChunkGraphRectangleIndexForTileXY(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.ChatSimState) !?GraphConnection {
+fn getChunkGraphRectangleIndexForTileXY(tileXY: mapZig.TileXY, threadIndex: usize, state: *main.GameState) !?GraphConnection {
     const chunkXY = mapZig.getChunkXyForTileXy(tileXY);
     const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
     if (chunk == null) return null;

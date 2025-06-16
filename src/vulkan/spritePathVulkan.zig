@@ -45,7 +45,7 @@ pub const SpritePathVertex = struct {
     }
 };
 
-pub fn setupVertices(state: *main.ChatSimState, chunkVisible: mapZig.VisibleChunksData) !void {
+pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksData) !void {
     var vkState = &state.vkState;
     const pathData = &vkState.path;
     const buffer = 500;
@@ -96,7 +96,7 @@ pub fn setupVertices(state: *main.ChatSimState, chunkVisible: mapZig.VisibleChun
     try setupVertexDataForGPU(vkState);
 }
 
-pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.path.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.path.vertexBuffer};
@@ -105,7 +105,7 @@ pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatS
     vk.vkCmdDraw(commandBuffer, @intCast(vkState.path.entityPaintCount), 1, 0, 0);
 }
 
-pub fn init(state: *main.ChatSimState) !void {
+pub fn init(state: *main.GameState) !void {
     state.vkState.path.vertexBufferCleanUp = try state.allocator.alloc(?vk.VkBuffer, paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT);
     state.vkState.path.vertexBufferMemoryCleanUp = try state.allocator.alloc(?vk.VkDeviceMemory, paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT);
     for (0..paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {

@@ -76,7 +76,7 @@ pub fn clear(font: *VkFont) void {
     font.verticeCountCurrent = 0;
 }
 
-fn dataUpdate(state: *main.ChatSimState) !void {
+fn dataUpdate(state: *main.GameState) !void {
     clear(&state.vkState.font);
     const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
 
@@ -139,7 +139,7 @@ fn dataUpdate(state: *main.ChatSimState) !void {
 }
 
 /// returns vulkan surface width of text
-pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) f32 {
+pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) f32 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     var xOffset: f32 = 0;
@@ -172,7 +172,7 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSiz
     };
 }
 
-pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.ChatSimState) !f32 {
+pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
     var numberAsString: []u8 = undefined;
@@ -204,7 +204,7 @@ pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSi
     return xOffset;
 }
 
-pub fn initFont(state: *main.ChatSimState) !void {
+pub fn initFont(state: *main.GameState) !void {
     try createGraphicsPipeline(&state.vkState, state.allocator);
     try createVertexBuffer(&state.vkState, state.allocator);
     try imageZig.createVulkanTextureImage(
@@ -243,7 +243,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory);
 }
 
-pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     try dataUpdate(state);
     const vkState = &state.vkState;
     try setupVertexDataForGPU(vkState);

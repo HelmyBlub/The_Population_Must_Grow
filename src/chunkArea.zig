@@ -63,7 +63,7 @@ pub fn isPositionInSameChunkArea(position: main.Position, areaXY: ChunkAreaXY) b
     return chunkAreaEquals(areaXY, posChunkAreaXY);
 }
 
-pub fn isChunkAreaLoaded(areaXY: ChunkAreaXY, state: *main.ChatSimState) bool {
+pub fn isChunkAreaLoaded(areaXY: ChunkAreaXY, state: *main.GameState) bool {
     const key = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(key)) |chunkArea| {
         if (chunkArea.chunks != null) return true;
@@ -106,7 +106,7 @@ pub fn appendRequestToUnidleChunkAreaKey(threadData: *main.ThreadData, areaKey: 
     try threadData.requestToUnidleAreakey.append(areaKey);
 }
 
-pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *main.GameState) !void {
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |area| {
@@ -119,7 +119,7 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *
 }
 
 /// returns true if loaded from file
-pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state: *main.GameState) !void {
     try state.chunkAreas.put(areaKey, .{
         .areaXY = areaXY,
         .currentChunkIndex = 0,
@@ -138,7 +138,7 @@ pub fn putChunkArea(areaXY: ChunkAreaXY, areaKey: u64, threadIndex: usize, state
     try appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
 }
 
-pub fn createChunkAreaDataWhenNoFile(areaXY: ChunkAreaXY, state: *main.ChatSimState) ![]mapZig.MapChunk {
+pub fn createChunkAreaDataWhenNoFile(areaXY: ChunkAreaXY, state: *main.GameState) ![]mapZig.MapChunk {
     const chunks = try state.allocator.alloc(mapZig.MapChunk, ChunkArea.SIZE * ChunkArea.SIZE);
     for (0..ChunkArea.SIZE) |chunkX| {
         for (0..ChunkArea.SIZE) |chunkY| {
@@ -205,7 +205,7 @@ fn diagonalNumbering(x: u32, y: u32) usize {
 }
 
 /// should only be done by main thread when not ticking
-pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.ChatSimState) !void {
+pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.GameState) !void {
     chunkArea.idleTypeData = .notIdle;
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
@@ -243,7 +243,7 @@ pub fn isChunkAreaInVisibleData(visibleData: mapZig.VisibleChunksData, areaXY: C
     return mapZig.isRectangleOverlapping(rectForOverlapping1, rectForOverlapping2);
 }
 
-pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.VisibleChunksData, isVisible: bool, state: *main.ChatSimState) !void {
+pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.VisibleChunksData, isVisible: bool, state: *main.GameState) !void {
     const leftAreaX = @divFloor(visibleChunksData.left, ChunkArea.SIZE);
     const topAreaY = @divFloor(visibleChunksData.top, ChunkArea.SIZE);
     const width = @divFloor(visibleChunksData.columns, ChunkArea.SIZE) + 2;
@@ -266,7 +266,7 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
     }
 }
 
-pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
+pub fn optimizeChunkAreaAssignments(state: *main.GameState) !void {
     // check for area load/unload
     if (state.testData == null or !state.testData.?.skipSaveAndLoad) {
         for (0..state.usedThreadsCount) |threadIndex| {
@@ -342,7 +342,7 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.ChatSimState) !void {
+pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.GameState) !void {
     const areaKey = getKeyForAreaXY(areaXY);
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
     for (0..ChunkArea.SIZE) |x| {
@@ -398,7 +398,7 @@ pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.ChatSimS
     }
 }
 
-fn connectNewGraphRectangles(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+fn connectNewGraphRectangles(chunk: *mapZig.MapChunk, state: *main.GameState) !void {
     const chunkXY = chunk.chunkXY;
     for (chunk.pathingData.graphRectangles.items, 0..) |*graphRectangle1, index1| {
         for ((index1 + 1)..chunk.pathingData.graphRectangles.items.len) |index2| {
@@ -433,7 +433,7 @@ fn connectNewGraphRectangles(chunk: *mapZig.MapChunk, state: *main.ChatSimState)
     }
 }
 
-fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, state: *main.GameState) !void {
     var blockingTiles: [mapZig.GameMap.CHUNK_LENGTH][mapZig.GameMap.CHUNK_LENGTH]bool = undefined;
     for (0..blockingTiles.len) |indexX| {
         for (0..blockingTiles.len) |indexY| {

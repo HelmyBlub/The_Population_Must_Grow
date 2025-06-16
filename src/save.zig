@@ -56,7 +56,7 @@ pub const SaveAndLoadThreadData = struct {
     saveAreaKey: std.ArrayList(u64),
 };
 
-pub fn createSaveAndLoadThread(state: *main.ChatSimState) !void {
+pub fn createSaveAndLoadThread(state: *main.GameState) !void {
     state.saveAndLoadThread = .{
         .thread = try std.Thread.spawn(.{}, saveAndLoadThreadTick, .{state}),
         .saveAndLoadThreadDataIndex = 0,
@@ -81,7 +81,7 @@ pub fn createSaveAndLoadThread(state: *main.ChatSimState) !void {
     };
 }
 
-pub fn destroySaveAndLoadThread(state: *main.ChatSimState) void {
+pub fn destroySaveAndLoadThread(state: *main.GameState) void {
     state.saveAndLoadThread.thread.join();
     for (state.saveAndLoadThread.data) |data| {
         data.loadAreaKey.deinit();
@@ -96,7 +96,7 @@ pub fn destroySaveAndLoadThread(state: *main.ChatSimState) void {
     }
 }
 
-fn saveAndLoadThreadTick(state: *main.ChatSimState) !void {
+fn saveAndLoadThreadTick(state: *main.GameState) !void {
     while (!state.gameEnd) {
         const currentData = &state.saveAndLoadThread.data[state.saveAndLoadThread.saveAndLoadThreadDataIndex];
         for (currentData.loadAreaKey.items) |areaKey| {
@@ -158,7 +158,7 @@ pub fn chunkAreaFileExists(areaXY: chunkAreaZig.ChunkAreaXY, allocator: std.mem.
     return true;
 }
 
-pub fn saveGeneralDataToFile(state: *main.ChatSimState) !void {
+pub fn saveGeneralDataToFile(state: *main.GameState) !void {
     if ((state.testData != null and state.testData.?.skipSaveAndLoad)) return;
     const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
     defer state.allocator.free(filepath);
@@ -189,7 +189,7 @@ pub fn saveGeneralDataToFile(state: *main.ChatSimState) !void {
 }
 
 /// returns false if no file loaded
-pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
+pub fn loadGeneralDataFromFile(state: *main.GameState) !bool {
     if ((state.testData != null and state.testData.?.skipSaveAndLoad)) return false;
     const filepath = try getSavePath(state.allocator, FILE_NAME_GENERAL_DATA);
     defer state.allocator.free(filepath);
@@ -232,7 +232,7 @@ pub fn deleteSave(allocator: std.mem.Allocator) !void {
     }
 }
 
-pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.ChatSimState) bool {
+pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.GameState) bool {
     const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
     const neighborsXY = [_]chunkAreaZig.ChunkAreaXY{
         .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY },
@@ -255,7 +255,7 @@ pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.ChatSimState) boo
     return true;
 }
 
-pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {
+pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.GameState) !void {
     if ((state.testData != null and state.testData.?.skipSaveAndLoad)) return;
     if (chunkArea.chunks == null) {
         std.debug.print("should not happen. Tried to save chunkArea which is already unloaded.\n", .{});
@@ -365,7 +365,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Chat
     try writer.writeAll(&writeValues);
 }
 
-fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
+fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.GameState) !void {
     for (chunk.citizens.items) |citizen| {
         if (citizen.nextThinkingAction != .idle) {
             // citizens has build order. Place it back
@@ -449,7 +449,7 @@ fn positionToWriteIndexTilePart(position: main.Position) usize {
     return tileUsizeX * mapZig.GameMap.CHUNK_LENGTH + tileUsizeY;
 }
 
-pub fn saveAllChunkAreasBeforeQuit(state: *main.ChatSimState) !void {
+pub fn saveAllChunkAreasBeforeQuit(state: *main.GameState) !void {
     if ((state.testData != null and state.testData.?.skipSaveAndLoad)) return;
     for (state.chunkAreas.values()) |*chunkArea| {
         if (chunkArea.chunks != null) {
@@ -458,7 +458,7 @@ pub fn saveAllChunkAreasBeforeQuit(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) !void {
+pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.GameState) !void {
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     const chunkArea = state.chunkAreas.getPtr(areaKey).?;
     for (chunkArea.chunks.?) |*toDestroyChunk| {
@@ -470,7 +470,7 @@ pub fn destroyChunksOfUnloadedArea(areaXY: chunkAreaZig.ChunkAreaXY, state: *mai
     chunkArea.chunks = null;
 }
 
-pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.ChatSimState) ![]mapZig.MapChunk {
+pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.GameState) ![]mapZig.MapChunk {
     const path = try getFileNameForAreaXy(areaXY, state.allocator);
     defer state.allocator.free(path);
 
@@ -722,7 +722,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Chat
     return chunks;
 }
 
-fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: *mapZig.MapChunk, halveDone: bool, state: *main.ChatSimState) !void {
+fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: *mapZig.MapChunk, halveDone: bool, state: *main.GameState) !void {
     var woodRequired: u8 = if (halveDone) mapZig.Building.BIG_HOUSE_WOOD / 2 else mapZig.Building.BIG_HOUSE_WOOD;
     if (!halveDone) woodRequired -= citizensSpawn;
     const newBuilding: mapZig.Building = .{
@@ -742,7 +742,7 @@ fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: 
     try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
 }
 
-fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.ChatSimState) !void {
+fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.GameState) !void {
     const chunkAreaXPos = @mod(chunk.chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE);
     const chunkAreaYPos = @mod(chunk.chunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE);
     if (chunkAreaXPos == 0 or chunkAreaXPos == chunkAreaZig.ChunkArea.SIZE - 1 or chunkAreaYPos == 0 or chunkAreaYPos == chunkAreaZig.ChunkArea.SIZE - 1) {

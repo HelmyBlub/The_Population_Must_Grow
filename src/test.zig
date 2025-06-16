@@ -56,7 +56,7 @@ pub fn executePerfromanceTest() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    var state: main.ChatSimState = undefined;
+    var state: main.GameState = undefined;
     try main.createGameState(allocator, &state, 0, true);
     defer main.destroyGameState(&state);
     state.testData = createTestData(state.allocator);
@@ -75,7 +75,7 @@ pub fn createTestData(allocator: std.mem.Allocator) TestData {
     };
 }
 
-pub fn tick(state: *main.ChatSimState) !void {
+pub fn tick(state: *main.GameState) !void {
     if (state.testData) |*testData| {
         while (testData.currenTestInputIndex < testData.testInputs.items.len) {
             const currentInput = testData.testInputs.items[testData.currenTestInputIndex];
@@ -171,7 +171,7 @@ pub fn determineValidanChunkDistanceForArea(chunkXyArray: [chunkAreaZig.ChunkAre
     std.debug.print("lowest validationChunkDistance: {}", .{validationChunkDistance});
 }
 
-fn printTestEndData(state: *main.ChatSimState) void {
+fn printTestEndData(state: *main.GameState) void {
     const timePassed = std.time.microTimestamp() - state.testData.?.testStartTimeMircoSeconds;
     const fps = @divFloor(@as(i64, @intCast(state.framesTotalCounter)) * 1_000_000, timePassed);
     codePerformanceZig.printToConsole(state);

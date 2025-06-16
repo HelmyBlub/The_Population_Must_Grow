@@ -209,7 +209,7 @@ pub const ColoredVertex = struct {
 
 pub const validation_layers = [_][*c]const u8{"VK_LAYER_KHRONOS_validation"};
 
-fn setupVerticesForSprites(state: *main.ChatSimState) !void {
+fn setupVerticesForSprites(state: *main.GameState) !void {
     try codePerformanceZig.startMeasure("      sprite init", &state.codePerformanceData);
     var vkState = &state.vkState;
     var entityPaintCountLayer1: usize = 0;
@@ -407,7 +407,7 @@ fn setupVerticesForSprites(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn initVulkan(state: *main.ChatSimState) !void {
+pub fn initVulkan(state: *main.GameState) !void {
     const vkState: *Vk_State = &state.vkState;
     vkState.vertexBufferCleanUp = try state.allocator.alloc(?vk.VkBuffer, Vk_State.MAX_FRAMES_IN_FLIGHT);
     vkState.vertexBufferMemoryCleanUp = try state.allocator.alloc(?vk.VkDeviceMemory, Vk_State.MAX_FRAMES_IN_FLIGHT);
@@ -1024,7 +1024,7 @@ pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.vertexBufferMemory);
 }
 
-fn updateUniformBuffer(state: *main.ChatSimState) !void {
+fn updateUniformBuffer(state: *main.GameState) !void {
     var ubo: VkCameraData = .{
         .transform = .{
             .{ 2 / windowSdlZig.windowData.widthFloat, 0, 0.0, 0.0 },
@@ -1042,7 +1042,7 @@ fn updateUniformBuffer(state: *main.ChatSimState) !void {
     }
 }
 
-pub fn drawFrame(state: *main.ChatSimState) !void {
+pub fn drawFrame(state: *main.GameState) !void {
     state.framesTotalCounter += 1;
     var vkState = &state.vkState;
     try codePerformanceZig.startMeasure("    sprite vertice setup", &state.codePerformanceData);
@@ -1141,7 +1141,7 @@ fn createSyncObjects(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     }
 }
 
-fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state: *main.ChatSimState) !void {
+fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state: *main.GameState) !void {
     const vkState = &state.vkState;
     var beginInfo = vk.VkCommandBufferBeginInfo{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

@@ -154,7 +154,7 @@ pub const BUILD_TYPE_BIG_HOUSE = 5;
 pub const BUILD_TYPE_PATHES = 6;
 pub const TILE_SIZE_BIG_HOUSE = 2;
 
-pub fn visibleAndAdjacentChunkRectangle(state: *main.ChatSimState) !void {
+pub fn visibleAndAdjacentChunkRectangle(state: *main.GameState) !void {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
         .x = camera.position.x - windowSdlZig.windowData.widthFloat / 2 / camera.zoom - 10,
@@ -174,7 +174,7 @@ pub fn visibleAndAdjacentChunkRectangle(state: *main.ChatSimState) !void {
     try chunkAreaZig.setVisibleFlagOfVisibleAndTickRectangle(newVisible, true, state);
 }
 
-pub fn getTopLeftVisibleChunkXY(state: *main.ChatSimState) VisibleChunksData {
+pub fn getTopLeftVisibleChunkXY(state: *main.GameState) VisibleChunksData {
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
         .x = camera.position.x - windowSdlZig.windowData.widthFloat / 2 / camera.zoom - 10,
@@ -195,7 +195,7 @@ pub fn isPositionInsideMapRectangle(position: main.Position, rectangle: MapRecta
         rectangle.pos.y <= position.y and rectangle.pos.y + rectangle.height >= position.y;
 }
 
-pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
+pub fn getMapScreenVisibilityRectangle(state: *main.GameState) MapRectangle {
     const spacing = 10;
     const camera = state.camera;
     const mapVisibleTopLeft: main.Position = .{
@@ -209,7 +209,7 @@ pub fn getMapScreenVisibilityRectangle(state: *main.ChatSimState) MapRectangle {
     };
 }
 
-pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usize, state: *main.ChatSimState) anyerror!*MapChunk {
+pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usize, state: *main.GameState) anyerror!*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     var optChunkArea = state.chunkAreas.getPtr(areaKey);
@@ -229,7 +229,7 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usi
     return &optChunkArea.?.chunks.?[chunkIndex];
 }
 
-pub fn getChunkByChunkXYWithRequestForLoad(chunkXY: ChunkXY, threadIndex: usize, state: *main.ChatSimState) !?*MapChunk {
+pub fn getChunkByChunkXYWithRequestForLoad(chunkXY: ChunkXY, threadIndex: usize, state: *main.GameState) !?*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     const optChunkArea = state.chunkAreas.getPtr(areaKey);
@@ -250,7 +250,7 @@ pub fn appendRequestToLoadChunkAreaKey(threadData: *main.ThreadData, areaKey: u6
     try threadData.requestToLoadChunkAreaKeys.append(areaKey);
 }
 
-pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.ChatSimState) !?*MapChunk {
+pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.GameState) !?*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     const optChunkArea = state.chunkAreas.getPtr(areaKey);
@@ -262,22 +262,22 @@ pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.ChatS
     return null;
 }
 
-pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !*MapChunk {
+pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
     return try getChunkAndCreateIfNotExistsForChunkXY(chunkXY, threadIndex, state);
 }
 
-pub fn getChunkByPositionWithRequestForLoad(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?*MapChunk {
+pub fn getChunkByPositionWithRequestForLoad(position: main.Position, threadIndex: usize, state: *main.GameState) !?*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
     return try getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
 }
 
-pub fn getChunkByPositionWithoutCreateOrLoad(position: main.Position, state: *main.ChatSimState) !?*MapChunk {
+pub fn getChunkByPositionWithoutCreateOrLoad(position: main.Position, state: *main.GameState) !?*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
     return try getChunkByChunkXYWithoutCreateOrLoad(chunkXY, state);
 }
 
-pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.ChatSimState) !void {
+pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.GameState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, 0, state);
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
@@ -362,12 +362,12 @@ pub fn getTileRectangleMiddlePosition(tileRectangle: MapTileRectangle) main.Posi
     };
 }
 
-pub fn getObjectOnTile(tileXY: TileXY, threadIndex: usize, state: *main.ChatSimState) !?MapObject {
+pub fn getObjectOnTile(tileXY: TileXY, threadIndex: usize, state: *main.GameState) !?MapObject {
     const position = mapTileXyToTileMiddlePosition(tileXY);
     return try getObjectOnPosition(position, threadIndex, state);
 }
 
-pub fn getObjectOnPosition(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?MapObject {
+pub fn getObjectOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?MapObject {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
     for (chunk.buildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
@@ -398,7 +398,7 @@ pub fn getObjectOnPosition(position: main.Position, threadIndex: usize, state: *
     return null;
 }
 
-pub fn canBuildOrWaitForTreeCutdown(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !bool {
+pub fn canBuildOrWaitForTreeCutdown(position: main.Position, threadIndex: usize, state: *main.GameState) !bool {
     const chunk = try getChunkByPositionWithRequestForLoad(position, threadIndex, state);
     if (chunk == null) return false;
     for (chunk.?.trees.items, 0..) |tree, i| {
@@ -411,7 +411,7 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, threadIndex: usize,
     return true;
 }
 
-fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.ChatSimState, setExistingTreeRegrow: bool, ignore1TileBuildings: bool, ignoreNonRegrowTrees: bool) !bool {
+fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.GameState, setExistingTreeRegrow: bool, ignore1TileBuildings: bool, ignoreNonRegrowTrees: bool) !bool {
     const buildCorners = [_]TileXY{
         .{
             .tileX = buildRectangle.topLeftTileXY.tileX - GameMap.MAX_BUILDING_TILE_RADIUS,
@@ -593,7 +593,7 @@ pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) 
     };
 }
 
-pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
+pub fn placeTree(tree: MapTree, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(tree.position), state, true, false, false)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, 0, state);
     try chunk.trees.append(tree);
@@ -604,14 +604,14 @@ pub fn placeTree(tree: MapTree, state: *main.ChatSimState) !bool {
     return true;
 }
 
-pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.GameState) !void {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, threadIndex, state);
     state.threadData[threadIndex].citizensAddedThisTick += 1;
     try chunk.citizens.append(citizen);
     try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, threadIndex, state);
 }
 
-pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bool {
+pub fn placePotatoField(potatoField: PotatoField, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(potatoField.position), state, false, false, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, 0, state);
     try chunk.potatoFields.append(potatoField);
@@ -620,14 +620,14 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.ChatSimState) !bo
     return true;
 }
 
-pub fn placePath(pathPos: main.Position, state: *main.ChatSimState) !bool {
+pub fn placePath(pathPos: main.Position, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(pathPos), state, false, false, true)) return false;
     const chunk = try getChunkAndCreateIfNotExistsForPosition(pathPos, 0, state);
     try chunk.pathes.append(pathPos);
     return true;
 }
 
-pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
+pub fn placeHouse(position: main.Position, state: *main.GameState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
         .type = .house,
@@ -635,7 +635,7 @@ pub fn placeHouse(position: main.Position, state: *main.ChatSimState, checkPath:
     return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
 
-pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
+pub fn placeBigHouse(position: main.Position, state: *main.GameState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const newBuilding: Building = .{
         .position = position,
         .type = .bigHouse,
@@ -644,7 +644,7 @@ pub fn placeBigHouse(position: main.Position, state: *main.ChatSimState, checkPa
     return try placeBuilding(newBuilding, state, checkPath, displayHelpText, threadIndex);
 }
 
-pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
+pub fn placeBuilding(building: Building, state: *main.GameState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
     if (building.type == .bigHouse) {
         const buildRectangle = getBigBuildingRectangle(building.position);
@@ -669,7 +669,7 @@ pub fn placeBuilding(building: Building, state: *main.ChatSimState, checkPath: b
     return true;
 }
 
-pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.GameState) !void {
     building.constructionStartedTime = null;
     building.woodRequired -|= 1;
     if (building.type == .house) {
@@ -697,7 +697,7 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Chat
     }
 }
 
-fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.ChatSimState) !bool {
+fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.GameState) !bool {
     var checkCorners = [_]TileXY{
         .{
             .tileX = buildRectangle.topLeftTileXY.tileX - 1,
@@ -774,7 +774,7 @@ fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.Chat
     return false;
 }
 
-fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSimState) !void {
+fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameState) !void {
     const corners = [_]main.Position{
         .{ .x = building.position.x - GameMap.TILE_SIZE / 2, .y = building.position.y - GameMap.TILE_SIZE / 2 },
         .{ .x = building.position.x - GameMap.TILE_SIZE / 2, .y = building.position.y + GameMap.TILE_SIZE / 2 },
@@ -805,7 +805,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.ChatSim
     }
 }
 
-pub fn getPotatoFieldOnPosition(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
+pub fn getPotatoFieldOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
     for (chunk.potatoFields.items, 0..) |*field, i| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
@@ -815,7 +815,7 @@ pub fn getPotatoFieldOnPosition(position: main.Position, threadIndex: usize, sta
     return null;
 }
 
-pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, threadIndex: usize, state: *main.ChatSimState) !void {
+pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citizenHome: main.Position, threadIndex: usize, state: *main.GameState) !void {
     const chunkAreaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunk.chunkXY);
     const citizenHomeChunkXY = getChunkXyForPosition(citizenHome);
     const chunkAreaXYCitizenHome = chunkAreaZig.getChunkAreaXyForChunkXy(citizenHomeChunkXY);
@@ -830,7 +830,7 @@ pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citi
     try chunk.queue.append(chunkQueueItem);
 }
 
-pub fn getTreeOnPosition(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?struct { tree: *MapTree, chunk: *MapChunk, treeIndex: usize } {
+pub fn getTreeOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?struct { tree: *MapTree, chunk: *MapChunk, treeIndex: usize } {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
     for (chunk.trees.items, 0..) |*tree, index| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
@@ -880,7 +880,7 @@ pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
     }
 }
 
-pub fn getBuildingOnPosition(position: main.Position, threadIndex: usize, state: *main.ChatSimState) !?*Building {
+pub fn getBuildingOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?*Building {
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
     for (chunk.buildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
@@ -895,7 +895,7 @@ pub fn getBuildingOnPosition(position: main.Position, threadIndex: usize, state:
     return null;
 }
 
-pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.ChatSimState) !void {
+pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main.GameState) !void {
     const areaRectangleFromTileRectangle: MapTileRectangle = .{
         .topLeftTileXY = .{
             .tileX = @divFloor(@divFloor(mapTileRectangle.topLeftTileXY.tileX, GameMap.CHUNK_LENGTH), chunkAreaZig.ChunkArea.SIZE),
@@ -917,7 +917,7 @@ pub fn unidleAffectedChunkAreas(mapTileRectangle: MapTileRectangle, state: *main
     }
 }
 
-pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountColumns: u32, tileCountRows: u32, state: *main.ChatSimState) !void {
+pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountColumns: u32, tileCountRows: u32, state: *main.GameState) !void {
     const fromTopLeftTileMiddle = mapTileXyToTileMiddlePosition(fromTopLeftTileXY);
     const targetTopLeftTileMiddle = mapTileXyToTileMiddlePosition(toTopLeftTileXY);
     for (0..tileCountColumns) |x| {
@@ -1039,7 +1039,7 @@ pub fn destroyChunk(chunk: *MapChunk) void {
     pathfindingZig.destoryChunkData(&chunk.pathingData);
 }
 
-pub fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
+pub fn createChunk(chunkXY: ChunkXY, state: *main.GameState) !MapChunk {
     var mapChunk: MapChunk = try createEmptyChunk(chunkXY, state.allocator);
     for (0..GameMap.CHUNK_LENGTH) |x| {
         for (0..GameMap.CHUNK_LENGTH) |y| {
@@ -1063,7 +1063,7 @@ pub fn createChunk(chunkXY: ChunkXY, state: *main.ChatSimState) !MapChunk {
     return mapChunk;
 }
 
-pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.ChatSimState) !void {
+pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.GameState) !void {
     const areaXY: chunkAreaZig.ChunkAreaXY = .{ .areaX = 0, .areaY = 0 };
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     try state.chunkAreas.put(areaKey, .{

@@ -16,13 +16,13 @@ pub const CodePerformanceEntry = struct {
     lastMeasurement: i128 = 0,
 };
 
-pub fn init(state: *main.ChatSimState) !void {
+pub fn init(state: *main.GameState) !void {
     state.codePerformanceData = .{
         .entries = std.StringArrayHashMap(CodePerformanceEntry).init(state.allocator),
     };
 }
 
-pub fn destroy(state: *main.ChatSimState) void {
+pub fn destroy(state: *main.GameState) void {
     state.codePerformanceData.entries.deinit();
 }
 
@@ -58,7 +58,7 @@ pub fn evaluateTickData(codePerformanceData: *CodePerformanceData) void {
     }
 }
 
-pub fn paintData(state: *main.ChatSimState, startY: f32) !void {
+pub fn paintData(state: *main.GameState, startY: f32) !void {
     const performanceFontSize = 20.0;
     const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
     const onePixelXInVulkan = 2 / windowSdlZig.windowData.widthFloat;
@@ -71,7 +71,7 @@ pub fn paintData(state: *main.ChatSimState, startY: f32) !void {
     }
 }
 
-pub fn printToConsole(state: *main.ChatSimState) void {
+pub fn printToConsole(state: *main.GameState) void {
     if (!MEASURE) return;
     std.debug.print("Performance", .{});
     var iterator = state.codePerformanceData.entries.iterator();

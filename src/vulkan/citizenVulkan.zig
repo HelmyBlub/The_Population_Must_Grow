@@ -66,7 +66,7 @@ const CitizenVertex = struct {
     }
 };
 
-pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: u32, chunkVisible: mapZig.VisibleChunksData) !void {
+pub fn setupVerticesForComplexCitizens(state: *main.GameState, citizenCount: u32, chunkVisible: mapZig.VisibleChunksData) !void {
     var vkState = &state.vkState;
     vkState.citizen.entityPaintCount = citizenCount;
 
@@ -114,7 +114,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.ChatSimState, citizenCount: 
     try setupVertexDataForGPU(vkState);
 }
 
-fn packBools(citizen: *main.Citizen, state: *main.ChatSimState) u8 {
+fn packBools(citizen: *main.Citizen, state: *main.GameState) u8 {
     var result: u8 = 0;
     if (citizen.foodLevel <= 0) result |= 1 << 0;
     if (citizen.hasWood) result |= 1 << 2;
@@ -132,7 +132,7 @@ fn packBools(citizen: *main.Citizen, state: *main.ChatSimState) u8 {
     return result;
 }
 
-pub fn recordCitizenCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.ChatSimState) !void {
+pub fn recordCitizenCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     const vkState = &state.vkState;
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.citizen.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.citizen.vertexBuffer};
@@ -163,7 +163,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     vk.vkUnmapMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemory);
 }
 
-pub fn initCitizen(state: *main.ChatSimState) !void {
+pub fn initCitizen(state: *main.GameState) !void {
     state.vkState.citizen.vertexBufferCleanUp = try state.allocator.alloc(?vk.VkBuffer, paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT);
     state.vkState.citizen.vertexBufferMemoryCleanUp = try state.allocator.alloc(?vk.VkDeviceMemory, paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT);
     for (0..paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {

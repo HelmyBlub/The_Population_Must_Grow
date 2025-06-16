@@ -48,7 +48,7 @@ pub const SoundData = struct {
     sounds: []SoundFile,
 };
 
-pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator) !void {
+pub fn createSoundMixer(state: *main.GameState, allocator: std.mem.Allocator) !void {
     state.soundMixer = .{
         .soundsToPlay = std.ArrayList(SoundToPlay).init(allocator),
         .soundsFutureQueue = std.ArrayList(FutureSoundToPlay).init(allocator),
@@ -57,7 +57,7 @@ pub fn createSoundMixer(state: *main.ChatSimState, allocator: std.mem.Allocator)
     try state.soundMixer.soundsToPlay.ensureTotalCapacity(SoundMixer.MAX_SOUNDS_AT_ONCE);
 }
 
-pub fn destroySoundMixer(state: *main.ChatSimState) void {
+pub fn destroySoundMixer(state: *main.GameState) void {
     state.soundMixer.mutex.lock();
     defer state.soundMixer.mutex.unlock();
     state.soundMixer.soundsToPlay.deinit();
@@ -73,7 +73,7 @@ pub fn destroySoundMixer(state: *main.ChatSimState) void {
     state.allocator.free(state.soundMixer.soundData.sounds);
 }
 
-pub fn tickSoundMixer(state: *main.ChatSimState) !void {
+pub fn tickSoundMixer(state: *main.GameState) !void {
     var index: usize = 0;
     while (index < state.soundMixer.soundsFutureQueue.items.len) {
         const item = state.soundMixer.soundsFutureQueue.items[index];
@@ -113,7 +113,7 @@ pub fn tickSoundMixer(state: *main.ChatSimState) !void {
 fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additional_amount: c_int, len: c_int) callconv(.C) void {
     _ = len;
     const Sample = i16;
-    const state: *main.ChatSimState = @ptrCast(@alignCast(userdata.?));
+    const state: *main.GameState = @ptrCast(@alignCast(userdata.?));
     state.soundMixer.mutex.lock();
     defer state.soundMixer.mutex.unlock();
     if (state.gameEnd) return;
@@ -210,7 +210,7 @@ pub const SOUND_WOOD_CHOP_3 = 3;
 pub const SOUND_WOOD_CHOP_4 = 4;
 pub const SOUND_WOOD_CHOP_5 = 5;
 pub const SOUND_HAMMER_WOOD = 6;
-fn initSounds(state: *main.ChatSimState, allocator: std.mem.Allocator) !SoundData {
+fn initSounds(state: *main.GameState, allocator: std.mem.Allocator) !SoundData {
     var desired_spec = sdl.SDL_AudioSpec{
         .format = sdl.SDL_AUDIO_S16,
         .freq = 48000,
