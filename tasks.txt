@@ -1,11 +1,18 @@
 tasks:
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
+    - solution: blocking tiles
+        - on build check for blocking tiles
+    - when delete upper part of big house on different area it happens
 - bug: bighouse over work order normal house
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - save on crash/panic?
+- bug memory leak:
+    D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:500:45: 0x7ff7f2ca0f0d in loadChunkAreaFromFile (thePopulationMustGrow.exe.obj)
+    const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
+- 
 
 - UI: reset 
 - UI: sound volume setting

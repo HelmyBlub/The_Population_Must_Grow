@@ -45,6 +45,8 @@ pub const MapChunk = struct {
     bigBuildings: std.ArrayList(Building),
     potatoFields: std.ArrayList(PotatoField),
     citizens: std.ArrayList(main.Citizen),
+    /// used for bigBuildings which use more than one tile
+    blockingTiles: std.ArrayList(TileXY),
     buildOrders: std.ArrayList(BuildOrder),
     skipBuildOrdersUntilTimeMs: ?u32 = null,
     pathes: std.ArrayList(main.Position),
@@ -353,7 +355,28 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                         }
                     }
                 }
-
+                //check for blocking tiles
+                const otherTileXyOfBuilding: [3]TileXY = .{
+                    .{ .tileX = tileXYOfBuilding.tileX - 1, .tileY = tileXYOfBuilding.tileY },
+                    .{ .tileX = tileXYOfBuilding.tileX, .tileY = tileXYOfBuilding.tileY - 1 },
+                    .{ .tileX = tileXYOfBuilding.tileX - 1, .tileY = tileXYOfBuilding.tileY - 1 },
+                };
+                for (otherTileXyOfBuilding) |otherTileXY| {
+                    const otherChunkXY = getChunkXyForTileXy(otherTileXY);
+                    if (otherChunkXY.chunkX != chunk.chunkXY.chunkX or otherChunkXY.chunkY != chunk.chunkXY.chunkY) {
+                        if (try getChunkByChunkXYWithoutCreateOrLoad(otherChunkXY, state)) |otherChunk| {
+                            var currentIndex: usize = 0;
+                            while (currentIndex < otherChunk.blockingTiles.items.len) {
+                                const currentBlockingTile = otherChunk.blockingTiles.items[currentIndex];
+                                if (currentBlockingTile.tileX == otherTileXY.tileX and currentBlockingTile.tileY == otherTileXY.tileY) {
+                                    _ = otherChunk.blockingTiles.swapRemove(currentIndex);
+                                } else {
+                                    currentIndex += 1;
+                                }
+                            }
+                        }
+                    }
+                }
                 return;
             }
         }
@@ -473,6 +496,11 @@ fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.GameState
                 if (is1x1ObjectOverlapping(building.position, buildRectangle)) {
                     return false;
                 }
+            }
+        }
+        for (chunk.blockingTiles.items) |blockingTile| {
+            if (isRectangleOverlapping(MapTileRectangle{ .topLeftTileXY = blockingTile, .columnCount = 1, .rowCount = 1 }, buildRectangle)) {
+                return false;
             }
         }
         for (chunk.bigBuildings.items) |building| {
@@ -710,6 +738,20 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Game
                 newCitizen.position = building.position;
                 try placeCitizen(newCitizen, threadIndex, state);
                 building.citizensSpawned += 1;
+            }
+            const bigBuildingTileXY = mapPositionToTileXy(building.position);
+            const chunkXY = getChunkXyForTileXy(bigBuildingTileXY);
+            const bigBuildingOtherTiles: [3]TileXY = .{
+                .{ .tileX = bigBuildingTileXY.tileX - 1, .tileY = bigBuildingTileXY.tileY },
+                .{ .tileX = bigBuildingTileXY.tileX, .tileY = bigBuildingTileXY.tileY - 1 },
+                .{ .tileX = bigBuildingTileXY.tileX - 1, .tileY = bigBuildingTileXY.tileY - 1 },
+            };
+            for (bigBuildingOtherTiles) |otherTile| {
+                const otherTileChunkXY = getChunkXyForTileXy(otherTile);
+                if (otherTileChunkXY.chunkX != chunkXY.chunkX or otherTileChunkXY.chunkY != chunkXY.chunkY) {
+                    const otherChunk = try getChunkAndCreateIfNotExistsForChunkXY(otherTileChunkXY, 0, state);
+                    try otherChunk.blockingTiles.append(otherTile);
+                }
             }
         }
     }
@@ -1051,6 +1093,7 @@ pub fn createEmptyChunk(chunkXY: ChunkXY, allocator: std.mem.Allocator) !MapChun
         .citizens = std.ArrayList(main.Citizen).init(allocator),
         .buildOrders = std.ArrayList(BuildOrder).init(allocator),
         .pathes = std.ArrayList(main.Position).init(allocator),
+        .blockingTiles = std.ArrayList(TileXY).init(allocator),
         .pathingData = .{
             .pathingData = undefined,
             .graphRectangles = std.ArrayList(pathfindingZig.ChunkGraphRectangle).init(allocator),
@@ -1068,6 +1111,7 @@ pub fn destroyChunk(chunk: *MapChunk) void {
     main.Citizen.destroyCitizens(chunk);
     chunk.citizens.deinit();
     chunk.buildOrders.deinit();
+    chunk.blockingTiles.deinit();
     chunk.pathes.deinit();
     chunk.queue.deinit();
     pathfindingZig.destoryChunkData(&chunk.pathingData);

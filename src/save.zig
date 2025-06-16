@@ -33,6 +33,7 @@ const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_1 = 22;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_2 = 23;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_3 = 24;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4 = 25;
+const SAVE_BLOCKING = 26;
 const FILE_NAME_GENERAL_DATA = "general.data";
 
 pub const SaveAndLoadThread = struct {
@@ -304,6 +305,10 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Game
                 }
                 writeValues[writeValueIndex] = writeValue;
             }
+            for (chunk.blockingTiles.items) |blockingTile| {
+                const writeValueIndex = writeValueChunkXyIndex + tileXyToWriteIndexTilePart(blockingTile);
+                writeValues[writeValueIndex] = SAVE_BLOCKING;
+            }
             for (chunk.potatoFields.items) |potatoField| {
                 const writeValueIndex = writeValueChunkXyIndex + positionToWriteIndexTilePart(potatoField.position);
                 var writeValue: u8 = SAVE_POTATO;
@@ -444,6 +449,10 @@ fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAre
 
 fn positionToWriteIndexTilePart(position: main.Position) usize {
     const tileXY = mapZig.mapPositionToTileXy(position);
+    return tileXyToWriteIndexTilePart(tileXY);
+}
+
+fn tileXyToWriteIndexTilePart(tileXY: mapZig.TileXY) usize {
     const tileUsizeX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
     const tileUsizeY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));
     return tileUsizeX * mapZig.GameMap.CHUNK_LENGTH + tileUsizeY;
@@ -509,10 +518,11 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Game
             currenChunk.?.pathingData = pathfindChunkData;
         }
 
-        const position: main.Position = mapZig.mapTileXyToTileMiddlePosition(.{
+        const tileXY: mapZig.TileXY = .{
             .tileX = @as(i32, @intCast(@divFloor(tileXYIndex, mapZig.GameMap.CHUNK_LENGTH))) + currentChunkXY.chunkX * mapZig.GameMap.CHUNK_LENGTH,
             .tileY = @as(i32, @intCast(@mod(tileXYIndex, mapZig.GameMap.CHUNK_LENGTH))) + currentChunkXY.chunkY * mapZig.GameMap.CHUNK_LENGTH,
-        });
+        };
+        const position: main.Position = mapZig.mapTileXyToTileMiddlePosition(tileXY);
 
         if (currenChunk) |*chunk| {
             switch (value) {
@@ -704,6 +714,9 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Game
                     };
                     try chunk.bigBuildings.append(newBuilding);
                     try chunk.buildOrders.append(.{ .position = position, .materialCount = newBuilding.woodRequired });
+                },
+                SAVE_BLOCKING => {
+                    try chunk.blockingTiles.append(tileXY);
                 },
                 SAVE_EMPTY => {
                     // nothing to do

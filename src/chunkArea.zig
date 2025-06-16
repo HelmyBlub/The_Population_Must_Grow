@@ -348,7 +348,7 @@ pub fn setupPathingForLoadedChunkArea(areaXY: ChunkAreaXY, state: *main.GameStat
     for (0..ChunkArea.SIZE) |x| {
         for (0..ChunkArea.SIZE) |y| {
             const chunk = &chunkArea.chunks.?[chunkKeyOrder[x][y]];
-            if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
+            if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0 and chunk.blockingTiles.items.len == 0) {
                 const chunkGraphRectangle: pathfindingZig.ChunkGraphRectangle = .{
                     .index = 0,
                     .chunkXY = chunk.chunkXY,
@@ -445,6 +445,11 @@ fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, state
         const tileXY = mapZig.mapPositionToTileXy(building.position);
         const indexX: usize = @intCast(@mod(tileXY.tileX, mapZig.GameMap.CHUNK_LENGTH));
         const indexY: usize = @intCast(@mod(tileXY.tileY, mapZig.GameMap.CHUNK_LENGTH));
+        blockingTiles[indexX][indexY] = true;
+    }
+    for (chunk.blockingTiles.items) |blockingTile| {
+        const indexX: usize = @intCast(@mod(blockingTile.tileX, mapZig.GameMap.CHUNK_LENGTH));
+        const indexY: usize = @intCast(@mod(blockingTile.tileY, mapZig.GameMap.CHUNK_LENGTH));
         blockingTiles[indexX][indexY] = true;
     }
     for (chunk.bigBuildings.items) |bigBuilding| {

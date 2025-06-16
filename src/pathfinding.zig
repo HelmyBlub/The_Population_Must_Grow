@@ -104,7 +104,7 @@ pub fn changePathingDataRectangle(rectangle: mapZig.MapTileRectangle, pathingTyp
                     .chunkX = startChunkX + @as(i32, @intCast(chunkAddX)),
                     .chunkY = startChunkY + @as(i32, @intCast(chunkAddY)),
                 }, threadIndex, state);
-                if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0) {
+                if (chunk.buildings.items.len == 0 and chunk.bigBuildings.items.len == 0 and chunk.blockingTiles.items.len == 0) {
                     try clearChunkGraph(chunk, threadIndex, state);
                 } else {
                     const chunkTileRectangle: mapZig.MapTileRectangle = .{
@@ -124,7 +124,7 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
     // check each tile if blocking and if it should not block anymore
     if (PATHFINDING_DEBUG) std.debug.print("checkForPathingBlockRemovalsInChunk {}\n", .{rectangle});
     for (0..rectangle.columnCount) |x| {
-        for (0..rectangle.rowCount) |y| {
+        rowLoop: for (0..rectangle.rowCount) |y| {
             const tileXY: mapZig.TileXY = .{
                 .tileX = rectangle.topLeftTileXY.tileX + @as(i32, @intCast(x)),
                 .tileY = rectangle.topLeftTileXY.tileY + @as(i32, @intCast(y)),
@@ -133,6 +133,12 @@ fn checkForPathingBlockRemovalsInChunk(chunk: *mapZig.MapChunk, rectangle: mapZi
             if (chunk.pathingData.pathingData[pathingIndex] != null) continue;
             if (try mapZig.getBuildingOnPosition(mapZig.mapTileXyToTileMiddlePosition(tileXY), threadIndex, state) != null) {
                 continue;
+            } else if (chunk.blockingTiles.items.len > 0) {
+                for (chunk.blockingTiles.items) |blockingTile| {
+                    if (blockingTile.tileX == tileXY.tileX and blockingTile.tileY == tileXY.tileY) {
+                        continue :rowLoop;
+                    }
+                }
             }
             // change tile to not blocking
             var newGraphRectangle: ChunkGraphRectangle = .{
@@ -532,7 +538,7 @@ fn appendConnectionWithCheck(addConnectionbToGraph: *ChunkGraphRectangle, newCon
 fn printGraphData(graphRectangle: *const ChunkGraphRectangle) void {
     std.debug.print("rec(id: {}_{}, topLeft: {}|{}, c:{}, r:{}, connections:{any})\n", .{
         graphRectangle.index,
-        graphRectangle.chunkKey,
+        graphRectangle.chunkXY,
         graphRectangle.tileRectangle.topLeftTileXY.tileX,
         graphRectangle.tileRectangle.topLeftTileXY.tileY,
         graphRectangle.tileRectangle.columnCount,
@@ -1016,55 +1022,56 @@ pub fn paintDebugPathfindingVisualization(state: *main.GameState) !void {
                 state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 7] = .{ .pos = .{ topLeftVulkan.x, topLeftVulkan.y }, .color = graphRectangleColor };
                 state.vkState.rectangle.verticeCount += recVertCount;
                 for (rectangle.connectionIndexes.items) |conData| {
-                    const conChunk = state.map.chunks.getPtr(conData.chunkKey).?;
-                    if (state.vkState.rectangle.verticeCount + 6 >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
-                    if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
-                        std.debug.print("beforeCrash: {}, {}, {}, {}, {}\n", .{ rectangle.tileRectangle, rectangle.index, rectangle.chunkKey, conData.chunkKey, rectangle.connectionIndexes.items.len });
-                        continue;
-                    }
-                    const conRect = conChunk.pathingData.graphRectangles.items[conData.index].tileRectangle;
-                    var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
-                    var conTileXy: mapZig.TileXY = conRect.topLeftTileXY;
-                    if (rectangle.tileRectangle.topLeftTileXY.tileY < conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)) and
-                        rectangle.tileRectangle.topLeftTileXY.tileX <= conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX <= rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)))
-                    {
-                        const maxTop = @max(rectangle.tileRectangle.topLeftTileXY.tileY, conRect.topLeftTileXY.tileY);
-                        const minBottom = @min(rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)), conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)));
-                        const middleY = @divFloor(maxTop + minBottom, 2);
-                        rectTileXy.tileY = middleY;
-                        conTileXy.tileY = middleY;
-                        if (rectTileXy.tileX < conTileXy.tileX) {
-                            rectTileXy.tileX = conTileXy.tileX - 1;
-                        } else {
-                            conTileXy.tileX = rectTileXy.tileX - 1;
+                    if (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(conData.chunkXY, state)) |conChunk| {
+                        if (state.vkState.rectangle.verticeCount + 6 >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
+                        if (conChunk.pathingData.graphRectangles.items.len <= conData.index) {
+                            std.debug.print("beforeCrash: {}, {}, {}, {}, {}\n", .{ rectangle.tileRectangle, rectangle.index, rectangle.chunkXY, conData.chunkXY, rectangle.connectionIndexes.items.len });
+                            continue;
                         }
-                    } else if (rectangle.tileRectangle.topLeftTileXY.tileX < conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)) and
-                        rectangle.tileRectangle.topLeftTileXY.tileY <= conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY <= rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)))
-                    {
-                        const maxLeft = @max(rectangle.tileRectangle.topLeftTileXY.tileX, conRect.topLeftTileXY.tileX);
-                        const minRight = @min(rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)), conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)));
-                        const middleX = @divFloor(maxLeft + minRight, 2);
-                        rectTileXy.tileX = middleX;
-                        conTileXy.tileX = middleX;
-                        if (rectTileXy.tileY < conTileXy.tileY) {
-                            rectTileXy.tileY = conTileXy.tileY - 1;
-                        } else {
-                            conTileXy.tileY = rectTileXy.tileY - 1;
+                        const conRect = conChunk.pathingData.graphRectangles.items[conData.index].tileRectangle;
+                        var rectTileXy: mapZig.TileXY = rectangle.tileRectangle.topLeftTileXY;
+                        var conTileXy: mapZig.TileXY = conRect.topLeftTileXY;
+                        if (rectangle.tileRectangle.topLeftTileXY.tileY < conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY < rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)) and
+                            rectangle.tileRectangle.topLeftTileXY.tileX <= conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX <= rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)))
+                        {
+                            const maxTop = @max(rectangle.tileRectangle.topLeftTileXY.tileY, conRect.topLeftTileXY.tileY);
+                            const minBottom = @min(rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)), conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)));
+                            const middleY = @divFloor(maxTop + minBottom, 2);
+                            rectTileXy.tileY = middleY;
+                            conTileXy.tileY = middleY;
+                            if (rectTileXy.tileX < conTileXy.tileX) {
+                                rectTileXy.tileX = conTileXy.tileX - 1;
+                            } else {
+                                conTileXy.tileX = rectTileXy.tileX - 1;
+                            }
+                        } else if (rectangle.tileRectangle.topLeftTileXY.tileX < conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)) and conRect.topLeftTileXY.tileX < rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)) and
+                            rectangle.tileRectangle.topLeftTileXY.tileY <= conRect.topLeftTileXY.tileY + @as(i32, @intCast(conRect.rowCount)) and conRect.topLeftTileXY.tileY <= rectangle.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(rectangle.tileRectangle.rowCount)))
+                        {
+                            const maxLeft = @max(rectangle.tileRectangle.topLeftTileXY.tileX, conRect.topLeftTileXY.tileX);
+                            const minRight = @min(rectangle.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(rectangle.tileRectangle.columnCount)), conRect.topLeftTileXY.tileX + @as(i32, @intCast(conRect.columnCount)));
+                            const middleX = @divFloor(maxLeft + minRight, 2);
+                            rectTileXy.tileX = middleX;
+                            conTileXy.tileX = middleX;
+                            if (rectTileXy.tileY < conTileXy.tileY) {
+                                rectTileXy.tileY = conTileXy.tileY - 1;
+                            } else {
+                                conTileXy.tileY = rectTileXy.tileY - 1;
+                            }
                         }
+
+                        const conArrowEndVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(conTileXy, state.camera);
+                        const arrowStartVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(rectTileXy, state.camera);
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = connectionRectangleColor };
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ arrowStartVulkan.x, arrowStartVulkan.y }, .color = connectionRectangleColor };
+
+                        const direction = main.calculateDirection(arrowStartVulkan, conArrowEndVulkan) + std.math.pi;
+
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction + 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
+                        state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction - 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
+                        state.vkState.rectangle.verticeCount += 6;
                     }
-
-                    const conArrowEndVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(conTileXy, state.camera);
-                    const arrowStartVulkan = mapZig.mapTileXyMiddleToVulkanSurfacePosition(rectTileXy, state.camera);
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = connectionRectangleColor };
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 1] = .{ .pos = .{ arrowStartVulkan.x, arrowStartVulkan.y }, .color = connectionRectangleColor };
-
-                    const direction = main.calculateDirection(arrowStartVulkan, conArrowEndVulkan) + std.math.pi;
-
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 2] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 3] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction + 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction + 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 4] = .{ .pos = .{ conArrowEndVulkan.x, conArrowEndVulkan.y }, .color = .{ 0, 0, 0 } };
-                    state.vkState.rectangle.vertices[state.vkState.rectangle.verticeCount + 5] = .{ .pos = .{ conArrowEndVulkan.x + @cos(direction - 0.3) * 0.05, conArrowEndVulkan.y + @sin(direction - 0.3) * 0.05 }, .color = .{ 0, 0, 0 } };
-                    state.vkState.rectangle.verticeCount += 6;
                 }
                 if (state.vkState.rectangle.verticeCount + recVertCount >= rectangleVulkanZig.VkRectangle.MAX_VERTICES) break :mainLoop;
             }
