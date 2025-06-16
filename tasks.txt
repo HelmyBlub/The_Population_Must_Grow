@@ -1,9 +1,8 @@
 tasks:
-- lower citizen hunger on area load.
 - bug: fast repeat restart crash
+- bug: delete tool crashes
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
-- bug: not all chunks ticked. Not all buildings where being build
 - bug: bighouse over work order normal house
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?

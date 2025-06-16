@@ -685,21 +685,28 @@ fn handleRequestToLoadChunkAreaKeys(state: *GameState) !void {
             state.saveAndLoadThread.addDataIndex = nextAddIndex;
             const saveAndLoadData = &state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex];
             for (saveAndLoadData.loadedAreaData.items) |areaChunksData| {
-                const chunkArea = state.chunkAreas.getPtr(areaChunksData.areaKey).?;
-                if (chunkArea.chunks == null) {
-                    chunkArea.chunks = areaChunksData.chunks;
-                    const areaXY = chunkAreaZig.getAreaXyForKey(areaChunksData.areaKey);
-                    try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
-                    chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
-                    chunkArea.requestedToLoad = false;
-                    try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, state);
+                if (state.chunkAreas.getPtr(areaChunksData.areaKey)) |chunkArea| {
+                    if (chunkArea.chunks == null) {
+                        chunkArea.chunks = areaChunksData.chunks;
+                        const areaXY = chunkAreaZig.getAreaXyForKey(areaChunksData.areaKey);
+                        try chunkAreaZig.setupPathingForLoadedChunkArea(areaXY, state);
+                        chunkArea.dontUnloadBeforeTime = state.gameTimeMs + chunkAreaZig.MINIMAL_ACTIVE_TIME_BEFORE_UNLOAD;
+                        chunkArea.requestedToLoad = false;
+                        try chunkAreaZig.assignChunkAreaBackToThread(chunkArea, areaChunksData.areaKey, state);
+                    } else {
+                        std.debug.print("does this happen? loading a loaded area? {} {} {d}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, state.gameTimeMs });
+                        for (areaChunksData.chunks) |*chunk| {
+                            mapZig.destroyChunk(chunk);
+                        }
+                        state.allocator.free(areaChunksData.chunks);
+                        chunkArea.requestedToLoad = false;
+                    }
                 } else {
-                    std.debug.print("does this happen? loading a loaded area? {} {} {d}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, state.gameTimeMs });
+                    // when restarting this can happen
                     for (areaChunksData.chunks) |*chunk| {
                         mapZig.destroyChunk(chunk);
                     }
                     state.allocator.free(areaChunksData.chunks);
-                    chunkArea.requestedToLoad = false;
                 }
             }
             saveAndLoadData.loadedAreaData.clearRetainingCapacity();
