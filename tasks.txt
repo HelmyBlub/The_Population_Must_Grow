@@ -1,6 +1,6 @@
 tasks:
-- bug: fast repeat restart crash
-- bug: delete tool crashes
+- check delete tool behavior
+- bug: multiple citizens on one tile
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: bighouse over work order normal house

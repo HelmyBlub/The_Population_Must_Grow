@@ -302,6 +302,14 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
             if (building.citizensSpawned == 0) {
                 _ = chunk.buildings.swapRemove(i);
             }
+            if (building.inConstruction) {
+                for (chunk.buildOrders.items, 0..) |*buildOrder, index| {
+                    if (buildOrder.position.x == building.position.x and buildOrder.position.y == building.position.y) {
+                        _ = chunk.buildOrders.swapRemove(index);
+                        break;
+                    }
+                }
+            }
             return;
         }
     }
@@ -337,6 +345,15 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                 if (building.citizensSpawned == 0) {
                     _ = chunk.bigBuildings.swapRemove(i);
                 }
+                if (building.inConstruction) {
+                    for (chunk.buildOrders.items, 0..) |*buildOrder, buildOrderIndex| {
+                        if (buildOrder.position.x == building.position.x and buildOrder.position.y == building.position.y) {
+                            _ = chunk.buildOrders.swapRemove(buildOrderIndex);
+                            break;
+                        }
+                    }
+                }
+
                 return;
             }
         }
@@ -672,6 +689,7 @@ pub fn placeBuilding(building: Building, state: *main.GameState, checkPath: bool
 pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.GameState) !void {
     building.constructionStartedTime = null;
     building.woodRequired -|= 1;
+    if (!building.inConstruction) return;
     if (building.type == .house) {
         building.inConstruction = false;
         building.imageIndex = imageZig.IMAGE_HOUSE;
@@ -842,7 +860,7 @@ pub fn getTreeOnPosition(position: main.Position, threadIndex: usize, state: *ma
 
 pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
     const movedIndex = chunk.trees.items.len - 1;
-    _ = chunk.trees.swapRemove(treeIndex);
+    const removedTree = chunk.trees.swapRemove(treeIndex);
     var queueIndex: usize = 0;
     while (chunk.queue.items.len > queueIndex) {
         const queueItem = &chunk.queue.items[queueIndex];
@@ -858,11 +876,19 @@ pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
             queueIndex += 1;
         }
     }
+    if (removedTree.fullyGrown == false and removedTree.growStartTimeMs == null) {
+        for (chunk.buildOrders.items, 0..) |*buildOrder, buildOrderIndex| {
+            if (buildOrder.position.x == removedTree.position.x and buildOrder.position.y == removedTree.position.y) {
+                _ = chunk.buildOrders.swapRemove(buildOrderIndex);
+                break;
+            }
+        }
+    }
 }
 
 pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
     const movedIndex = chunk.potatoFields.items.len - 1;
-    _ = chunk.potatoFields.swapRemove(potatoIndex);
+    const removedField = chunk.potatoFields.swapRemove(potatoIndex);
     var queueIndex: usize = 0;
     while (chunk.queue.items.len > queueIndex) {
         const queueItem = &chunk.queue.items[queueIndex];
@@ -876,6 +902,14 @@ pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
             queueIndex += 1;
         } else {
             queueIndex += 1;
+        }
+    }
+    if (removedField.fullyGrown == false and removedField.growStartTimeMs == null) {
+        for (chunk.buildOrders.items, 0..) |*buildOrder, buildOrderIndex| {
+            if (buildOrder.position.x == removedField.position.x and buildOrder.position.y == removedField.position.y) {
+                _ = chunk.buildOrders.swapRemove(buildOrderIndex);
+                break;
+            }
         }
     }
 }
