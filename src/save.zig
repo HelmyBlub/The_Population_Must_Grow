@@ -607,7 +607,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Game
                     };
                     var newCitizen = main.Citizen.createCitizen(position, state.allocator);
                     newCitizen.position = position;
-                    newCitizen.foodLevel += @as(f32, @floatFromInt(@mod(index, 100))) / 100.0 + 0.5; //should not all want to eat at the same time
+                    newCitizen.foodLevel = @as(f32, @floatFromInt(@mod(index, 100))) / 100.0 + 0.5; //should not all want to eat at the same time
                     try chunk.citizens.append(newCitizen);
                     try chunk.buildings.append(newBuilding);
                 },
@@ -644,7 +644,7 @@ pub fn loadChunkAreaFromFile(areaXY: chunkAreaZig.ChunkAreaXY, state: *main.Game
                     for (0..8) |_| {
                         var newCitizen = main.Citizen.createCitizen(newBuilding.position, state.allocator);
                         newCitizen.position = position;
-                        newCitizen.foodLevel += @as(f32, @floatFromInt(@mod(index, 100))) / 100.0 + 0.5; //should not all want to eat at the same time
+                        newCitizen.foodLevel = @as(f32, @floatFromInt(@mod(index, 100))) / 100.0 + 0.5; //should not all want to eat at the same time
                         try chunk.citizens.append(newCitizen);
                     }
                     try chunk.bigBuildings.append(newBuilding);
@@ -734,7 +734,7 @@ fn bigBuildingBuildOrderLoad(position: main.Position, citizensSpawn: u8, chunk: 
     for (0..citizensSpawn) |_| {
         var newCitizen = main.Citizen.createCitizen(newBuilding.position, state.allocator);
         newCitizen.position = position;
-        newCitizen.foodLevel += @as(f32, @floatCast(@mod(position.x, 2000.0))) / 2000.0 + 0.5; //should not all want to eat at the same time
+        newCitizen.foodLevel = @as(f32, @floatCast(@mod(position.x, 2000.0))) / 2000.0 + 0.5; //should not all want to eat at the same time
         try chunk.citizens.append(newCitizen);
     }
 

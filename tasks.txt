@@ -1,6 +1,5 @@
 tasks:
-- rename ChatSimState
-- test 600_000 citizens with quitting and starting game. Everything should still work
+- lower citizen hunger on area load.
 - bug: fast repeat restart crash
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
@@ -30,6 +29,7 @@ tasks:
 - bug: copy paste big area crash
 - delete test branches?
 - change to new git repo, remo
+- think about what to do with test f-keys
 
 - features:
     - bugfixing/testing
