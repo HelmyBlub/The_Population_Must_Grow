@@ -2,8 +2,8 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
-    // const optimize: std.builtin.OptimizeMode = .ReleaseFast;
+    // const optimize: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
+    const optimize: std.builtin.OptimizeMode = .ReleaseFast;
     const exe = b.addExecutable(.{
         .name = "thePopulationMustGrow",
         .root_source_file = b.path("src/main.zig"),

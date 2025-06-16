@@ -1,6 +1,10 @@
 tasks:
-- bug: bighouse over work order normal house
 - bug: when deleting citizens stuff is not cleaned up correctly
+    - function "handleDeleteCitizen" has missing cases
+        - reproduce: have 2 citizens. place 2 build order next to each other. Remove one citizen
+            - only one build order gets completed. The seconds one does not happen
+                - but if the buildings were not beside each other it did work?
+
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?
 - check performance for chunks in chunkAreas
@@ -9,7 +13,7 @@ tasks:
 - bug memory leak:
     D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:500:45: 0x7ff7f2ca0f0d in loadChunkAreaFromFile (thePopulationMustGrow.exe.obj)
     const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
-- 
+- property to disable vulkan debug layer
 
 - UI: reset 
 - UI: sound volume setting

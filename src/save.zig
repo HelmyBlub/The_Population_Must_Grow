@@ -373,76 +373,7 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Game
 fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.GameState) !void {
     for (chunk.citizens.items) |citizen| {
         if (citizen.nextThinkingAction != .idle) {
-            // citizens has build order. Place it back
-            var buildOrderPosition: ?main.Position = null;
-            if (citizen.buildingPosition) |pos| {
-                buildOrderPosition = pos;
-            } else if (citizen.treePosition) |pos| {
-                buildOrderPosition = pos;
-            } else if (citizen.farmPosition) |pos| {
-                buildOrderPosition = pos;
-            }
-
-            if (citizen.treePosition) |pos| {
-                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
-                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
-                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
-                        if (try mapZig.getChunkByPositionWithoutCreateOrLoad(pos, state)) |treeChunk| {
-                            for (treeChunk.trees.items) |*tree| {
-                                if (main.calculateDistance(pos, tree.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                    tree.beginCuttingTime = null;
-                                    tree.citizenOnTheWay = false;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (citizen.potatoPosition) |pos| {
-                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
-                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
-                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
-                        if (try mapZig.getChunkByPositionWithoutCreateOrLoad(pos, state)) |potatoChunk| {
-                            for (potatoChunk.potatoFields.items) |*potatoField| {
-                                if (main.calculateDistance(pos, potatoField.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                    potatoField.citizenOnTheWay -|= 1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (buildOrderPosition) |pos| {
-                const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
-                if (!chunkAreaZig.chunkAreaEquals(posAreaXY, areaXY)) {
-                    if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
-                        if (try mapZig.getChunkByPositionWithoutCreateOrLoad(pos, state)) |buildOrderChunk| {
-                            var isSpecialBigBuildingCase = false;
-                            if (citizen.buildingPosition != null) {
-                                //big buildings need more specific handling
-                                for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
-                                    if (main.calculateDistance(pos, bigBuilding.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                        for (buildOrderChunk.buildOrders.items) |*buildOrder| {
-                                            if (main.calculateDistance(pos, buildOrder.position) < mapZig.GameMap.TILE_SIZE / 2) {
-                                                buildOrder.materialCount += 1;
-                                                isSpecialBigBuildingCase = true;
-                                                break;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!isSpecialBigBuildingCase) {
-                                try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
-                            }
-                        }
-                    }
-                }
-            }
+            try mapZig.handleDeleteCitizen(citizen, areaXY, state);
         }
     }
 }

@@ -293,6 +293,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                 for (chunk.citizens.items, 0..) |citizen, j| {
                     if (citizen.homePosition.x == building.position.x and citizen.homePosition.y == building.position.y) {
                         citizen.moveTo.deinit();
+                        try handleDeleteCitizen(citizen, null, state);
                         _ = chunk.citizens.swapRemove(j);
                         building.citizensSpawned -= 1;
                         state.citizenCounter -= 1;
@@ -338,6 +339,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                     const citizen = chunk.citizens.items[index];
                     if (citizen.homePosition.x == building.position.x and citizen.homePosition.y == building.position.y) {
                         citizen.moveTo.deinit();
+                        try handleDeleteCitizen(citizen, null, state);
                         _ = chunk.citizens.swapRemove(index);
                         state.citizenCounter -= 1;
                         building.citizensSpawned -= 1;
@@ -391,6 +393,79 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
         if (main.calculateDistance(position, path) < GameMap.TILE_SIZE) {
             _ = chunk.pathes.swapRemove(i);
             return;
+        }
+    }
+}
+
+pub fn handleDeleteCitizen(citizen: main.Citizen, skipAreaXY: ?chunkAreaZig.ChunkAreaXY, state: *main.GameState) !void {
+    // citizens has build order. Place it back
+    var buildOrderPosition: ?main.Position = null;
+    if (citizen.buildingPosition) |pos| {
+        buildOrderPosition = pos;
+    } else if (citizen.treePosition) |pos| {
+        buildOrderPosition = pos;
+    } else if (citizen.farmPosition) |pos| {
+        buildOrderPosition = pos;
+    }
+
+    if (citizen.treePosition) |pos| {
+        const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+        if (skipAreaXY == null or !chunkAreaZig.chunkAreaEquals(posAreaXY, skipAreaXY.?)) {
+            if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                if (try getChunkByPositionWithoutCreateOrLoad(pos, state)) |treeChunk| {
+                    for (treeChunk.trees.items) |*tree| {
+                        if (main.calculateDistance(pos, tree.position) < GameMap.TILE_SIZE / 2) {
+                            tree.beginCuttingTime = null;
+                            tree.citizenOnTheWay = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (citizen.potatoPosition) |pos| {
+        const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+        if (skipAreaXY == null or !chunkAreaZig.chunkAreaEquals(posAreaXY, skipAreaXY.?)) {
+            if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                if (try getChunkByPositionWithoutCreateOrLoad(pos, state)) |potatoChunk| {
+                    for (potatoChunk.potatoFields.items) |*potatoField| {
+                        if (main.calculateDistance(pos, potatoField.position) < GameMap.TILE_SIZE / 2) {
+                            potatoField.citizenOnTheWay -|= 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (buildOrderPosition) |pos| {
+        const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
+        if (skipAreaXY == null or !chunkAreaZig.chunkAreaEquals(posAreaXY, skipAreaXY.?)) {
+            if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
+                if (try getChunkByPositionWithoutCreateOrLoad(pos, state)) |buildOrderChunk| {
+                    var isSpecialBigBuildingCase = false;
+                    if (citizen.buildingPosition != null) {
+                        //big buildings need more specific handling
+                        for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
+                            if (main.calculateDistance(pos, bigBuilding.position) < GameMap.TILE_SIZE / 2) {
+                                for (buildOrderChunk.buildOrders.items) |*buildOrder| {
+                                    if (main.calculateDistance(pos, buildOrder.position) < GameMap.TILE_SIZE / 2) {
+                                        buildOrder.materialCount += 1;
+                                        isSpecialBigBuildingCase = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (!isSpecialBigBuildingCase) {
+                        try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
+                    }
+                }
+            }
         }
     }
 }
