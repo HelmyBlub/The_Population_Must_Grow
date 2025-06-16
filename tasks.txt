@@ -1,5 +1,5 @@
 tasks:
-- unload/load logic should only unload chunks with all idle neigbors
+- increase complex citizen paint distance
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
 - test 600_000 citizens with quitting and starting game. Everything should still work
 - check unload/save logic to not be in tick
