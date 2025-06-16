@@ -222,6 +222,10 @@ pub fn deleteSaveAndRestart(state: *ChatSimState) !void {
     }
     try mapZig.createSpawnArea(state.allocator, state);
     state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len - 1;
+    state.soundMixer.mutex.lock();
+    state.soundMixer.soundsFutureQueue.clearRetainingCapacity();
+    state.soundMixer.soundsToPlay.clearRetainingCapacity();
+    state.soundMixer.mutex.unlock();
 }
 
 pub fn setupRectangleData(state: *ChatSimState) void {

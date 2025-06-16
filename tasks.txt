@@ -1,8 +1,7 @@
 tasks:
-- increase complex citizen paint distance
-- problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
+- bug: ghost sounds after restart
 - test 600_000 citizens with quitting and starting game. Everything should still work
-- check unload/save logic to not be in tick
+- bug: fast repeat restart crash
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
@@ -12,7 +11,6 @@ tasks:
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - save on crash/panic?
-- bug: ghost sounds after restart
 
 - on game load with many citizens don't show "surpassed citizen count" message
 - UI: reset 
@@ -27,6 +25,8 @@ tasks:
     - idle citizens walk slower
 - check "ensureUnusedCapacity" values
 
+- problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
+- check unload/save logic to be on other thread
 - limit citizen hunger, currently infite negative
 - bug: copy paste big area crash
 - delete test branches?
