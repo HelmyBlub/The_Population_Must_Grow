@@ -128,7 +128,7 @@ fn getSavePath(allocator: std.mem.Allocator, filename: []const u8) ![]const u8 {
 }
 
 fn getSaveDirectoryPath(allocator: std.mem.Allocator) ![]const u8 {
-    const game_name = "NumberGoUp";
+    const game_name = "ThePopulationMustGrow";
     const save_folder = "saves";
 
     const base_dir = try std.fs.getAppDataDir(allocator, game_name);
