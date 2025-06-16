@@ -1,7 +1,4 @@
 tasks:
-- check delete tool behavior
-- bug: multiple citizens on one tile
-
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: bighouse over work order normal house
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
@@ -38,7 +35,7 @@ tasks:
 Some data:
 - FPS: 111, citizens: 31580, gameTime: 330000, end FPS: 72.19633 (16.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-
+- FPS: 111, citizens: 31580, gameTime: 330000, end FPS: 71.64387 (after a lot of fixes)
 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.

@@ -327,7 +327,7 @@ fn buildingCutTree(citizen: *Citizen, threadIndex: usize, state: *main.GameState
         treeData.tree.beginCuttingTime = null;
         citizen.treePosition = null;
         if (!treeData.tree.regrow) {
-            mapZig.removeTree(treeData.treeIndex, treeData.chunk);
+            mapZig.removeTree(treeData.treeIndex, false, treeData.chunk);
         } else {
             treeData.tree.growStartTimeMs = state.gameTimeMs;
             const queueItem = mapZig.ChunkQueueItem{ .itemData = .{ .tree = treeData.treeIndex }, .executeTime = state.gameTimeMs + mapZig.GROW_TIME_MS };

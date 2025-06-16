@@ -281,7 +281,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
     const chunk = try getChunkAndCreateIfNotExistsForPosition(position, 0, state);
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
-            removeTree(i, chunk);
+            removeTree(i, true, chunk);
             break;
         }
     }
@@ -421,7 +421,7 @@ pub fn canBuildOrWaitForTreeCutdown(position: main.Position, threadIndex: usize,
     for (chunk.?.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             if (tree.citizenOnTheWay) return false;
-            removeTree(i, chunk.?);
+            removeTree(i, false, chunk.?);
             return true;
         }
     }
@@ -858,7 +858,7 @@ pub fn getTreeOnPosition(position: main.Position, threadIndex: usize, state: *ma
     return null;
 }
 
-pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
+pub fn removeTree(treeIndex: usize, removeBuildOrderOnPosition: bool, chunk: *MapChunk) void {
     const movedIndex = chunk.trees.items.len - 1;
     const removedTree = chunk.trees.swapRemove(treeIndex);
     var queueIndex: usize = 0;
@@ -876,7 +876,7 @@ pub fn removeTree(treeIndex: usize, chunk: *MapChunk) void {
             queueIndex += 1;
         }
     }
-    if (removedTree.fullyGrown == false and removedTree.growStartTimeMs == null) {
+    if (removeBuildOrderOnPosition and removedTree.fullyGrown == false and removedTree.growStartTimeMs == null) {
         for (chunk.buildOrders.items, 0..) |*buildOrder, buildOrderIndex| {
             if (buildOrder.position.x == removedTree.position.x and buildOrder.position.y == removedTree.position.y) {
                 _ = chunk.buildOrders.swapRemove(buildOrderIndex);
