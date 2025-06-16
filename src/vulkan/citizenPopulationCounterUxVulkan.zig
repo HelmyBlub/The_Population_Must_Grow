@@ -87,6 +87,12 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
     );
 }
 
+pub fn updateCountryPopulationIndexOnGameLoad(state: *main.ChatSimState) void {
+    while (state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex > 0 and state.citizenCounter > countryPopulationDataZig.WORLD_POPULATION[state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex].population) {
+        state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex -= 1;
+    }
+}
+
 pub fn setupVertices(state: *main.ChatSimState) !void {
     const fillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
     const borderColor: [3]f32 = .{ 0, 0, 0 };

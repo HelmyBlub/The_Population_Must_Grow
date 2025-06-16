@@ -4,6 +4,7 @@ const mapZig = @import("map.zig");
 const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
+const citizenPopulationCounterUxZig = @import("vulkan/citizenPopulationCounterUxVulkan.zig");
 
 pub const DEBUG_INFO_SAVE = true;
 const SAVE_EMPTY = 0;
@@ -207,6 +208,7 @@ pub fn loadGeneralDataFromFile(state: *main.ChatSimState) !bool {
         const areaXY = chunkAreaZig.getAreaXyForKey(key);
         try chunkAreaZig.putChunkArea(areaXY, key, 0, state);
     }
+    citizenPopulationCounterUxZig.updateCountryPopulationIndexOnGameLoad(state);
     return true;
 }
 
