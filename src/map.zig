@@ -843,21 +843,22 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameSta
     };
 
     for (corners) |corner| {
-        const optBuilding = try getBuildingOnPosition(.{ .x = corner.x, .y = corner.y }, 0, state);
-        if (optBuilding) |cornerBuilding| {
-            if (building.woodRequired > 1) building.woodRequired -= 1;
-            const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, 0, state);
-            for (chunk.citizens.items, 0..) |*citizen, i| {
-                if (citizen.homePosition.x == cornerBuilding.position.x and citizen.homePosition.y == cornerBuilding.position.y) {
-                    citizen.homePosition = building.position;
-                    building.citizensSpawned += 1;
-                    cornerBuilding.citizensSpawned -= 1;
-                    const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
-                    if (newBuildingChunk != chunk) {
-                        const moveCitizen = chunk.citizens.swapRemove(i);
-                        try newBuildingChunk.citizens.append(moveCitizen);
+        if (try getBuildingOnPosition(.{ .x = corner.x, .y = corner.y }, 0, state)) |cornerBuilding| {
+            if (!cornerBuilding.inConstruction) {
+                if (building.woodRequired > 1) building.woodRequired -= 1;
+                const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, 0, state);
+                for (chunk.citizens.items, 0..) |*citizen, i| {
+                    if (citizen.homePosition.x == cornerBuilding.position.x and citizen.homePosition.y == cornerBuilding.position.y) {
+                        citizen.homePosition = building.position;
+                        building.citizensSpawned += 1;
+                        cornerBuilding.citizensSpawned -= 1;
+                        const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
+                        if (newBuildingChunk != chunk) {
+                            const moveCitizen = chunk.citizens.swapRemove(i);
+                            try newBuildingChunk.citizens.append(moveCitizen);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
             try demolishAnythingOnPosition(cornerBuilding.position, null, state);

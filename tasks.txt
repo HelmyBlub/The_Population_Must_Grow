@@ -1,9 +1,6 @@
 tasks:
-- problem: load chunkArea but bighouse from other chunkArea could block some tiles
-    - solution: blocking tiles
-        - on build check for blocking tiles
-    - when delete upper part of big house on different area it happens
 - bug: bighouse over work order normal house
+- bug: when deleting citizens stuff is not cleaned up correctly
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?
 - check performance for chunks in chunkAreas

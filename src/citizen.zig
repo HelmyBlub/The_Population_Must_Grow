@@ -366,6 +366,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
                 citizen.nextThinkingTickTimeMs = state.gameTimeMs + 250;
             }
         } else {
+            citizen.buildingPosition = building.position; // a case exists where a normal building is swapped to big building build order which otherwise would stuck the citizen
             const buildingXOffset: f32 = if (citizen.position.x < building.position.x) -7 else 7;
             try citizen.moveToPosition(.{ .x = building.position.x + buildingXOffset, .y = building.position.y + 3 }, threadIndex, state);
         }
