@@ -5,7 +5,7 @@ const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 
-pub const DEBUG_INFO_SAVE = false;
+pub const DEBUG_INFO_SAVE = true;
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
 const SAVE_TREE = 2;
@@ -228,6 +228,29 @@ pub fn deleteSave(allocator: std.mem.Allocator) !void {
             }
         }
     }
+}
+
+pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.ChatSimState) bool {
+    const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
+    const neighborsXY = [_]chunkAreaZig.ChunkAreaXY{
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY },
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY + 1 },
+        .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY + 1 },
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY + 1 },
+    };
+    for (neighborsXY) |neighborXY| {
+        const neighborKey = chunkAreaZig.getKeyForAreaXY(neighborXY);
+        if (state.chunkAreas.getPtr(neighborKey)) |neighborChunkArea| {
+            if ((neighborChunkArea.idleTypeData != .idle and neighborChunkArea.chunks != null) or neighborChunkArea.visible) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.ChatSimState) !void {

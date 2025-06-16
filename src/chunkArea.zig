@@ -276,7 +276,7 @@ pub fn optimizeChunkAreaAssignments(state: *main.ChatSimState) !void {
                 const currentKey = threadData.recentlyRemovedChunkAreaKeys.items[currentIndex];
                 const chunkArea = state.chunkAreas.getPtr(currentKey).?;
                 if (chunkArea.idleTypeData == .idle and !chunkArea.visible and chunkArea.chunks != null) {
-                    if (chunkArea.dontUnloadBeforeTime < state.gameTimeMs) {
+                    if (chunkArea.dontUnloadBeforeTime < state.gameTimeMs and saveZig.decideIfUnloadAndSaveAreaKey(currentKey, state)) {
                         try saveZig.saveChunkAreaToFile(chunkArea, state);
                         try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);
                         _ = threadData.recentlyRemovedChunkAreaKeys.swapRemove(currentIndex);

@@ -1,9 +1,8 @@
 tasks:
-- rename game name
 - unload/load logic should only unload chunks with all idle neigbors
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
 - test 600_000 citizens with quitting and starting game. Everything should still work
-
+- check unload/save logic to not be in tick
 
 - problem: load chunkArea but bighouse from other chunkArea could block some tiles
 - bug: not all chunks ticked. Not all buildings where being build
