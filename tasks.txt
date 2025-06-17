@@ -1,20 +1,11 @@
 tasks:
+- bug: build UX not centered, bad for window resize small
+
 - settings icon to top right
-    - image for settings icon
-    - when clicked open and outlined rectangle and show the following
-        - reclicking closes it
-        - open changes color of background of icon
-    - UI: game reset 
-        - button to hold for 3seconds
-        - rectangles with text
-            - text: "hold button for 3seconds to restart"
-            - button with text "restart"
-            - button fills up over 3 seconds
     - UI: sound volume setting
         - move left or right to change base volume
         - image for slider or just rectangle
         - display value at the right
-- bug: build UX not centered, bad for window resize small
 
 - find out how to publish steam build
 

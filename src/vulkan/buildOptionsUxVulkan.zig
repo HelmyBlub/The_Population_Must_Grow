@@ -75,7 +75,8 @@ pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
     const vulkanHeight = sizePixels / windowSdlZig.windowData.heightFloat;
     const vulkanSpacing = spacingPixels / windowSdlZig.windowData.widthFloat;
     const posY = 0.99 - vulkanHeight;
-    const posX: f32 = -vulkanWidth * @as(f32, @floatFromInt(vkState.buildOptionsUx.uiButtons.len)) / 2.0;
+    const buildButtons = 9;
+    const posX: f32 = -(vulkanWidth + vulkanSpacing) * buildButtons / 2.0;
 
     for (vkState.buildOptionsUx.uiButtons, 0..) |*uiButton, index| {
         switch (uiButton.type) {
