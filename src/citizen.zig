@@ -232,6 +232,7 @@ fn checkHunger(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !b
             potato.citizenOnTheWay += 1;
             citizen.potatoPosition = potato.position;
             citizen.nextThinkingAction = .potatoHarvest;
+            citizen.moveTo.clearRetainingCapacity();
             return true;
         }
     }
@@ -240,7 +241,7 @@ fn checkHunger(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !b
 
 fn calculateMoveSpeed(citizen: *Citizen) void {
     if (citizen.moveTo.items.len > 0) {
-        var moveSpeed: f16 = if (citizen.foodLevel > 0) Citizen.MOVE_SPEED_NORMAL else Citizen.MOVE_SPEED_STARVING;
+        var moveSpeed: f16 = if ((citizen.foodLevel > 0 and citizen.nextThinkingAction != .idle) or citizen.nextThinkingAction == .potatoHarvest) Citizen.MOVE_SPEED_NORMAL else Citizen.MOVE_SPEED_STARVING;
         if (citizen.hasWood) moveSpeed *= Citizen.MOVE_SPEED_WODD_FACTOR;
         citizen.moveSpeed = moveSpeed;
     }
