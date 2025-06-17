@@ -78,36 +78,7 @@ pub fn clear(font: *VkFont) void {
 
 fn dataUpdate(state: *main.GameState) !void {
     clear(&state.vkState.font);
-    const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
-
-    if (state.vkState.font.displayPerformance) {
-        const performanceFontSize = 20.0;
-        var offsetY: f32 = -0.99;
-        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
-        offsetY += onePixelYInVulkan * performanceFontSize;
-        const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, state);
-        offsetY += onePixelYInVulkan * performanceFontSize;
-
-        if (state.cpuPerCent) |cpuPerCent| {
-            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
-            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
-            offsetY += onePixelYInVulkan * performanceFontSize;
-        }
-        for (0..state.usedThreadsCount) |threadIndex| {
-            const thread = state.threadData[threadIndex];
-            var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            offsetY += onePixelYInVulkan * performanceFontSize;
-        }
-        try codePerformanceZig.paintData(state, offsetY);
-    }
+    try displayPerformanceDebugInfo(state);
     if (state.vkState.buildOptionsUx.uiButtons.len > 14) {
         const textOntoButton = state.vkState.buildOptionsUx.uiButtons[11];
         if (state.actualGameSpeed == state.desiredGameSpeed) {
@@ -136,6 +107,40 @@ fn dataUpdate(state: *main.GameState) !void {
         _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, state);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
+}
+
+fn displayPerformanceDebugInfo(state: *main.GameState) !void {
+    if (state.vkState.font.displayPerformance) {
+        const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
+        const performanceFontSize = 20.0;
+        var offsetY: f32 = -0.99;
+        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
+        offsetY += onePixelYInVulkan * performanceFontSize;
+        const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, state);
+        offsetY += onePixelYInVulkan * performanceFontSize;
+
+        if (state.cpuPerCent) |cpuPerCent| {
+            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            offsetY += onePixelYInVulkan * performanceFontSize;
+        }
+        for (0..state.usedThreadsCount) |threadIndex| {
+            const thread = state.threadData[threadIndex];
+            var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.recentlyRemovedChunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
+            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            offsetY += onePixelYInVulkan * performanceFontSize;
+        }
+        try codePerformanceZig.paintData(state, offsetY);
+    }
 }
 
 /// returns vulkan surface width of text

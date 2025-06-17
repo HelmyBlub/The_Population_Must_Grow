@@ -1,23 +1,15 @@
 tasks:
-- bug: "place beside path" text not disappearing and slowly moving out of frame. Why?
-- check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
-    - where could the data be?
-    - after moving over the entiry map again the memory goes to the expected value. But why only than?
-- check performance for chunks in chunkAreas
-    - can improve by not always searching area again and just chunk
-- save on crash/panic?
-- bug memory leak:
-    D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:500:45: 0x7ff7f2ca0f0d in loadChunkAreaFromFile (thePopulationMustGrow.exe.obj)
-    const chunks = try state.allocator.alloc(mapZig.MapChunk, chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE);
-- property to disable vulkan debug layer
-
+- path paint optimization by again counting path tiles before as i count regardless
 - UI: reset 
 - UI: sound volume setting
+- save on crash/panic?
+- property to disable vulkan debug layer
+
 - check: make map round?
     - or check if limit to break game can be reached in reasonable time
+- check performance for chunks in chunkAreas
+    - can improve by not always searching area again and just chunk
 
-- think about: save if citizens was starved?
-- path paint optimization by again counting path tiles before as i count regardless
 
 - small changes:
     - idle citizens walk slower
@@ -37,10 +29,9 @@ tasks:
 
   
 Some data:
-- FPS: 111, citizens: 31580, gameTime: 330000, end FPS: 72.19633 (16.06.2025)
+- FPS: 113, citizens: 31580, gameTime: 330000, end FPS: 73.054474 (17.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 111, citizens: 31580, gameTime: 330000, end FPS: 71.64387 (after a lot of fixes)
-
+ 
 Goal:
 - a game which should not take more than 6month to make. Maybe publish to steam.
 - performance should matter

@@ -215,6 +215,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
     var entityPaintCountLayer1: usize = 0;
     var entityPaintCountLayer1Citizen: usize = 0;
     var entityPaintCountLayer2: usize = 0;
+    var entityPaintCountPath: usize = 0;
     var chunkVisible = mapZig.getTopLeftVisibleChunkXY(state);
     // citizens can be far away from their chunks, so they need to be considered for painting too
     const increaseBy: usize = 3;
@@ -249,6 +250,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
             entityPaintCountLayer1 += chunk.trees.items.len;
             entityPaintCountLayer1 += chunk.potatoFields.items.len;
             entityPaintCountLayer2 += chunk.potatoFields.items.len;
+            entityPaintCountPath += chunk.pathes.items.len;
         }
     }
     state.vkState.entityPaintCountLayer1 = @intCast(entityPaintCountLayer1);
@@ -279,7 +281,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
     }
     codePerformanceZig.endMeasure("      sprite entity size change", &state.codePerformanceData);
 
-    try spritePathVulkanZig.setupVertices(state, chunkVisible);
+    try spritePathVulkanZig.setupVertices(state, chunkVisible, entityPaintCountPath);
     var indexLayer1Citizen: u32 = 0;
     var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
     var indexLayer2: u32 = indexLayer1 + state.vkState.entityPaintCountLayer1;

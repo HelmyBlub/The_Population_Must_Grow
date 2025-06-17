@@ -13,7 +13,6 @@ const chunkAreaZig = @import("../chunkArea.zig");
 pub const VkPathVertices = struct {
     graphicsPipeline: vk.VkPipeline = undefined,
     entityPaintCount: u32 = 0,
-    nextEntityPaintCount: u32 = 0,
     vertices: []SpritePathVertex = undefined,
     vertexBufferSize: u64 = 0,
     vertexBuffer: vk.VkBuffer = undefined,
@@ -45,12 +44,9 @@ pub const SpritePathVertex = struct {
     }
 };
 
-pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksData) !void {
+pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksData, pathPaintCount: usize) !void {
     var vkState = &state.vkState;
     const pathData = &vkState.path;
-    const buffer = 500;
-    pathData.entityPaintCount = pathData.nextEntityPaintCount;
-    const pathCount = pathData.entityPaintCount + buffer;
 
     // recreate buffer with new size
     if (vkState.path.vertexBufferSize == 0) return;
@@ -60,10 +56,10 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
         vkState.path.vertexBufferCleanUp[vkState.currentFrame] = null;
         vkState.path.vertexBufferMemoryCleanUp[vkState.currentFrame] = null;
     }
-    if ((vkState.path.vertexBufferSize < pathCount or vkState.path.vertexBufferSize -| paintVulkanZig.Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > pathCount)) {
+    if ((vkState.path.vertexBufferSize < pathPaintCount or vkState.path.vertexBufferSize -| paintVulkanZig.Vk_State.BUFFER_ADDITIOAL_SIZE * 2 > pathPaintCount)) {
         vkState.path.vertexBufferCleanUp[vkState.currentFrame] = vkState.path.vertexBuffer;
         vkState.path.vertexBufferMemoryCleanUp[vkState.currentFrame] = vkState.path.vertexBufferMemory;
-        try createVertexBuffer(vkState, pathCount, state.allocator);
+        try createVertexBuffer(vkState, pathPaintCount, state.allocator);
     }
 
     var index: u32 = 0;
@@ -83,7 +79,7 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
             if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
             const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
             const len = chunk.pathes.items.len;
-            if (index + len < max) {
+            if (len > 0 and index + len < max) {
                 const dest: [*]main.Position = @ptrCast(@alignCast(vkState.path.vertices[index..(index + len)]));
                 @memcpy(dest, chunk.pathes.items[0..len]);
                 entitiesCounter += @intCast(len);
@@ -92,7 +88,6 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
         }
     }
     pathData.entityPaintCount = entitiesCounter;
-    pathData.nextEntityPaintCount = index;
     try setupVertexDataForGPU(vkState);
 }
 
@@ -102,7 +97,7 @@ pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameS
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.path.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(vkState.path.entityPaintCount), 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, vkState.path.entityPaintCount, 1, 0, 0);
 }
 
 pub fn init(state: *main.GameState) !void {

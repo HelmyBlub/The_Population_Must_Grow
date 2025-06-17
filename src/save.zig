@@ -6,7 +6,7 @@ const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 const citizenPopulationCounterUxZig = @import("vulkan/citizenPopulationCounterUxVulkan.zig");
 
-pub const DEBUG_INFO_SAVE = true;
+pub const DEBUG_INFO_SAVE = false;
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
 const SAVE_TREE = 2;
