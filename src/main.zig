@@ -12,6 +12,7 @@ const imageZig = @import("image.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 const saveZig = @import("save.zig");
 const countryPopulationDataZig = @import("countryPopulationData.zig");
+const settingsMenuUxVulkanZig = @import("vulkan/settingsMenuVulkan.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
@@ -353,6 +354,7 @@ pub fn mainLoop(state: *GameState) !void {
         state.tickStartTimeMicroSeconds = std.time.microTimestamp();
         state.ticksRemainingBeforePaint += state.actualGameSpeed;
         try windowSdlZig.handleEvents(state);
+        try settingsMenuUxVulkanZig.tick(state);
         try mapZig.visibleAndAdjacentChunkRectangle(state);
         try chunkAreaZig.optimizeChunkAreaAssignments(state);
         tickStartedTime = std.time.microTimestamp();

@@ -12,30 +12,10 @@ const inputZig = @import("../input.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 
 pub const VkBuildOptionsUx = struct {
-    triangles: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []paintVulkanZig.ColoredVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
-    lines: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []paintVulkanZig.ColoredVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
-    sprites: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []paintVulkanZig.SpriteVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
-    font: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []fontVulkanZig.FontVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
+    triangles: paintVulkanZig.VkTriangles = undefined,
+    lines: paintVulkanZig.VkLines = undefined,
+    sprites: paintVulkanZig.VkSprites = undefined,
+    font: paintVulkanZig.VkFont = undefined,
     selectedButtonIndex: usize = 0,
     mouseHoverButtonIndex: ?usize = null,
     uiButtons: []UiButton = undefined,
@@ -83,8 +63,9 @@ const UiButton = struct {
     tooltip: [][]const u8,
 };
 
-pub fn onWindowResize(vkState: *paintVulkanZig.Vk_State) void {
-    setupUiButtonLocations(vkState);
+pub fn onWindowResize(state: *main.GameState) !void {
+    setupUiButtonLocations(&state.vkState);
+    try setupVertices(state);
 }
 
 pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {

@@ -13,24 +13,9 @@ const windowSdlZig = @import("../windowSdl.zig");
 const countryPopulationDataZig = @import("../countryPopulationData.zig");
 
 pub const VkCitizenPopulationCounterUx = struct {
-    triangles: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []paintVulkanZig.ColoredVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
-    lines: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []paintVulkanZig.ColoredVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
-    font: struct {
-        vertexBuffer: vk.VkBuffer = undefined,
-        vertexBufferMemory: vk.VkDeviceMemory = undefined,
-        vertices: []fontVulkanZig.FontVertex = undefined,
-        verticeCount: usize = 0,
-    } = undefined,
+    triangles: paintVulkanZig.VkTriangles = undefined,
+    lines: paintVulkanZig.VkLines = undefined,
+    font: paintVulkanZig.VkFont = undefined,
     nextCountryPopulationIndex: usize = countryPopulationDataZig.WORLD_POPULATION.len - 1,
     surpassedMessageDisplayTime: i64 = 0,
     houseBuildPathMessageDisplayTime: ?i64 = null,

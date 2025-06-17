@@ -43,6 +43,7 @@ pub const IMAGE_ICON_HOUSE_AREA = 33;
 pub const IMAGE_ICON_TREE_AREA = 34;
 pub const IMAGE_ICON_COPY_PASTE = 35;
 pub const IMAGE_ICON_DELETE = 36;
+pub const IMAGE_ICON_SETTINGS = 37;
 
 pub const ImageData = struct {
     path: []const u8,
@@ -86,6 +87,7 @@ pub const IMAGE_DATA = [_]ImageData{
     .{ .path = "images/iconTreeArea.png" },
     .{ .path = "images/iconCopyPaste.png" },
     .{ .path = "images/iconDelete.png" },
+    .{ .path = "images/settingsIcon.png" },
 };
 
 pub fn createVulkanTextureSprites(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {

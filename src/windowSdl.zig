@@ -11,6 +11,7 @@ const rectangleVulkanZig = @import("vulkan/rectangleVulkan.zig");
 const mapZig = @import("map.zig");
 const soundMixerZig = @import("soundMixer.zig");
 const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
+const settingsMenuUxVulkanZig = @import("vulkan/settingsMenuVulkan.zig");
 const imageZig = @import("image.zig");
 const testZig = @import("test.zig");
 const saveZig = @import("save.zig");
@@ -53,8 +54,15 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
 pub fn handleEvents(state: *main.GameState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
+        if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
+            if (try settingsMenuUxVulkanZig.mouseUp(state, .{ .x = event.motion.x, .y = event.motion.y })) {
+                return;
+            }
+        }
         if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
             if (try buildOptionsUxVulkanZig.mouseClick(state, .{ .x = event.motion.x, .y = event.motion.y })) {
+                return;
+            } else if (try settingsMenuUxVulkanZig.mouseDown(state, .{ .x = event.motion.x, .y = event.motion.y })) {
                 return;
             } else {
                 if (event.button.button == 1) {
@@ -70,6 +78,7 @@ pub fn handleEvents(state: *main.GameState) !void {
         if (event.type == sdl.SDL_EVENT_MOUSE_MOTION) {
             state.mouseInfo.currentPos = .{ .x = event.motion.x, .y = event.motion.y };
             try buildOptionsUxVulkanZig.mouseMove(state);
+            try settingsMenuUxVulkanZig.mouseMove(state);
             if (state.mouseInfo.rightButtonPressedTimeMs) |_| {
                 state.camera.position.x -= event.motion.xrel / state.camera.zoom;
                 state.camera.position.y -= event.motion.yrel / state.camera.zoom;

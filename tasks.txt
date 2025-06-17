@@ -12,11 +12,13 @@ tasks:
             - button fills up over 3 seconds
     - UI: sound volume setting
         - move left or right to change base volume
-        - image for slider
+        - image for slider or just rectangle
         - display value at the right
+- bug: build UX not centered, bad for window resize small
 
 - find out how to publish steam build
 
+- what happens when i reach the last population target
 - save on crash/panic?
 - property to disable vulkan debug layer
 - check "ensureUnusedCapacity" values

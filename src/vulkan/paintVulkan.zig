@@ -11,6 +11,7 @@ const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
 const citizenVulkanZig = @import("citizenVulkan.zig");
 const buildOptionsUxVulkanZig = @import("buildOptionsUxVulkan.zig");
+const settingsMenuUxVulkanZig = @import("settingsMenuVulkan.zig");
 const spritePathVulkanZig = @import("spritePathVulkan.zig");
 const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxVulkan.zig");
 const codePerformanceZig = @import("../codePerformance.zig");
@@ -80,10 +81,39 @@ pub const Vk_State = struct {
     citizen: citizenVulkanZig.VkCitizen = .{},
     path: spritePathVulkanZig.VkPathVertices = .{},
     buildOptionsUx: buildOptionsUxVulkanZig.VkBuildOptionsUx = .{},
+    settingsMenuUx: settingsMenuUxVulkanZig.VkSettingsUx = .{},
     citizenPopulationCounterUx: citizenPopulationCounterUxVulkanZig.VkCitizenPopulationCounterUx = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
     pub const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     pub const BUFFER_ADDITIOAL_SIZE: u16 = 50;
+};
+
+pub const VkTriangles = struct {
+    vertexBuffer: vk.VkBuffer = undefined,
+    vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertices: []ColoredVertex = undefined,
+    verticeCount: usize = 0,
+};
+
+pub const VkLines = struct {
+    vertexBuffer: vk.VkBuffer = undefined,
+    vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertices: []ColoredVertex = undefined,
+    verticeCount: usize = 0,
+};
+
+pub const VkSprites = struct {
+    vertexBuffer: vk.VkBuffer = undefined,
+    vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertices: []SpriteVertex = undefined,
+    verticeCount: usize = 0,
+};
+
+pub const VkFont = struct {
+    vertexBuffer: vk.VkBuffer = undefined,
+    vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertices: []fontVulkanZig.FontVertex = undefined,
+    verticeCount: usize = 0,
 };
 
 const VkCameraData = struct {
@@ -438,6 +468,7 @@ pub fn initVulkan(state: *main.GameState) !void {
     try citizenVulkanZig.initCitizen(state);
     try spritePathVulkanZig.init(state);
     try buildOptionsUxVulkanZig.init(state);
+    try settingsMenuUxVulkanZig.init(state);
     try citizenPopulationCounterUxVulkanZig.init(state);
     try createVertexBuffer(vkState, Vk_State.BUFFER_ADDITIOAL_SIZE, state.allocator);
     try createUniformBuffers(vkState, state.allocator);
@@ -470,15 +501,16 @@ fn cleanupSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) void {
     allocator.free(vkState.swapchain_info.support.presentModes);
 }
 
-fn recreateSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
-    _ = vk.vkDeviceWaitIdle(vkState.logicalDevice);
+fn recreateSwapChain(state: *main.GameState, allocator: std.mem.Allocator) !void {
+    _ = vk.vkDeviceWaitIdle(state.vkState.logicalDevice);
 
-    cleanupSwapChain(vkState, allocator);
-    _ = try createSwapChainRelatedStuffAndCheckWindowSize(vkState, allocator);
+    cleanupSwapChain(&state.vkState, allocator);
+    _ = try createSwapChainRelatedStuffAndCheckWindowSize(state, allocator);
 }
 
 /// returns true if stuff exists or is created
-fn createSwapChainRelatedStuffAndCheckWindowSize(vkState: *Vk_State, allocator: std.mem.Allocator) !bool {
+fn createSwapChainRelatedStuffAndCheckWindowSize(state: *main.GameState, allocator: std.mem.Allocator) !bool {
+    const vkState = &state.vkState;
     if (vkState.framebuffers == null) {
         var capabilities: vk.VkSurfaceCapabilitiesKHR = undefined;
         _ = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkState.physical_device, vkState.surface, &capabilities);
@@ -493,7 +525,8 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(vkState: *Vk_State, allocator: 
         try createFramebuffers(vkState, allocator);
         windowSdlZig.windowData.widthFloat = @floatFromInt(capabilities.currentExtent.width);
         windowSdlZig.windowData.heightFloat = @floatFromInt(capabilities.currentExtent.height);
-        buildOptionsUxVulkanZig.onWindowResize(vkState);
+        try buildOptionsUxVulkanZig.onWindowResize(state);
+        try settingsMenuUxVulkanZig.onWindowResize(state);
         return true;
     }
     return true;
@@ -913,6 +946,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     citizenVulkanZig.destroyCitizen(vkState, allocator);
     spritePathVulkanZig.destroy(vkState, allocator);
     buildOptionsUxVulkanZig.destroy(vkState, allocator);
+    settingsMenuUxVulkanZig.destroy(vkState, allocator);
     citizenPopulationCounterUxVulkanZig.destroy(vkState, allocator);
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.vertexBufferSize != 0 and vkState.vertexBufferCleanUp[i] != null) {
@@ -1055,7 +1089,7 @@ pub fn drawFrame(state: *main.GameState) !void {
     codePerformanceZig.endMeasure("    citizen vertice copy to gpu", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure("    window check", &state.codePerformanceData);
-    if (!try createSwapChainRelatedStuffAndCheckWindowSize(vkState, state.allocator)) return;
+    if (!try createSwapChainRelatedStuffAndCheckWindowSize(state, state.allocator)) return;
     codePerformanceZig.endMeasure("    window check", &state.codePerformanceData);
     try codePerformanceZig.startMeasure("    uniform buffer", &state.codePerformanceData);
     try updateUniformBuffer(state);
@@ -1075,7 +1109,7 @@ pub fn drawFrame(state: *main.GameState) !void {
     const acquireImageResult = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
 
     if (acquireImageResult == vk.VK_ERROR_OUT_OF_DATE_KHR) {
-        try recreateSwapChain(vkState, state.allocator);
+        try recreateSwapChain(state, state.allocator);
         return;
     } else if (acquireImageResult != vk.VK_SUCCESS and acquireImageResult != vk.VK_SUBOPTIMAL_KHR) {
         return error.failedToAcquireSwapChainImage;
@@ -1111,7 +1145,7 @@ pub fn drawFrame(state: *main.GameState) !void {
     const presentResult = vk.vkQueuePresentKHR(vkState.queue, &presentInfo);
 
     if (presentResult == vk.VK_ERROR_OUT_OF_DATE_KHR or presentResult == vk.VK_SUBOPTIMAL_KHR) {
-        try recreateSwapChain(vkState, state.allocator);
+        try recreateSwapChain(state, state.allocator);
     } else if (presentResult != vk.VK_SUCCESS) {
         return error.failedToPresentSwapChainImage;
     }
@@ -1211,6 +1245,7 @@ fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, imageIndex: u32, state
     try rectangleVulkanZig.recordRectangleCommandBuffer(commandBuffer, state);
     try citizenPopulationCounterUxVulkanZig.recordCommandBuffer(commandBuffer, state);
     try buildOptionsUxVulkanZig.recordCommandBuffer(commandBuffer, state);
+    try settingsMenuUxVulkanZig.recordCommandBuffer(commandBuffer, state);
     try fontVulkanZig.recordFontCommandBuffer(commandBuffer, state);
     vk.vkCmdEndRenderPass(commandBuffer);
     try vkcheck(vk.vkEndCommandBuffer(commandBuffer), "Failed to End Command Buffer.");
