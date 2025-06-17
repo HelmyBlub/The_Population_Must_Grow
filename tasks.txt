@@ -1,29 +1,42 @@
 tasks:
-- limit citizen hunger, currently infite negative
-- UI: reset 
-- UI: sound volume setting
+- settings icon to top right
+    - image for settings icon
+    - when clicked open and outlined rectangle and show the following
+        - reclicking closes it
+        - open changes color of background of icon
+    - UI: game reset 
+        - button to hold for 3seconds
+        - rectangles with text
+            - text: "hold button for 3seconds to restart"
+            - button with text "restart"
+            - button fills up over 3 seconds
+    - UI: sound volume setting
+        - move left or right to change base volume
+        - image for slider
+        - display value at the right
+
+- find out how to publish steam build
+
 - save on crash/panic?
 - property to disable vulkan debug layer
 - check "ensureUnusedCapacity" values
-
 - check: make map round?
     - or check if limit to break game can be reached in reasonable time
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 
-
+- check steam achivements
 
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
 - check unload/save logic to be on other thread
-- bug: copy paste big area crash
+- think about what to do with test f-keys
 - delete test branches?
 - change to new git repo, remo
-- think about what to do with test f-keys
+- check background music?
 
 - features:
     - bugfixing/testing
     - put on steam
-
   
 Some data:
 - FPS: 113, citizens: 31580, gameTime: 330000, end FPS: 73.054474 (17.06.2025)
@@ -33,30 +46,4 @@ Some data:
 - FPS: 115, citizens: 34030, gameTime: 330000, end FPS: 80.7412 (citizens reset moveTo when they found food)
 - FPS: 117, citizens: 33074, gameTime: 330000, end FPS: 84.82323 (citizens move random no longer based on graph top left)
 - FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.63493 (limited citizen negative food level)
-Goal:
-- a game which should not take more than 6month to make. Maybe publish to steam.
-- performance should matter
-- game idea:
-    - city builder extreme fast
-    - i have citizens. Each citizen just needs a home and food
-        - citizens can be chatters
-    - i as the player can:
-        - place building orders: 
-            - houses for citizens to live in
-            - tree farm: citizens can become lumberjacks to gather wood and cut it. Required for building houses
-            - farm: citizens can become farmers to plant food. Required for not starving
-            - citizens must build these and gather resources for it
-            - storage area. Used for storing food and wood
-            - upgrade building:
-                - bigger house: more people can live in it
-    - citizens will automatically join if houses with space exit
-    - game start with one small house and one citizen (the player) and storage area with some food and wood
-    - game loop:
-        - build more houses -> get more citizens
-        - more citizen need more food -> build more or bigger farms
-        - more citizens -> can build more faster
-        - scale town up to what the PC can handle
-            -> code performance matters
-            -> expectations with my pc: 10_000 citizens and 60fp should be easy
-                -> expectations which i guess should be possible: 100_000 citizens and 60fps
 
