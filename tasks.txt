@@ -1,10 +1,4 @@
 tasks:
-- bug: when deleting citizens stuff is not cleaned up correctly
-    - function "handleDeleteCitizen" has missing cases
-        - reproduce: have 2 citizens. place 2 build order next to each other. Remove one citizen
-            - only one build order gets completed. The seconds one does not happen
-                - but if the buildings were not beside each other it did work?
-
 - bug: "place beside path" text not disappearing and slowly moving out of frame. Why?
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?

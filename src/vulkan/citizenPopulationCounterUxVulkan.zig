@@ -37,7 +37,8 @@ pub const VkCitizenPopulationCounterUx = struct {
     const MAX_VERTICES_TRIANGLES = 6 * 2;
     const MAX_VERTICES_LINES = 8 + 8;
     const MAX_VERTICES_FONT = 200;
-    const MESSAGE_SURPASSED_DURATION = 5000;
+    const MESSAGE_SURPASSED_DURATION = 4000;
+    const MESSAGE_PLACE_BESIDE_PATH_DURATION = 2000;
 };
 
 pub fn init(state: *main.GameState) !void {
@@ -203,12 +204,13 @@ pub fn setupVertices(state: *main.GameState) !void {
         }, lastCountryFontSize, state);
     }
     if (state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime) |houseBuildPathMessageDisplayTime| {
-        const timeDiffHouseMessage = houseBuildPathMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();
-        const offsetY: f32 = (1.0 - @as(f32, @floatFromInt(timeDiffHouseMessage)) / VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION) * onePixelYInVulkan * 100.0;
+        const timeDiffHouseMessage = houseBuildPathMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_PLACE_BESIDE_PATH_DURATION -| std.time.milliTimestamp();
+        const offsetY: f32 = (1.0 - @as(f32, @floatFromInt(timeDiffHouseMessage)) / VkCitizenPopulationCounterUx.MESSAGE_PLACE_BESIDE_PATH_DURATION) * onePixelYInVulkan * 100.0;
         _ = paintText("must be placed beside a Path", .{
             .x = -onePixelXInVulkan * fontSize * 10,
             .y = -offsetY,
         }, fontSize, state);
+        if (timeDiffHouseMessage <= 0) state.vkState.citizenPopulationCounterUx.houseBuildPathMessageDisplayTime = null;
     }
 
     try setupVertexDataForGPU(&state.vkState);
