@@ -5,8 +5,10 @@ tasks:
             - only one build order gets completed. The seconds one does not happen
                 - but if the buildings were not beside each other it did work?
 
+- bug: "place beside path" text not disappearing and slowly moving out of frame. Why?
 - check process RAM usage. Was using 1GB after scolling thorugh a lot of areas, but should not have been so much?
     - where could the data be?
+    - after moving over the entiry map again the memory goes to the expected value. But why only than?
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - save on crash/panic?

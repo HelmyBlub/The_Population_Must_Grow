@@ -301,10 +301,6 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                     }
                 }
             }
-
-            if (building.citizensSpawned == 0) {
-                _ = chunk.buildings.swapRemove(i);
-            }
             if (building.inConstruction) {
                 for (chunk.buildOrders.items, 0..) |*buildOrder, index| {
                     if (buildOrder.position.x == building.position.x and buildOrder.position.y == building.position.y) {
@@ -312,6 +308,9 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                         break;
                     }
                 }
+            }
+            if (building.citizensSpawned == 0) {
+                _ = chunk.buildings.swapRemove(i);
             }
             return;
         }
@@ -346,9 +345,6 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                     }
                 }
 
-                if (building.citizensSpawned == 0) {
-                    _ = chunk.bigBuildings.swapRemove(i);
-                }
                 if (building.inConstruction) {
                     for (chunk.buildOrders.items, 0..) |*buildOrder, buildOrderIndex| {
                         if (buildOrder.position.x == building.position.x and buildOrder.position.y == building.position.y) {
@@ -356,6 +352,9 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                             break;
                         }
                     }
+                }
+                if (building.citizensSpawned == 0) {
+                    _ = chunk.bigBuildings.swapRemove(i);
                 }
                 //check for blocking tiles
                 const otherTileXyOfBuilding: [3]TileXY = .{
@@ -443,27 +442,25 @@ pub fn handleDeleteCitizen(citizen: main.Citizen, skipAreaXY: ?chunkAreaZig.Chun
     if (buildOrderPosition) |pos| {
         const posAreaXY = chunkAreaZig.getChunkAreaXyForPosition(pos);
         if (skipAreaXY == null or !chunkAreaZig.chunkAreaEquals(posAreaXY, skipAreaXY.?)) {
-            if (chunkAreaZig.isChunkAreaLoaded(posAreaXY, state)) {
-                if (try getChunkByPositionWithoutCreateOrLoad(pos, state)) |buildOrderChunk| {
-                    var isSpecialBigBuildingCase = false;
-                    if (citizen.buildingPosition != null) {
-                        //big buildings need more specific handling
-                        for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
-                            if (main.calculateDistance(pos, bigBuilding.position) < GameMap.TILE_SIZE / 2) {
-                                for (buildOrderChunk.buildOrders.items) |*buildOrder| {
-                                    if (main.calculateDistance(pos, buildOrder.position) < GameMap.TILE_SIZE / 2) {
-                                        buildOrder.materialCount += 1;
-                                        isSpecialBigBuildingCase = true;
-                                        break;
-                                    }
+            if (try getChunkByPositionWithoutCreateOrLoad(pos, state)) |buildOrderChunk| {
+                var isSpecialBigBuildingCase = false;
+                if (citizen.buildingPosition != null) {
+                    //big buildings need more specific handling
+                    for (buildOrderChunk.bigBuildings.items) |bigBuilding| {
+                        if (main.calculateDistance(pos, bigBuilding.position) < GameMap.TILE_SIZE / 2) {
+                            for (buildOrderChunk.buildOrders.items) |*buildOrder| {
+                                if (main.calculateDistance(pos, buildOrder.position) < GameMap.TILE_SIZE / 2) {
+                                    buildOrder.materialCount += 1;
+                                    isSpecialBigBuildingCase = true;
+                                    break;
                                 }
-                                break;
                             }
+                            break;
                         }
                     }
-                    if (!isSpecialBigBuildingCase) {
-                        try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
-                    }
+                }
+                if (!isSpecialBigBuildingCase) {
+                    try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
                 }
             }
         }
