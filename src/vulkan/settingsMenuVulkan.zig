@@ -22,7 +22,12 @@ pub const VkSettingsUx = struct {
         rec: UiRectangle = undefined,
         holdStartTime: ?i64 = null,
     } = undefined,
-    volumeSliderRectangle: UiRectangle = undefined,
+    volumeSlider: struct {
+        recSlider: UiRectangle = undefined,
+        recDragArea: UiRectangle = undefined,
+        holding: bool = false,
+        value: f32 = 0,
+    } = undefined,
     menuOpen: bool = false,
     settingsIconHovered: bool = false,
     const UX_RECTANGLES = 16;
@@ -79,10 +84,33 @@ pub fn setupUiLocations(vkState: *paintVulkanZig.Vk_State) void {
             .y = settingsMenuRec.pos.y + vulkanSpacingY,
         },
     };
+
+    const sliderSpacingX = 40.0 / windowSdlZig.windowData.widthFloat;
+    const sliderWidth = 40 / windowSdlZig.windowData.widthFloat;
+    const dragAreaWidth = (menuWidth - sliderSpacingX * 2 - sliderWidth);
+    const sliderOffsetX = vkState.settingsMenuUx.volumeSlider.value * dragAreaWidth;
+    vkState.settingsMenuUx.volumeSlider.recSlider = .{
+        .height = 40 / windowSdlZig.windowData.heightFloat,
+        .width = sliderWidth,
+        .pos = .{
+            .x = settingsMenuRec.pos.x + sliderSpacingX + sliderOffsetX,
+            .y = vkState.settingsMenuUx.restart.rec.pos.y + vkState.settingsMenuUx.restart.rec.height + vulkanSpacingY + 20 / windowSdlZig.windowData.heightFloat,
+        },
+    };
+    vkState.settingsMenuUx.volumeSlider.recDragArea = .{
+        .height = 10 / windowSdlZig.windowData.heightFloat,
+        .width = dragAreaWidth,
+        .pos = .{
+            .x = settingsMenuRec.pos.x + sliderSpacingX,
+            .y = vkState.settingsMenuUx.restart.rec.pos.y + vkState.settingsMenuUx.restart.rec.height + vulkanSpacingY + 35 / windowSdlZig.windowData.heightFloat,
+        },
+    };
 }
 
 fn initUi(state: *main.GameState) !void {
     state.vkState.settingsMenuUx.restart.holdStartTime = null;
+    state.vkState.settingsMenuUx.volumeSlider.holding = false;
+    state.vkState.settingsMenuUx.volumeSlider.value = 0;
     setupUiLocations(&state.vkState);
 }
 
@@ -109,6 +137,15 @@ pub fn mouseMove(state: *main.GameState) !void {
     {
         settingsMenuUx.restart.holdStartTime = null;
         try setupVertices(state);
+        return;
+    }
+
+    if (settingsMenuUx.volumeSlider.holding) {
+        const rec = settingsMenuUx.volumeSlider.recDragArea;
+        settingsMenuUx.volumeSlider.value = @min(@max(0, @as(f32, @floatCast(vulkanMousePos.x - rec.pos.x)) / rec.width), 1);
+        setupUiLocations(&state.vkState);
+        try setupVertices(state);
+        return;
     }
 }
 
@@ -119,6 +156,11 @@ pub fn mouseUp(state: *main.GameState, mouseWindowPosition: main.PositionF32) !b
     if (settingsMenuUx.restart.holdStartTime != null) {
         settingsMenuUx.restart.holdStartTime = null;
         try setupVertices(state);
+        return true;
+    }
+
+    if (settingsMenuUx.volumeSlider.holding) {
+        settingsMenuUx.volumeSlider.holding = false;
         return true;
     }
     return false;
@@ -145,11 +187,17 @@ pub fn mouseDown(state: *main.GameState, mouseWindowPosition: main.PositionF32) 
         settingsMenuUx.restart.holdStartTime = std.time.milliTimestamp();
         return true;
     }
+    const sliderRec = settingsMenuUx.volumeSlider.recSlider;
+    if (sliderRec.pos.x <= vulkanMousePos.x and sliderRec.pos.x + sliderRec.width >= vulkanMousePos.x and
+        sliderRec.pos.y <= vulkanMousePos.y and sliderRec.pos.y + sliderRec.height >= vulkanMousePos.y)
+    {
+        settingsMenuUx.volumeSlider.holding = true;
+        return true;
+    }
     const menuRec = settingsMenuUx.settingsMenuRectangle;
     if (menuRec.pos.x <= vulkanMousePos.x and menuRec.pos.x + menuRec.width >= vulkanMousePos.x and
         menuRec.pos.y <= vulkanMousePos.y and menuRec.pos.y + menuRec.height >= vulkanMousePos.y)
     {
-        std.debug.print("check \n", .{});
         return true;
     }
     return false;
@@ -279,6 +327,9 @@ pub fn setupVertices(state: *main.GameState) !void {
             width += font.vertices[font.verticeCount].texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
             font.verticeCount += 1;
         }
+
+        setupVerticeForRectangle(settingsMenuUx.volumeSlider.recDragArea, settingsMenuUx, color, borderColor);
+        setupVerticeForRectangle(settingsMenuUx.volumeSlider.recSlider, settingsMenuUx, buttonFillColor, borderColor);
     }
 
     try setupVertexDataForGPU(&state.vkState);

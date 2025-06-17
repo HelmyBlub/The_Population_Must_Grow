@@ -1,11 +1,10 @@
 tasks:
-- bug: build UX not centered, bad for window resize small
-
 - settings icon to top right
     - UI: sound volume setting
         - move left or right to change base volume
         - image for slider or just rectangle
         - display value at the right
+    - UI: Fullscreen <-> Windowed
 
 - find out how to publish steam build
 
@@ -32,11 +31,6 @@ tasks:
     - put on steam
   
 Some data:
-- FPS: 113, citizens: 31580, gameTime: 330000, end FPS: 73.054474 (17.06.2025)
+- FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.333954 (17.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 116, citizens: 33251, gameTime: 330000, end FPS: 85.51717 (idle citizens walk slower)
-- FPS: 116, citizens: 33234, gameTime: 330000, end FPS: 86.40941 (hungry citizens are fast when food found)
-- FPS: 115, citizens: 34030, gameTime: 330000, end FPS: 80.7412 (citizens reset moveTo when they found food)
-- FPS: 117, citizens: 33074, gameTime: 330000, end FPS: 84.82323 (citizens move random no longer based on graph top left)
-- FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.63493 (limited citizen negative food level)
 
