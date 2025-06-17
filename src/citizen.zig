@@ -532,6 +532,9 @@ fn foodTick(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !void
     } else {
         citizen.nextFoodTickTimeMs = state.gameTimeMs + 15_000;
         calculateMoveSpeed(citizen);
+        if (citizen.foodLevel < -0.5) {
+            citizen.foodLevel = -0.5;
+        }
     }
 }
 
