@@ -244,8 +244,14 @@ pub fn mouseDown(state: *main.GameState, mouseWindowPosition: main.PositionF32) 
         return true;
     }
 
-    if (isPositionInUiRec(settingsMenuUx.volumeSlider.recSlider, vulkanMousePos)) {
+    const slider = settingsMenuUx.volumeSlider;
+    if (slider.recDragArea.pos.x <= vulkanMousePos.x and slider.recDragArea.pos.x + slider.recDragArea.width >= vulkanMousePos.x and
+        slider.recSlider.pos.y <= vulkanMousePos.y and slider.recSlider.pos.y + slider.recSlider.height >= vulkanMousePos.y)
+    {
+        state.soundMixer.volume = @min(@max(0, @as(f32, @floatCast(vulkanMousePos.x - slider.recDragArea.pos.x)) / slider.recDragArea.width), 1);
         settingsMenuUx.volumeSlider.holding = true;
+        setupUiLocations(state);
+        try setupVertices(state);
         return true;
     }
 

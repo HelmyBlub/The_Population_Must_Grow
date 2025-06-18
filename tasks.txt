@@ -1,6 +1,5 @@
 tasks:
 - settings icon to top right
-    - remember settings?
     - slider: click to set to pos
 
 - food for starting citizen
