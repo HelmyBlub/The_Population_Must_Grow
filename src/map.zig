@@ -1214,7 +1214,7 @@ pub fn createChunk(chunkXY: ChunkXY, state: *main.GameState) !MapChunk {
     return mapChunk;
 }
 
-pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.GameState) !void {
+pub fn createSpawnArea(state: *main.GameState) !void {
     const areaXY: chunkAreaZig.ChunkAreaXY = .{ .areaX = 0, .areaY = 0 };
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     try state.chunkAreas.put(areaKey, .{
@@ -1242,11 +1242,21 @@ pub fn createSpawnArea(allocator: std.mem.Allocator, state: *main.GameState) !vo
 
     var spawnChunk: *MapChunk = &chunkArea.chunks.?[chunkAreaZig.chunkKeyOrder[spawnChunkXY.chunkX][spawnChunkXY.chunkY]];
     const halveTileSize = GameMap.TILE_SIZE / 2;
-    try spawnChunk.buildings.append(.{ .position = .{ .x = halveTileSize, .y = halveTileSize }, .inConstruction = false, .type = .house, .citizensSpawned = 1, .imageIndex = imageZig.IMAGE_HOUSE });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = halveTileSize }, .fullyGrown = true });
-    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, .fullyGrown = true });
-    const citizen = main.Citizen.createCitizen(.{ .x = halveTileSize, .y = halveTileSize }, allocator);
-    try spawnChunk.citizens.append(citizen);
+    _ = try placePath(.{ .x = halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, state);
+    _ = try placePath(.{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE + halveTileSize }, state);
+    try spawnChunk.potatoFields.append(PotatoField{ .position = .{
+        .x = GameMap.TILE_SIZE + halveTileSize,
+        .y = halveTileSize,
+    }, .fullyGrown = true });
+    try spawnChunk.trees.append(.{ .position = .{ .x = GameMap.TILE_SIZE + halveTileSize, .y = GameMap.TILE_SIZE * 2 + halveTileSize }, .fullyGrown = true });
+
+    const startHomePosition: main.Position = .{ .x = halveTileSize, .y = halveTileSize };
+    const startBuilding: Building = .{ .position = startHomePosition, .type = .house };
+    try spawnChunk.buildings.append(startBuilding);
+    if (try getBuildingOnPosition(startHomePosition, 0, state)) |building| {
+        try finishBuilding(building, 0, state);
+    }
+
     state.citizenCounterLastTick = 1;
     try chunkAreaZig.checkIfAreaIsActive(spawnChunk.chunkXY, 0, state);
 }

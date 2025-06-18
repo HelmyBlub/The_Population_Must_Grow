@@ -11,6 +11,7 @@ const TestActionType = enum {
     buildTreeArea,
     buildHouseArea,
     buildPotatoFarmArea,
+    demolish,
     copyPaste,
     changeGameSpeed,
     spawnFinishedHouseWithCitizen,
@@ -24,6 +25,7 @@ const TestActionData = union(TestActionType) {
     buildTreeArea: mapZig.MapTileRectangle,
     buildHouseArea: mapZig.MapTileRectangle,
     buildPotatoFarmArea: mapZig.MapTileRectangle,
+    demolish: mapZig.MapTileRectangle,
     copyPaste: CopyPasteData,
     changeGameSpeed: f32,
     spawnFinishedHouseWithCitizen: main.Position,
@@ -97,6 +99,10 @@ pub fn tick(state: *main.GameState) !void {
                     },
                     .buildPotatoFarmArea => |data| {
                         state.currentBuildType = mapZig.BUILD_TYPE_POTATO_FARM;
+                        try windowSdlZig.handleRectangleAreaAction(data, state);
+                    },
+                    .demolish => |data| {
+                        state.currentBuildType = mapZig.BUILD_TYPE_DEMOLISH;
                         try windowSdlZig.handleRectangleAreaAction(data, state);
                     },
                     .copyPaste => |data| {
@@ -188,6 +194,7 @@ fn printTestEndData(state: *main.GameState) void {
 
 fn setupTestInputs(testData: *TestData) !void {
     try testData.testInputs.append(.{ .data = .{ .changeGameSpeed = 10 }, .executeTime = 0 });
+    try testData.testInputs.append(.{ .data = .{ .demolish = .{ .topLeftTileXY = .{ .tileX = 0, .tileY = 0 }, .columnCount = 2, .rowCount = 1 } }, .executeTime = 0 });
     //city block
     for (0..10) |counter| {
         const x: i32 = @intCast(counter);

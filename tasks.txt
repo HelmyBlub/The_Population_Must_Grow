@@ -1,8 +1,11 @@
 tasks:
-- settings icon to top right
-    - slider: click to set to pos
 
-- food for starting citizen
+- spawn chunk changes
+    - food
+    - path
+    - pathing setup?
+
+
 - find out how to publish steam build
 
 - what happens when i reach the last population target
@@ -29,5 +32,6 @@ tasks:
     - put on steam
   
 Some data:
-- FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.333954 (17.06.2025)
+- FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.333954 (18.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 116, citizens: 32390, gameTime: 330000, end FPS: 83.285225 (changed spawn area)
