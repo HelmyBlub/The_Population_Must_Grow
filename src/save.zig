@@ -5,8 +5,11 @@ const imageZig = @import("image.zig");
 const pathfindingZig = @import("pathfinding.zig");
 const chunkAreaZig = @import("chunkArea.zig");
 const citizenPopulationCounterUxZig = @import("vulkan/citizenPopulationCounterUxVulkan.zig");
+const windowSdlZig = @import("windowSdl.zig");
 
 pub const DEBUG_INFO_SAVE = false;
+const SAFE_FILE_VERSION: u8 = 0;
+
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
 const SAVE_TREE = 2;
@@ -172,8 +175,11 @@ pub fn saveGeneralDataToFile(state: *main.GameState) !void {
     for (state.threadData) |threadData| {
         citizenCounter += threadData.citizensAddedThisTick;
     }
+    _ = try writer.writeByte(SAFE_FILE_VERSION);
     _ = try writer.writeInt(u64, citizenCounter, .little);
     _ = try writer.writeInt(u32, state.gameTimeMs, .little);
+    _ = try writer.writeInt(u32, @bitCast(state.soundMixer.volume), .little);
+    _ = try writer.writeByte(@intFromBool(state.vkState.settingsMenuUx.fullscreen.checked));
 
     var activeThreads = std.ArrayList(u64).init(state.allocator);
     defer activeThreads.deinit();
@@ -200,9 +206,20 @@ pub fn loadGeneralDataFromFile(state: *main.GameState) !bool {
 
     const reader = file.reader();
 
+    const safeFileVersion = try reader.readByte();
+    if (safeFileVersion != SAFE_FILE_VERSION) {
+        //here i could handle cases instead of returning false which ignores the file and will overwrite it
+        return false;
+    }
     state.citizenCounter = try reader.readInt(u64, .little);
     state.citizenCounterLastTick = state.citizenCounter;
     state.gameTimeMs = try reader.readInt(u32, .little);
+    state.soundMixer.volume = @bitCast(try reader.readInt(u32, .little));
+    state.vkState.settingsMenuUx.fullscreen.checked = (try reader.readByte()) == 1;
+    if (state.vkState.settingsMenuUx.fullscreen.checked) {
+        _ = windowSdlZig.toggleFullscreen();
+    }
+
     const activeChunkAreaKeysLength: usize = try reader.readInt(usize, .little);
     for (0..activeChunkAreaKeysLength) |_| {
         const key = try reader.readInt(u64, .little);

@@ -21,10 +21,12 @@ pub const VkSettingsUx = struct {
     restart: struct {
         rec: UiRectangle = undefined,
         holdStartTime: ?i64 = null,
+        hovering: bool = false,
     } = undefined,
     volumeSlider: struct {
         recSlider: UiRectangle = undefined,
         recDragArea: UiRectangle = undefined,
+        hovering: bool = false,
         holding: bool = false,
     } = undefined,
     fullscreen: struct {
@@ -63,6 +65,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
     const settingsMenuUx = &vkState.settingsMenuUx;
     const vulkanSpacingX = 10.0 / windowSdlZig.windowData.widthFloat;
     const vulkanSpacingY = 10.0 / windowSdlZig.windowData.heightFloat;
+    const vulkanSpacingLargerY = 40.0 / windowSdlZig.windowData.heightFloat;
 
     const iconWidth = 80 / windowSdlZig.windowData.widthFloat;
     const iconHeight = 80 / windowSdlZig.windowData.heightFloat;
@@ -77,7 +80,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
 
     const menuWidth = 510 / windowSdlZig.windowData.widthFloat;
     settingsMenuUx.settingsMenuRectangle = .{
-        .height = 400 / windowSdlZig.windowData.heightFloat,
+        .height = 450 / windowSdlZig.windowData.heightFloat,
         .width = menuWidth,
         .pos = .{
             .x = 1 - menuWidth - vulkanSpacingX,
@@ -104,7 +107,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
         .width = sliderWidth,
         .pos = .{
             .x = settingsMenuRec.pos.x + sliderOffsetX + vulkanSpacingX,
-            .y = settingsMenuUx.restart.rec.pos.y + settingsMenuUx.restart.rec.height + vulkanSpacingY + 60 / windowSdlZig.windowData.heightFloat,
+            .y = settingsMenuUx.restart.rec.pos.y + settingsMenuUx.restart.rec.height + vulkanSpacingLargerY + 60 / windowSdlZig.windowData.heightFloat,
         },
     };
     settingsMenuUx.volumeSlider.recDragArea = .{
@@ -121,7 +124,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
         .width = 50 / windowSdlZig.windowData.widthFloat,
         .pos = .{
             .x = settingsMenuRec.pos.x + vulkanSpacingX,
-            .y = settingsMenuUx.volumeSlider.recSlider.pos.y + settingsMenuUx.volumeSlider.recSlider.height + vulkanSpacingY,
+            .y = settingsMenuUx.volumeSlider.recSlider.pos.y + settingsMenuUx.volumeSlider.recSlider.height + vulkanSpacingLargerY,
         },
     };
 
@@ -130,7 +133,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
         .width = 100 / windowSdlZig.windowData.heightFloat,
         .pos = .{
             .x = settingsMenuRec.pos.x + vulkanSpacingX,
-            .y = settingsMenuUx.fullscreen.rec.pos.y + settingsMenuUx.fullscreen.rec.height + vulkanSpacingY,
+            .y = settingsMenuUx.fullscreen.rec.pos.y + settingsMenuUx.fullscreen.rec.height + vulkanSpacingLargerY,
         },
     };
 }
@@ -138,11 +141,15 @@ pub fn setupUiLocations(state: *main.GameState) void {
 fn initUi(state: *main.GameState) !void {
     const settings = &state.vkState.settingsMenuUx;
     settings.restart.holdStartTime = null;
+    settings.restart.hovering = false;
+
     settings.volumeSlider.holding = false;
-    settings.quit.hovering = false;
+    settings.volumeSlider.hovering = false;
+
     settings.fullscreen.checked = false;
     settings.fullscreen.hovering = false;
-    state.soundMixer.volume = 1;
+
+    settings.quit.hovering = false;
     setupUiLocations(state);
 }
 
@@ -162,6 +169,8 @@ pub fn mouseMove(state: *main.GameState) !void {
 
     settingsMenuUx.quit.hovering = false;
     settingsMenuUx.fullscreen.hovering = false;
+    settingsMenuUx.restart.hovering = false;
+    settingsMenuUx.volumeSlider.hovering = false;
     const restartRec = settingsMenuUx.restart.rec;
     if (settingsMenuUx.restart.holdStartTime != null and (restartRec.pos.x > vulkanMousePos.x or restartRec.pos.x + restartRec.width < vulkanMousePos.x or
         restartRec.pos.y > vulkanMousePos.y or restartRec.pos.y + restartRec.height < vulkanMousePos.y))
@@ -179,13 +188,23 @@ pub fn mouseMove(state: *main.GameState) !void {
         return;
     }
 
-    if (isPositionInUiRec(settingsMenuUx.quit.rec, vulkanMousePos)) {
-        settingsMenuUx.quit.hovering = true;
+    if (isPositionInUiRec(settingsMenuUx.restart.rec, vulkanMousePos)) {
+        settingsMenuUx.restart.hovering = true;
+        try setupVertices(state);
+        return;
+    }
+    if (isPositionInUiRec(settingsMenuUx.volumeSlider.recSlider, vulkanMousePos)) {
+        settingsMenuUx.volumeSlider.hovering = true;
         try setupVertices(state);
         return;
     }
     if (isPositionInUiRec(settingsMenuUx.fullscreen.rec, vulkanMousePos)) {
         settingsMenuUx.fullscreen.hovering = true;
+        try setupVertices(state);
+        return;
+    }
+    if (isPositionInUiRec(settingsMenuUx.quit.rec, vulkanMousePos)) {
+        settingsMenuUx.quit.hovering = true;
         try setupVertices(state);
         return;
     }
@@ -352,7 +371,8 @@ pub fn setupVertices(state: *main.GameState) !void {
     if (settingsMenuUx.menuOpen) {
         const menuRec = settingsMenuUx.settingsMenuRectangle;
         setupVerticeForRectangle(menuRec, settingsMenuUx, color, borderColor);
-        setupVerticeForRectangle(settingsMenuUx.restart.rec, settingsMenuUx, buttonFillColor, borderColor);
+        const restartFillColor = if (settingsMenuUx.restart.hovering) hoverColor else buttonFillColor;
+        setupVerticeForRectangle(settingsMenuUx.restart.rec, settingsMenuUx, restartFillColor, borderColor);
         if (settingsMenuUx.restart.holdStartTime) |time| {
             const timeDiff = @max(0, time + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp());
             const fillPerCent: f32 = 1 - @as(f32, @floatFromInt(timeDiff)) / VkSettingsUx.RESTART_HOLD_DURATION_MS;
@@ -380,7 +400,8 @@ pub fn setupVertices(state: *main.GameState) !void {
         );
 
         setupVerticeForRectangle(settingsMenuUx.volumeSlider.recDragArea, settingsMenuUx, color, borderColor);
-        setupVerticeForRectangle(settingsMenuUx.volumeSlider.recSlider, settingsMenuUx, buttonFillColor, borderColor);
+        const sliderFillColor = if (settingsMenuUx.volumeSlider.hovering) hoverColor else buttonFillColor;
+        setupVerticeForRectangle(settingsMenuUx.volumeSlider.recSlider, settingsMenuUx, sliderFillColor, borderColor);
 
         const textWidth = fontVulkanZig.paintText(
             "Volume: ",

@@ -138,6 +138,25 @@ pub fn main() !void {
     try startGame(allocator, false);
 }
 
+var stateForPanicAccess: ?*GameState = null;
+// pub const panic = std.debug.FullPanic(myPanic);
+fn myPanic(msg: []const u8, first_trace_addr: ?usize) noreturn {
+    _ = first_trace_addr;
+    std.debug.print("Panic! {s}\n", .{msg});
+    if (stateForPanicAccess) |state| {
+        if (state.gameTimeMs > 0) {
+            saveZig.destroySaveAndLoadThread(state);
+            saveZig.saveGeneralDataToFile(state) catch {
+                std.debug.print("failed to save general data\n", .{});
+            };
+            saveZig.saveAllChunkAreasBeforeQuit(state) catch {
+                std.debug.print("failed to save chunkArea data\n", .{});
+            };
+        }
+    }
+    std.process.exit(1);
+}
+
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
     const diffX = pos1.x - pos2.x;
     const diffY = pos1.y - pos2.y;
@@ -188,12 +207,13 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSe
     }
     try saveZig.createSaveAndLoadThread(state);
     try codePerformanceZig.init(state);
-    const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
-    if (!couldLoadGeneralData) try mapZig.createSpawnArea(allocator, state);
     try inputZig.initDefaultKeyBindings(state);
     try initPaintVulkanAndWindowSdl(state);
     try soundMixerZig.createSoundMixer(state, allocator);
+    const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
+    if (!couldLoadGeneralData) try mapZig.createSpawnArea(allocator, state);
     try inputZig.executeAction(inputZig.ActionType.buildPath, state);
+    settingsMenuUxVulkanZig.setupUiLocations(state);
 }
 
 pub fn deleteSaveAndRestart(state: *GameState) !void {
