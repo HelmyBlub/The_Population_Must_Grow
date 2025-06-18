@@ -1,23 +1,17 @@
 tasks:
-- find out how to publish steam build
-    -offstream
-
-- what happens when i reach the last population target
-
 - save on crash/panic?
     - started something in main
-- property to disable vulkan debug layer
 - check "ensureUnusedCapacity" values
 - check: make map round?
     - or check if limit to break game can be reached in reasonable time
-- check performance for chunks in chunkAreas
-    - can improve by not always searching area again and just chunk
 
 - check steam achivements
 
+- think about what to do with test f-keys
+- check performance for chunks in chunkAreas
+    - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
 - check unload/save logic to be on other thread
-- think about what to do with test f-keys
 - delete test branches?
 - change to new git repo, remo
 - check background music?
@@ -25,6 +19,13 @@ tasks:
 - features:
     - bugfixing/testing
     - put on steam
+
+Offstream:
+    - find out how to publish steam build
+        - trailer
+    - check steam achivements if doable on stream
+    - test linux build
+    - do i know someone for a mac build test?
   
 Some data:
 - FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.333954 (18.06.2025)

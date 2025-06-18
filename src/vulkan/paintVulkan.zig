@@ -17,6 +17,8 @@ const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxV
 const codePerformanceZig = @import("../codePerformance.zig");
 const chunkAreaZig = @import("../chunkArea.zig");
 
+const ENABLE_VALIDATION_LAYER = false;
+
 pub const Vk_State = struct {
     hInstance: vk.HINSTANCE = undefined,
     instance: vk.VkInstance = undefined,
@@ -1016,11 +1018,13 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .pNext = null,
         .flags = 0,
         .pApplicationInfo = &app_info,
-        .enabledLayerCount = validation_layers.len,
-        .ppEnabledLayerNames = &validation_layers,
         .enabledExtensionCount = 0,
         .ppEnabledExtensionNames = null,
     };
+    if (ENABLE_VALIDATION_LAYER) {
+        instance_create_info.enabledLayerCount = validation_layers.len;
+        instance_create_info.ppEnabledLayerNames = &validation_layers;
+    }
     const requiredExtensions = [_][*:0]const u8{
         vk.VK_KHR_SURFACE_EXTENSION_NAME,
         vk.VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -1703,8 +1707,10 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
         .enabledExtensionCount = 1,
         .ppEnabledExtensionNames = &[_][*c]const u8{vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME},
     };
-    device_create_info.enabledLayerCount = 1;
-    device_create_info.ppEnabledLayerNames = &validation_layers;
+    if (ENABLE_VALIDATION_LAYER) {
+        device_create_info.enabledLayerCount = validation_layers.len;
+        device_create_info.ppEnabledLayerNames = &validation_layers;
+    }
     try vkcheck(vk.vkCreateDevice(physical_device, &device_create_info, null, &vkState.logicalDevice), "Failed to create logical device");
     std.debug.print("Logical Device Created : {any}\n", .{vkState.logicalDevice});
     vk.vkGetDeviceQueue(vkState.logicalDevice, vkState.graphics_queue_family_idx, 0, &vkState.queue);
