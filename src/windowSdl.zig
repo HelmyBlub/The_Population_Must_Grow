@@ -110,6 +110,11 @@ pub fn handleEvents(state: *main.GameState) !void {
                 state.keyboardInfo.cameraMoveY = 0;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.keyboardInfo.cameraMoveY = 0;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_ESCAPE) {
+                state.vkState.settingsMenuUx.menuOpen = !state.vkState.settingsMenuUx.menuOpen;
+                try settingsMenuUxVulkanZig.setupVertices(state);
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
+                state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F2) {
                 if (state.testData == null) {
                     state.testData = testZig.createTestData(state.allocator);
@@ -166,8 +171,6 @@ pub fn handleEvents(state: *main.GameState) !void {
                         }
                     }
                 }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
-                state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }
