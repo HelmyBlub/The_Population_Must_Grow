@@ -7,6 +7,7 @@ tasks:
     - UI: Fullscreen <-> Windowed
     - UI: QUIT
     - open/close with ESC
+    - remember settings?
 
 - food for starting citizen
 - find out how to publish steam build
