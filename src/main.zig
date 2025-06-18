@@ -242,7 +242,7 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
         threadData.requestToUnidleAreakey.clearAndFree();
     }
     try mapZig.createSpawnArea(state);
-    state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len - 1;
+    state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len;
     state.soundMixer.mutex.lock();
     state.soundMixer.soundsFutureQueue.clearRetainingCapacity();
     state.soundMixer.soundsToPlay.clearRetainingCapacity();

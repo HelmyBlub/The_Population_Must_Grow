@@ -16,7 +16,7 @@ pub const VkCitizenPopulationCounterUx = struct {
     triangles: paintVulkanZig.VkTriangles = undefined,
     lines: paintVulkanZig.VkLines = undefined,
     font: fontVulkanZig.VkFont = undefined,
-    nextCountryPopulationIndex: usize = countryPopulationDataZig.WORLD_POPULATION.len - 1,
+    nextCountryPopulationIndex: usize = countryPopulationDataZig.WORLD_POPULATION.len,
     surpassedMessageDisplayTime: i64 = 0,
     houseBuildPathMessageDisplayTime: ?i64 = null,
     const MAX_VERTICES_TRIANGLES = 6 * 2;
@@ -74,7 +74,7 @@ fn createVertexBuffers(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.All
 }
 
 pub fn updateCountryPopulationIndexOnGameLoad(state: *main.GameState) void {
-    while (state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex > 0 and state.citizenCounter > countryPopulationDataZig.WORLD_POPULATION[state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex].population) {
+    while (state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex > 0 and state.citizenCounter > countryPopulationDataZig.WORLD_POPULATION[state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex - 1].population) {
         state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex -= 1;
     }
 }
@@ -100,17 +100,25 @@ pub fn setupVertices(state: *main.GameState) !void {
         .width = rectangleVulkanWidth,
         .height = fontSize * onePixelYInVulkan,
     };
-    var nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex];
-    var fillPerCent: f32 = @as(f32, @floatFromInt(state.citizenCounter)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.population));
-    if (fillPerCent > 1) {
-        popCounterUx.nextCountryPopulationIndex -|= 1;
-        popCounterUx.surpassedMessageDisplayTime = std.time.milliTimestamp();
-        fillPerCent = 1;
-        nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex];
+    var fillPerCent: f32 = 1;
+    var nextCountryPopulationGoal: ?countryPopulationDataZig.CountryData = null;
+    if (popCounterUx.nextCountryPopulationIndex > 0) {
+        nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex - 1];
+        fillPerCent = @as(f32, @floatFromInt(state.citizenCounter)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.?.population));
+        if (fillPerCent > 1) {
+            popCounterUx.nextCountryPopulationIndex -|= 1;
+            popCounterUx.surpassedMessageDisplayTime = std.time.milliTimestamp();
+            fillPerCent = 1;
+            if (popCounterUx.nextCountryPopulationIndex > 0) {
+                nextCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex - 1];
+            } else {
+                nextCountryPopulationGoal = null;
+            }
+        }
     }
     var optLastCountryPopulationGoal: ?countryPopulationDataZig.CountryData = null;
-    if (popCounterUx.nextCountryPopulationIndex + 1 < countryPopulationDataZig.WORLD_POPULATION.len) {
-        optLastCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex + 1];
+    if (popCounterUx.nextCountryPopulationIndex < countryPopulationDataZig.WORLD_POPULATION.len) {
+        optLastCountryPopulationGoal = countryPopulationDataZig.WORLD_POPULATION[popCounterUx.nextCountryPopulationIndex];
     }
 
     triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ populationRectangle.pos.x, populationRectangle.pos.y }, .color = fillColor };
@@ -154,14 +162,16 @@ pub fn setupVertices(state: *main.GameState) !void {
     _ = try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, 25, &state.vkState.citizenPopulationCounterUx.font);
 
     if (optLastCountryPopulationGoal) |lastCountryPopulationGoal| {
-        _ = fontVulkanZig.paintText(nextCountryPopulationGoal.name, .{
-            .x = populationRectangle.pos.x + populationRectangle.width,
-            .y = populationRectangle.pos.y,
-        }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font);
-        _ = try fontVulkanZig.paintNumber(nextCountryPopulationGoal.population, .{
-            .x = populationRectangle.pos.x + populationRectangle.width,
-            .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
-        }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font);
+        if (nextCountryPopulationGoal) |popGoal| {
+            _ = fontVulkanZig.paintText(popGoal.name, .{
+                .x = populationRectangle.pos.x + populationRectangle.width,
+                .y = populationRectangle.pos.y,
+            }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font);
+            _ = try fontVulkanZig.paintNumber(popGoal.population, .{
+                .x = populationRectangle.pos.x + populationRectangle.width,
+                .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
+            }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font);
+        }
 
         const timeDiffSurpassed = popCounterUx.surpassedMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();
         if (timeDiffSurpassed > 0) {
@@ -178,7 +188,8 @@ pub fn setupVertices(state: *main.GameState) !void {
         }
 
         const lastCountryFontSize = fontSize / 2.5;
-        const lastXPerCent: f32 = @as(f32, @floatFromInt(lastCountryPopulationGoal.population)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.population));
+        const upperBound: f32 = if (nextCountryPopulationGoal) |popGoal| @as(f32, @floatFromInt(popGoal.population)) else @as(f32, @floatFromInt(state.citizenCounter));
+        const lastXPerCent: f32 = @as(f32, @floatFromInt(lastCountryPopulationGoal.population)) / upperBound;
         const lastCountryX = populationRectangle.pos.x + populationRectangle.width * lastXPerCent;
         lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ lastCountryX, populationRectangle.pos.y - lastCountryFontSize * onePixelYInVulkan }, .color = borderColor };
         lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ lastCountryX, populationRectangle.pos.y + populationRectangle.height }, .color = borderColor };

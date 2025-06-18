@@ -1,14 +1,9 @@
 tasks:
-
-- spawn chunk changes
-    - food
-    - path
-    - pathing setup?
-
-
 - find out how to publish steam build
+    -offstream
 
 - what happens when i reach the last population target
+
 - save on crash/panic?
     - started something in main
 - property to disable vulkan debug layer
