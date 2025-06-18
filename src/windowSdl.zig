@@ -51,6 +51,17 @@ pub fn getWindowSize(width: *u32, height: *u32) void {
     height.* = @intCast(h);
 }
 
+pub fn toggleFullscreen() bool {
+    const flags = sdl.SDL_GetWindowFlags(windowData.window);
+    if ((flags & sdl.SDL_WINDOW_FULLSCREEN) == 0) {
+        _ = sdl.SDL_SetWindowFullscreen(windowData.window, true);
+        return true;
+    } else {
+        _ = sdl.SDL_SetWindowFullscreen(windowData.window, false);
+        return false;
+    }
+}
+
 pub fn handleEvents(state: *main.GameState) !void {
     var event: sdl.SDL_Event = undefined;
     while (sdl.SDL_PollEvent(&event)) {
@@ -158,19 +169,7 @@ pub fn handleEvents(state: *main.GameState) !void {
                     }
                 }
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
-                std.debug.print("printSomeInfo\n", .{});
-                const areaKey = chunkAreaZig.getKeyForAreaXY(.{ .areaX = -1, .areaY = 0 });
-                if (state.chunkAreas.getPtr(areaKey)) |chunkArea| {
-                    std.debug.print(" chunkArea {} {}, {}\n", .{ chunkArea.areaXY.areaX, chunkArea.areaXY.areaY, chunkArea.idleTypeData });
-                    if (chunkArea.chunks) |chunks| {
-                        const chunk = chunks[mapZig.getChunkIndexForChunkXY(.{ .chunkX = -1, .chunkY = 0 })];
-                        std.debug.print("    chunk {} {}, {}, {}\n", .{ chunk.chunkXY.chunkX, chunk.chunkXY.chunkY, chunk.queue.items.len, chunk.potatoFields.items.len });
-                        if (chunk.potatoFields.items.len > 0) {
-                            const potatoField = chunk.potatoFields.items[0];
-                            std.debug.print("       potato {}\n", .{potatoField});
-                        }
-                    }
-                }
+                //
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }

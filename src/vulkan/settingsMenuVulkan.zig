@@ -27,6 +27,11 @@ pub const VkSettingsUx = struct {
         recDragArea: UiRectangle = undefined,
         holding: bool = false,
     } = undefined,
+    fullscreen: struct {
+        rec: UiRectangle = undefined,
+        checked: bool = false,
+        hovering: bool = false,
+    } = undefined,
     quit: struct {
         rec: UiRectangle = undefined,
         hovering: bool = false,
@@ -72,7 +77,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
 
     const menuWidth = 510 / windowSdlZig.windowData.widthFloat;
     settingsMenuUx.settingsMenuRectangle = .{
-        .height = 300 / windowSdlZig.windowData.heightFloat,
+        .height = 400 / windowSdlZig.windowData.heightFloat,
         .width = menuWidth,
         .pos = .{
             .x = 1 - menuWidth - vulkanSpacingX,
@@ -110,12 +115,22 @@ pub fn setupUiLocations(state: *main.GameState) void {
             .y = settingsMenuUx.volumeSlider.recSlider.pos.y + 15 / windowSdlZig.windowData.heightFloat,
         },
     };
+
+    settingsMenuUx.fullscreen.rec = .{
+        .height = 50 / windowSdlZig.windowData.heightFloat,
+        .width = 50 / windowSdlZig.windowData.widthFloat,
+        .pos = .{
+            .x = settingsMenuRec.pos.x + vulkanSpacingX,
+            .y = settingsMenuUx.volumeSlider.recSlider.pos.y + settingsMenuUx.volumeSlider.recSlider.height + vulkanSpacingY,
+        },
+    };
+
     settingsMenuUx.quit.rec = .{
         .height = 80 / windowSdlZig.windowData.heightFloat,
         .width = 100 / windowSdlZig.windowData.heightFloat,
         .pos = .{
-            .x = settingsMenuRec.pos.x + sliderWidth / 2 + vulkanSpacingX,
-            .y = settingsMenuUx.volumeSlider.recSlider.pos.y + settingsMenuUx.volumeSlider.recSlider.height + vulkanSpacingY,
+            .x = settingsMenuRec.pos.x + vulkanSpacingX,
+            .y = settingsMenuUx.fullscreen.rec.pos.y + settingsMenuUx.fullscreen.rec.height + vulkanSpacingY,
         },
     };
 }
@@ -125,6 +140,8 @@ fn initUi(state: *main.GameState) !void {
     settings.restart.holdStartTime = null;
     settings.volumeSlider.holding = false;
     settings.quit.hovering = false;
+    settings.fullscreen.checked = false;
+    settings.fullscreen.hovering = false;
     state.soundMixer.volume = 1;
     setupUiLocations(state);
 }
@@ -132,10 +149,7 @@ fn initUi(state: *main.GameState) !void {
 pub fn mouseMove(state: *main.GameState) !void {
     const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y);
     const settingsMenuUx = &state.vkState.settingsMenuUx;
-    const icon = settingsMenuUx.settingsIcon;
-    if (icon.pos.x <= vulkanMousePos.x and icon.pos.x + icon.width >= vulkanMousePos.x and
-        icon.pos.y <= vulkanMousePos.y and icon.pos.y + icon.height >= vulkanMousePos.y)
-    {
+    if (isPositionInUiRec(settingsMenuUx.settingsIcon, vulkanMousePos)) {
         settingsMenuUx.settingsIconHovered = true;
         try setupVertices(state);
         return;
@@ -147,6 +161,7 @@ pub fn mouseMove(state: *main.GameState) !void {
     if (!settingsMenuUx.menuOpen) return;
 
     settingsMenuUx.quit.hovering = false;
+    settingsMenuUx.fullscreen.hovering = false;
     const restartRec = settingsMenuUx.restart.rec;
     if (settingsMenuUx.restart.holdStartTime != null and (restartRec.pos.x > vulkanMousePos.x or restartRec.pos.x + restartRec.width < vulkanMousePos.x or
         restartRec.pos.y > vulkanMousePos.y or restartRec.pos.y + restartRec.height < vulkanMousePos.y))
@@ -164,11 +179,13 @@ pub fn mouseMove(state: *main.GameState) !void {
         return;
     }
 
-    const quitRec = settingsMenuUx.quit.rec;
-    if (quitRec.pos.x <= vulkanMousePos.x and quitRec.pos.x + quitRec.width >= vulkanMousePos.x and
-        quitRec.pos.y <= vulkanMousePos.y and quitRec.pos.y + quitRec.height >= vulkanMousePos.y)
-    {
+    if (isPositionInUiRec(settingsMenuUx.quit.rec, vulkanMousePos)) {
         settingsMenuUx.quit.hovering = true;
+        try setupVertices(state);
+        return;
+    }
+    if (isPositionInUiRec(settingsMenuUx.fullscreen.rec, vulkanMousePos)) {
+        settingsMenuUx.fullscreen.hovering = true;
         try setupVertices(state);
         return;
     }
@@ -196,46 +213,44 @@ pub fn mouseUp(state: *main.GameState, mouseWindowPosition: main.PositionF32) !b
 pub fn mouseDown(state: *main.GameState, mouseWindowPosition: main.PositionF32) !bool {
     const vulkanMousePos = windowSdlZig.mouseWindowPositionToVulkanSurfacePoisition(mouseWindowPosition.x, mouseWindowPosition.y);
     const settingsMenuUx = &state.vkState.settingsMenuUx;
-    const icon = settingsMenuUx.settingsIcon;
-    if (icon.pos.x <= vulkanMousePos.x and icon.pos.x + icon.width >= vulkanMousePos.x and
-        icon.pos.y <= vulkanMousePos.y and icon.pos.y + icon.height >= vulkanMousePos.y)
-    {
+    if (isPositionInUiRec(settingsMenuUx.settingsIcon, vulkanMousePos)) {
         settingsMenuUx.menuOpen = !settingsMenuUx.menuOpen;
         try setupVertices(state);
         return true;
     }
     if (!settingsMenuUx.menuOpen) return false;
 
-    const restartRec = settingsMenuUx.restart.rec;
-    if (restartRec.pos.x <= vulkanMousePos.x and restartRec.pos.x + restartRec.width >= vulkanMousePos.x and
-        restartRec.pos.y <= vulkanMousePos.y and restartRec.pos.y + restartRec.height >= vulkanMousePos.y)
-    {
+    if (isPositionInUiRec(settingsMenuUx.restart.rec, vulkanMousePos)) {
         settingsMenuUx.restart.holdStartTime = std.time.milliTimestamp();
         return true;
     }
-    const sliderRec = settingsMenuUx.volumeSlider.recSlider;
-    if (sliderRec.pos.x <= vulkanMousePos.x and sliderRec.pos.x + sliderRec.width >= vulkanMousePos.x and
-        sliderRec.pos.y <= vulkanMousePos.y and sliderRec.pos.y + sliderRec.height >= vulkanMousePos.y)
-    {
+
+    if (isPositionInUiRec(settingsMenuUx.volumeSlider.recSlider, vulkanMousePos)) {
         settingsMenuUx.volumeSlider.holding = true;
         return true;
     }
-    const quitRec = settingsMenuUx.quit.rec;
-    if (quitRec.pos.x <= vulkanMousePos.x and quitRec.pos.x + quitRec.width >= vulkanMousePos.x and
-        quitRec.pos.y <= vulkanMousePos.y and quitRec.pos.y + quitRec.height >= vulkanMousePos.y)
-    {
+
+    if (isPositionInUiRec(settingsMenuUx.quit.rec, vulkanMousePos)) {
         state.gameEnd = true;
         return true;
     }
 
-    const menuRec = settingsMenuUx.settingsMenuRectangle;
-    if (menuRec.pos.x <= vulkanMousePos.x and menuRec.pos.x + menuRec.width >= vulkanMousePos.x and
-        menuRec.pos.y <= vulkanMousePos.y and menuRec.pos.y + menuRec.height >= vulkanMousePos.y)
-    {
+    if (isPositionInUiRec(settingsMenuUx.fullscreen.rec, vulkanMousePos)) {
+        settingsMenuUx.fullscreen.checked = windowSdlZig.toggleFullscreen();
+        try setupVertices(state);
+        return true;
+    }
+
+    if (isPositionInUiRec(settingsMenuUx.settingsMenuRectangle, vulkanMousePos)) {
         return true;
     }
 
     return false;
+}
+
+fn isPositionInUiRec(rec: UiRectangle, pos: main.Position) bool {
+    return rec.pos.x <= pos.x and rec.pos.x + rec.width >= pos.x and
+        rec.pos.y <= pos.y and rec.pos.y + rec.height >= pos.y;
 }
 
 pub fn tick(state: *main.GameState) !void {
@@ -352,18 +367,17 @@ pub fn setupVertices(state: *main.GameState) !void {
             };
             setupVerticeForRectangle(fillRec, settingsMenuUx, holdRecColor, borderColor);
         }
-        const text = "Hold to Restart";
         const fontSize: comptime_float = 26;
         const fontVulkanHeight = fontSize / windowSdlZig.windowData.heightFloat * 2;
-        var width: f32 = 0;
-        for (text) |char| {
-            font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(char, .{
-                .x = settingsMenuUx.restart.rec.pos.x + width,
+        _ = fontVulkanZig.paintText(
+            "Hold to Restart",
+            .{
+                .x = settingsMenuUx.restart.rec.pos.x,
                 .y = settingsMenuUx.restart.rec.pos.y + settingsMenuUx.restart.rec.height / 5.0,
-            }, fontSize);
-            width += font.vertices[font.verticeCount].texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
-            font.verticeCount += 1;
-        }
+            },
+            fontSize,
+            &state.vkState.settingsMenuUx.font,
+        );
 
         setupVerticeForRectangle(settingsMenuUx.volumeSlider.recDragArea, settingsMenuUx, color, borderColor);
         setupVerticeForRectangle(settingsMenuUx.volumeSlider.recSlider, settingsMenuUx, buttonFillColor, borderColor);
@@ -380,6 +394,27 @@ pub fn setupVertices(state: *main.GameState) !void {
             fontSize,
             &state.vkState.settingsMenuUx.font,
         );
+
+        const fullscreenFillColor = if (settingsMenuUx.fullscreen.hovering) hoverColor else buttonFillColor;
+        setupVerticeForRectangle(settingsMenuUx.fullscreen.rec, settingsMenuUx, fullscreenFillColor, borderColor);
+        _ = fontVulkanZig.paintText(
+            "Fullscreen",
+            .{
+                .x = settingsMenuUx.fullscreen.rec.pos.x + settingsMenuUx.fullscreen.rec.width * 1.05,
+                .y = settingsMenuUx.fullscreen.rec.pos.y - settingsMenuUx.fullscreen.rec.height * 0.1,
+            },
+            fontSize,
+            &state.vkState.settingsMenuUx.font,
+        );
+        if (settingsMenuUx.fullscreen.checked) {
+            sprites.vertices[sprites.verticeCount] = .{
+                .pos = .{ settingsMenuUx.fullscreen.rec.pos.x, settingsMenuUx.fullscreen.rec.pos.y },
+                .imageIndex = imageZig.IMAGE_CHECKMARK,
+                .width = settingsMenuUx.fullscreen.rec.width,
+                .height = settingsMenuUx.fullscreen.rec.height,
+            };
+            sprites.verticeCount += 1;
+        }
 
         const quitFillColor = if (settingsMenuUx.quit.hovering) hoverColor else buttonFillColor;
         setupVerticeForRectangle(settingsMenuUx.quit.rec, settingsMenuUx, quitFillColor, borderColor);

@@ -1,7 +1,5 @@
 tasks:
 - settings icon to top right
-    - open/close with ESC
-    - UI: QUIT
     - UI: Fullscreen <-> Windowed
     - remember settings?
 
