@@ -5,7 +5,10 @@ tasks:
         - image for slider or just rectangle
         - display value at the right
     - UI: Fullscreen <-> Windowed
+    - UI: QUIT
+    - open/close with ESC
 
+- food for starting citizen
 - find out how to publish steam build
 
 - what happens when i reach the last population target

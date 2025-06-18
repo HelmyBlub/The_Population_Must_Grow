@@ -9,19 +9,23 @@ const imageZig = @import("../image.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 const codePerformanceZig = @import("../codePerformance.zig");
 
-pub const VkFont = struct {
+pub const VkFontData = struct {
+    vkFont: VkFont = undefined,
     pipelineLayout: vk.VkPipelineLayout = undefined,
     graphicsPipeline: vk.VkPipeline = undefined,
-    vertexBuffer: vk.VkBuffer = undefined,
-    vertexBufferMemory: vk.VkDeviceMemory = undefined,
-    vertices: []FontVertex = undefined,
     verticeMax: u32 = 900,
-    verticeCountCurrent: u32 = 0,
     mipLevels: u32 = undefined,
     textureImage: vk.VkImage = undefined,
     textureImageMemory: vk.VkDeviceMemory = undefined,
     textureImageView: vk.VkImageView = undefined,
     displayPerformance: bool = false,
+};
+
+pub const VkFont = struct {
+    vertexBuffer: vk.VkBuffer = undefined,
+    vertexBufferMemory: vk.VkDeviceMemory = undefined,
+    vertices: []FontVertex = undefined,
+    verticeCount: usize = 0,
 };
 
 pub const FontVertex = struct {
@@ -72,8 +76,8 @@ pub const FontVertex = struct {
     }
 };
 
-pub fn clear(font: *VkFont) void {
-    font.verticeCountCurrent = 0;
+pub fn clear(font: *VkFontData) void {
+    font.vkFont.verticeCount = 0;
 }
 
 fn dataUpdate(state: *main.GameState) !void {
@@ -83,28 +87,28 @@ fn dataUpdate(state: *main.GameState) !void {
         const textOntoButton = state.vkState.buildOptionsUx.uiButtons[11];
         if (state.actualGameSpeed == state.desiredGameSpeed) {
             const speedFontSize = 30;
-            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
             if (1 > state.desiredGameSpeed) {
-                _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+                _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
             } else {
-                _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, state);
+                _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
             }
         } else {
             const speedFontSize = 16;
-            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, state);
+            const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
             if (1 > state.desiredGameSpeed) {
-                _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+                _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
             } else {
-                _ = try paintNumber(@as(u32, @intFromFloat(state.desiredGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, state);
+                _ = try paintNumber(@as(u32, @intFromFloat(state.desiredGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
             }
-            const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
-            _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, state);
+            const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, &state.vkState.font.vkFont);
+            _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, &state.vkState.font.vkFont);
         }
 
         const textOntoZoomButton = state.vkState.buildOptionsUx.uiButtons[14];
         const zoomFontSize = 30;
-        const textWidth = paintText("Zoom: ", .{ .x = textOntoZoomButton.pos.x, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, state);
-        _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, state);
+        const textWidth = paintText("Zoom: ", .{ .x = textOntoZoomButton.pos.x, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, &state.vkState.font.vkFont);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
 }
@@ -114,29 +118,29 @@ fn displayPerformanceDebugInfo(state: *main.GameState) !void {
         const onePixelYInVulkan = 2 / windowSdlZig.windowData.heightFloat;
         const performanceFontSize = 20.0;
         var offsetY: f32 = -0.99;
-        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, state);
+        const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
         offsetY += onePixelYInVulkan * performanceFontSize;
-        const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, state);
+        const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
         offsetY += onePixelYInVulkan * performanceFontSize;
 
         if (state.cpuPerCent) |cpuPerCent| {
-            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
-            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, state);
+            var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         for (0..state.usedThreadsCount) |threadIndex| {
             const thread = state.threadData[threadIndex];
-            var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.recentlyRemovedChunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
-            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, state);
-            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, state);
+            var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.recentlyRemovedChunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         try codePerformanceZig.paintData(state, offsetY);
@@ -144,14 +148,14 @@ fn displayPerformanceDebugInfo(state: *main.GameState) !void {
 }
 
 /// returns vulkan surface width of text
-pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) f32 {
+pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, vkFont: *VkFont) f64 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
-    var xOffset: f32 = 0;
+    var xOffset: f64 = 0;
     for (chars) |char| {
-        if (state.vkState.font.verticeCountCurrent >= state.vkState.font.verticeMax) break;
+        if (vkFont.verticeCount >= vkFont.vertices.len) break;
         charToTexCoords(char, &texX, &texWidth);
-        state.vkState.font.vertices[state.vkState.font.verticeCountCurrent] = .{
+        vkFont.vertices[vkFont.verticeCount] = .{
             .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
             .color = .{ 1, 0, 0 },
             .texX = texX,
@@ -159,7 +163,7 @@ pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSi
             .size = fontSize,
         };
         xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
-        state.vkState.font.verticeCountCurrent += 1;
+        vkFont.verticeCount += 1;
     }
     return xOffset;
 }
@@ -177,7 +181,7 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSiz
     };
 }
 
-pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, state: *main.GameState) !f32 {
+pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, vkFont: *VkFont) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
     var numberAsString: []u8 = undefined;
@@ -193,9 +197,9 @@ pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSi
     const spacingPosition = (numberAsString.len + 2) % 3;
     const spacing = 20 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
     for (numberAsString, 0..) |char, i| {
-        if (state.vkState.font.verticeCountCurrent >= state.vkState.font.verticeMax) break;
+        if (vkFont.verticeCount >= vkFont.vertices.len) break;
         charToTexCoords(char, &texX, &texWidth);
-        state.vkState.font.vertices[state.vkState.font.verticeCountCurrent] = .{
+        vkFont.vertices[vkFont.verticeCount] = .{
             .pos = .{ vulkanSurfacePosition.x + xOffset, vulkanSurfacePosition.y },
             .color = .{ 1, 0, 0 },
             .texX = texX,
@@ -204,7 +208,7 @@ pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSi
         };
         xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
         if (i % 3 == spacingPosition) xOffset += spacing;
-        state.vkState.font.verticeCountCurrent += 1;
+        vkFont.verticeCount += 1;
     }
     return xOffset;
 }
@@ -233,19 +237,19 @@ pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocat
     vk.vkDestroyImageView(vkState.logicalDevice, vkState.font.textureImageView, null);
     vk.vkDestroyImage(vkState.logicalDevice, vkState.font.textureImage, null);
     vk.vkFreeMemory(vkState.logicalDevice, vkState.font.textureImageMemory, null);
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.font.vertexBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory, null);
+    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.font.vkFont.vertexBuffer, null);
+    vk.vkFreeMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, null);
     vk.vkDestroyPipeline(vkState.logicalDevice, vkState.font.graphicsPipeline, null);
     vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.font.pipelineLayout, null);
-    allocator.free(vkState.font.vertices);
+    allocator.free(vkState.font.vkFont.vertices);
 }
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vkFont.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]FontVertex = @ptrCast(@alignCast(data));
-    @memcpy(gpu_vertices, vkState.font.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.font.vertexBufferMemory);
+    @memcpy(gpu_vertices, vkState.font.vkFont.vertices[0..]);
+    vk.vkUnmapMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory);
 }
 
 pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
@@ -253,10 +257,10 @@ pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.G
     const vkState = &state.vkState;
     try setupVertexDataForGPU(vkState);
     vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
-    const vertexBuffers: [1]vk.VkBuffer = .{vkState.font.vertexBuffer};
+    const vertexBuffers: [1]vk.VkBuffer = .{vkState.font.vkFont.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
     vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, vkState.font.verticeCountCurrent, 1, 0, 0);
+    vk.vkCmdDraw(commandBuffer, @intCast(vkState.font.vkFont.verticeCount), 1, 0, 0);
 }
 
 pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
@@ -400,13 +404,13 @@ pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    vkState.font.vertices = try allocator.alloc(FontVertex, vkState.font.verticeMax);
+    vkState.font.vkFont.vertices = try allocator.alloc(FontVertex, vkState.font.verticeMax);
     try paintVulkanZig.createBuffer(
         @sizeOf(FontVertex) * vkState.font.verticeMax,
         vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &vkState.font.vertexBuffer,
-        &vkState.font.vertexBufferMemory,
+        &vkState.font.vkFont.vertexBuffer,
+        &vkState.font.vkFont.vertexBufferMemory,
         vkState,
     );
 }

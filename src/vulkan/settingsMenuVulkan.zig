@@ -15,7 +15,7 @@ pub const VkSettingsUx = struct {
     triangles: paintVulkanZig.VkTriangles = undefined,
     lines: paintVulkanZig.VkLines = undefined,
     sprites: paintVulkanZig.VkSprites = undefined,
-    font: paintVulkanZig.VkFont = undefined,
+    font: fontVulkanZig.VkFont = undefined,
     settingsIcon: UiRectangle = undefined,
     settingsMenuRectangle: UiRectangle = undefined,
     restart: struct {
@@ -93,7 +93,7 @@ pub fn setupUiLocations(vkState: *paintVulkanZig.Vk_State) void {
         .height = 40 / windowSdlZig.windowData.heightFloat,
         .width = sliderWidth,
         .pos = .{
-            .x = settingsMenuRec.pos.x + sliderSpacingX + sliderOffsetX,
+            .x = settingsMenuRec.pos.x + sliderOffsetX + vulkanSpacingX,
             .y = vkState.settingsMenuUx.restart.rec.pos.y + vkState.settingsMenuUx.restart.rec.height + vulkanSpacingY + 20 / windowSdlZig.windowData.heightFloat,
         },
     };
@@ -101,7 +101,7 @@ pub fn setupUiLocations(vkState: *paintVulkanZig.Vk_State) void {
         .height = 10 / windowSdlZig.windowData.heightFloat,
         .width = dragAreaWidth,
         .pos = .{
-            .x = settingsMenuRec.pos.x + sliderSpacingX,
+            .x = settingsMenuRec.pos.x + sliderWidth / 2 + vulkanSpacingX,
             .y = vkState.settingsMenuUx.restart.rec.pos.y + vkState.settingsMenuUx.restart.rec.height + vulkanSpacingY + 35 / windowSdlZig.windowData.heightFloat,
         },
     };

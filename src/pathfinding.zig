@@ -1086,7 +1086,7 @@ pub fn paintDebugPathfindingVisualizationFont(state: *main.GameState) !void {
         if (optGraphIndex) |graphIndex| {
             const mapPosition = getMapPositionForPathingIndex(chunk, i);
             const vulkanPosition = mapZig.mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, state.camera);
-            _ = try fontVulkanZig.paintNumber(@as(u32, @intCast(graphIndex)), vulkanPosition, 16, state);
+            _ = try fontVulkanZig.paintNumber(@as(u32, @intCast(graphIndex)), vulkanPosition, 16, &state.vkState.font.vkFont);
         }
     }
 }

@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    exe.subsystem = .Windows;
     exe.addIncludePath(b.path("dependencies"));
     exe.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
 

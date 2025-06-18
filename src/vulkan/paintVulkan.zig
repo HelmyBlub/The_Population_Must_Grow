@@ -77,7 +77,7 @@ pub const Vk_State = struct {
     entityPaintCountLayer2: u32 = 0,
     vertices: []SpriteWithGlobalTransformVertex = undefined,
     rectangle: rectangleVulkanZig.VkRectangle = undefined,
-    font: fontVulkanZig.VkFont = .{},
+    font: fontVulkanZig.VkFontData = .{},
     citizen: citizenVulkanZig.VkCitizen = .{},
     path: spritePathVulkanZig.VkPathVertices = .{},
     buildOptionsUx: buildOptionsUxVulkanZig.VkBuildOptionsUx = .{},
@@ -106,13 +106,6 @@ pub const VkSprites = struct {
     vertexBuffer: vk.VkBuffer = undefined,
     vertexBufferMemory: vk.VkDeviceMemory = undefined,
     vertices: []SpriteVertex = undefined,
-    verticeCount: usize = 0,
-};
-
-pub const VkFont = struct {
-    vertexBuffer: vk.VkBuffer = undefined,
-    vertexBufferMemory: vk.VkDeviceMemory = undefined,
-    vertices: []fontVulkanZig.FontVertex = undefined,
     verticeCount: usize = 0,
 };
 
