@@ -1,4 +1,5 @@
 const std = @import("std");
+const buildin = @import("builtin");
 const sdl = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
@@ -127,53 +128,10 @@ pub fn handleEvents(state: *main.GameState) !void {
                 try settingsMenuUxVulkanZig.setupVertices(state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F2) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    state.testData.?.fpsLimiter = true;
-                    state.testData.?.skipSaveAndLoad = false;
-                }
-                state.testData.?.forceSingleCore = true;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F3) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    state.testData.?.fpsLimiter = true;
-                    state.testData.?.skipSaveAndLoad = false;
-                }
-                state.testData.?.forceSingleCore = false;
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F5) {
-                if (state.usedThreadsCount < state.maxThreadCount) {
-                    try main.changeUsedThreadCount(state.usedThreadsCount + 1, state);
-                    state.autoBalanceThreadCount = false;
-                    std.debug.print("threadCount increased to {d}\n", .{state.usedThreadsCount});
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F6) {
-                if (state.usedThreadsCount > 1) {
-                    try main.changeUsedThreadCount(state.usedThreadsCount - 1, state);
-                    state.autoBalanceThreadCount = false;
-                    std.debug.print("threadCount decreased to {d}\n", .{state.usedThreadsCount});
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F8) {
-                if (state.testData == null) {
-                    state.testData = testZig.createTestData(state.allocator);
-                    state.testData.?.fpsLimiter = true;
-                    state.testData.?.skipSaveAndLoad = false;
-                    try testZig.setupTestInputsXAreas(&state.testData.?);
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F10) {
-                try main.deleteSaveAndRestart(state);
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F11) {
-                std.debug.print("thread performance\n", .{});
-                for (state.threadData, 0..) |threadData, index| {
-                    if (threadData.measureData.performancePerTickedCitizens) |performance| {
-                        std.debug.print("    {} {} {}\n", .{ index, performance, threadData.measureData.lastMeasureTime });
-                    }
-                }
-            } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
-                //
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }
+            if (buildin.mode == .Debug) try debugKeyBinds(state, event.key.scancode);
         } else if (event.type == sdl.SDL_EVENT_KEY_DOWN) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_A) {
                 state.keyboardInfo.cameraMoveX = -10;
@@ -188,6 +146,54 @@ pub fn handleEvents(state: *main.GameState) !void {
             std.debug.print("clicked window X \n", .{});
             state.gameEnd = true;
         }
+    }
+}
+
+fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
+    if (scancode == sdl.SDL_SCANCODE_F2) {
+        if (state.testData == null) {
+            state.testData = testZig.createTestData(state.allocator);
+            state.testData.?.fpsLimiter = true;
+            state.testData.?.skipSaveAndLoad = false;
+        }
+        state.testData.?.forceSingleCore = true;
+    } else if (scancode == sdl.SDL_SCANCODE_F3) {
+        if (state.testData == null) {
+            state.testData = testZig.createTestData(state.allocator);
+            state.testData.?.fpsLimiter = true;
+            state.testData.?.skipSaveAndLoad = false;
+        }
+        state.testData.?.forceSingleCore = false;
+    } else if (scancode == sdl.SDL_SCANCODE_F5) {
+        if (state.usedThreadsCount < state.maxThreadCount) {
+            try main.changeUsedThreadCount(state.usedThreadsCount + 1, state);
+            state.autoBalanceThreadCount = false;
+            std.debug.print("threadCount increased to {d}\n", .{state.usedThreadsCount});
+        }
+    } else if (scancode == sdl.SDL_SCANCODE_F6) {
+        if (state.usedThreadsCount > 1) {
+            try main.changeUsedThreadCount(state.usedThreadsCount - 1, state);
+            state.autoBalanceThreadCount = false;
+            std.debug.print("threadCount decreased to {d}\n", .{state.usedThreadsCount});
+        }
+    } else if (scancode == sdl.SDL_SCANCODE_F8) {
+        if (state.testData == null) {
+            state.testData = testZig.createTestData(state.allocator);
+            state.testData.?.fpsLimiter = true;
+            state.testData.?.skipSaveAndLoad = false;
+            try testZig.setupTestInputsXAreas(&state.testData.?);
+        }
+    } else if (scancode == sdl.SDL_SCANCODE_F10) {
+        try main.deleteSaveAndRestart(state);
+    } else if (scancode == sdl.SDL_SCANCODE_F11) {
+        std.debug.print("thread performance\n", .{});
+        for (state.threadData, 0..) |threadData, index| {
+            if (threadData.measureData.performancePerTickedCitizens) |performance| {
+                std.debug.print("    {} {} {}\n", .{ index, performance, threadData.measureData.lastMeasureTime });
+            }
+        }
+    } else if (scancode == sdl.SDL_SCANCODE_F12) {
+        //
     }
 }
 
