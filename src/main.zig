@@ -54,7 +54,7 @@ pub const GameState: type = struct {
     maxThreadCount: usize,
     usedThreadsCount: usize,
     minCitizenPerThread: u32 = 15000,
-    saveAndLoadThread: saveZig.SaveAndLoadThread = undefined,
+    saveAndLoadThread: ?saveZig.SaveAndLoadThread = null,
     threadData: []ThreadData = undefined,
     autoBalanceThreadCount: bool = true,
     activeChunkAllowedPathIndex: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
@@ -136,25 +136,6 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     try startGame(allocator, false);
-}
-
-var stateForPanicAccess: ?*GameState = null;
-// pub const panic = std.debug.FullPanic(myPanic);
-fn myPanic(msg: []const u8, first_trace_addr: ?usize) noreturn {
-    _ = first_trace_addr;
-    std.debug.print("Panic! {s}\n", .{msg});
-    if (stateForPanicAccess) |state| {
-        if (state.gameTimeMs > 0) {
-            saveZig.destroySaveAndLoadThread(state);
-            saveZig.saveGeneralDataToFile(state) catch {
-                std.debug.print("failed to save general data\n", .{});
-            };
-            saveZig.saveAllChunkAreasBeforeQuit(state) catch {
-                std.debug.print("failed to save chunkArea data\n", .{});
-            };
-        }
-    }
-    std.process.exit(1);
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
@@ -698,14 +679,14 @@ fn handleRequestToLoadChunkAreaKeys(state: *GameState) !void {
             }
             if (!chunkArea.?.requestedToLoad and chunkArea.?.chunks == null) {
                 chunkArea.?.requestedToLoad = true;
-                try state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex].loadAreaKey.append(areaKey);
+                try state.saveAndLoadThread.?.data[state.saveAndLoadThread.?.addDataIndex].loadAreaKey.append(areaKey);
             }
         }
-        const nextAddIndex = @mod(state.saveAndLoadThread.addDataIndex + 1, saveZig.SaveAndLoadThread.DATA_LEN);
-        if (nextAddIndex != state.saveAndLoadThread.saveAndLoadThreadDataIndex) {
+        const nextAddIndex = @mod(state.saveAndLoadThread.?.addDataIndex + 1, saveZig.SaveAndLoadThread.DATA_LEN);
+        if (nextAddIndex != state.saveAndLoadThread.?.saveAndLoadThreadDataIndex) {
             try state.chunkAreas.ensureUnusedCapacity(40);
-            state.saveAndLoadThread.addDataIndex = nextAddIndex;
-            const saveAndLoadData = &state.saveAndLoadThread.data[state.saveAndLoadThread.addDataIndex];
+            state.saveAndLoadThread.?.addDataIndex = nextAddIndex;
+            const saveAndLoadData = &state.saveAndLoadThread.?.data[state.saveAndLoadThread.?.addDataIndex];
             for (saveAndLoadData.loadedAreaData.items) |areaChunksData| {
                 if (state.chunkAreas.getPtr(areaChunksData.areaKey)) |chunkArea| {
                     if (chunkArea.chunks == null) {

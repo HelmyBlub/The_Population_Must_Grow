@@ -1,12 +1,12 @@
 tasks:
-- save on crash/panic?
-    - started something in main
-- check "ensureUnusedCapacity" values
+ check "ensureUnusedCapacity" values
 - check: make map round?
     - or check if limit to break game can be reached in reasonable time
-
+        - i guess it is reachable in few hours
+ 
 - check steam achivements
 
+- what if game crashes on load, before player can restart?
 - think about what to do with test f-keys
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
@@ -21,8 +21,6 @@ tasks:
     - put on steam
 
 Offstream:
-    - find out how to publish steam build
-        - trailer
     - check steam achivements if doable on stream
     - test linux build
     - do i know someone for a mac build test?

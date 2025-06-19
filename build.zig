@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -10,7 +11,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    // exe.subsystem = .Windows;
+    if (builtin.mode == .ReleaseFast) {
+        // exe.subsystem = .Windows;
+    }
     exe.addIncludePath(b.path("dependencies"));
     exe.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
 

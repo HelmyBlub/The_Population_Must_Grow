@@ -86,23 +86,25 @@ pub fn createSaveAndLoadThread(state: *main.GameState) !void {
 }
 
 pub fn destroySaveAndLoadThread(state: *main.GameState) void {
-    state.saveAndLoadThread.thread.join();
-    for (state.saveAndLoadThread.data) |data| {
-        data.loadAreaKey.deinit();
-        data.saveAreaKey.deinit();
-        for (data.loadedAreaData.items) |area| {
-            for (area.chunks) |*chunk| {
-                mapZig.destroyChunk(chunk);
+    if (state.saveAndLoadThread) |saveAndLoad| {
+        saveAndLoad.thread.join();
+        for (saveAndLoad.data) |data| {
+            data.loadAreaKey.deinit();
+            data.saveAreaKey.deinit();
+            for (data.loadedAreaData.items) |area| {
+                for (area.chunks) |*chunk| {
+                    mapZig.destroyChunk(chunk);
+                }
+                state.allocator.free(area.chunks);
             }
-            state.allocator.free(area.chunks);
+            data.loadedAreaData.deinit();
         }
-        data.loadedAreaData.deinit();
     }
 }
 
 fn saveAndLoadThreadTick(state: *main.GameState) !void {
     while (!state.gameEnd) {
-        const currentData = &state.saveAndLoadThread.data[state.saveAndLoadThread.saveAndLoadThreadDataIndex];
+        const currentData = &state.saveAndLoadThread.?.data[state.saveAndLoadThread.?.saveAndLoadThreadDataIndex];
         for (currentData.loadAreaKey.items) |areaKey| {
             const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
             if (DEBUG_INFO_SAVE) std.debug.print("request ", .{}); // load function will log more text
@@ -115,11 +117,11 @@ fn saveAndLoadThreadTick(state: *main.GameState) !void {
             try currentData.loadedAreaData.append(.{ .chunks = chunks, .areaKey = areaKey });
         }
         currentData.loadAreaKey.clearRetainingCapacity();
-        while (!state.gameEnd and state.saveAndLoadThread.addDataIndex == @mod(state.saveAndLoadThread.saveAndLoadThreadDataIndex + 1, SaveAndLoadThread.DATA_LEN)) {
+        while (!state.gameEnd and state.saveAndLoadThread.?.addDataIndex == @mod(state.saveAndLoadThread.?.saveAndLoadThreadDataIndex + 1, SaveAndLoadThread.DATA_LEN)) {
             // wait for next to be ready
             std.time.sleep(10_000_000);
         }
-        if (!state.gameEnd) state.saveAndLoadThread.saveAndLoadThreadDataIndex = @mod(state.saveAndLoadThread.saveAndLoadThreadDataIndex + 1, SaveAndLoadThread.DATA_LEN);
+        if (!state.gameEnd) state.saveAndLoadThread.?.saveAndLoadThreadDataIndex = @mod(state.saveAndLoadThread.?.saveAndLoadThreadDataIndex + 1, SaveAndLoadThread.DATA_LEN);
     }
 }
 
