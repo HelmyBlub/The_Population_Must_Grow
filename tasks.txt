@@ -1,5 +1,4 @@
 tasks:
-- bug: path flickering if painting
 - bug: first test can have memory leaks
         D:\mein\github_gamedev\Zig_ChatSim\src\map.zig:1196:42: 0x7ff7f3655df0 in createChunk (test.exe.obj)
                         try mapChunk.trees.append(tree);

@@ -86,7 +86,7 @@ pub fn createSaveAndLoadThread(state: *main.GameState) !void {
 }
 
 pub fn destroySaveAndLoadThread(state: *main.GameState) void {
-    if (state.saveAndLoadThread) |saveAndLoad| {
+    if (state.saveAndLoadThread) |*saveAndLoad| {
         saveAndLoad.thread.join();
         for (saveAndLoad.data) |data| {
             data.loadAreaKey.deinit();
