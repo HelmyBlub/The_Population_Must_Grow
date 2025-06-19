@@ -37,7 +37,7 @@ const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_2 = 23;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_3 = 24;
 const SAVE_BIG_BUILDING_BUILD_ORDER_HALVE_DONE_CITIZEN_4 = 25;
 const SAVE_BLOCKING = 26;
-const FILE_NAME_GENERAL_DATA = "general.data";
+const FILE_NAME_GENERAL_DATA = "general.dat";
 
 pub const SaveAndLoadThread = struct {
     thread: std.Thread,

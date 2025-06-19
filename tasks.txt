@@ -5,7 +5,7 @@ tasks:
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
 
 - what if game crashes on load, before player can restart?
-- think about what to do with test f-keys
+    - could not create files to break game, so should be fine
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
