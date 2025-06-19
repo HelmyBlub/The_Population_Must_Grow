@@ -79,7 +79,7 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
             if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
             const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
             const len = chunk.pathes.items.len;
-            if (len > 0 and index + len < max) {
+            if (len > 0 and index + len <= max) {
                 const dest: [*]main.Position = @ptrCast(@alignCast(vkState.path.vertices[index..(index + len)]));
                 @memcpy(dest, chunk.pathes.items[0..len]);
                 entitiesCounter += @intCast(len);
