@@ -448,6 +448,20 @@ fn autoBalanceActualGameSpeed(state: *GameState) void {
     }
 }
 
+pub fn limitCameraArea(state: *GameState) void {
+    const limit = (chunkAreaZig.ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 20) * chunkAreaZig.ChunkArea.SIZE * mapZig.GameMap.CHUNK_SIZE;
+    if (state.camera.position.x < -limit) {
+        state.camera.position.x = -limit;
+    } else if (state.camera.position.x > limit) {
+        state.camera.position.x = limit;
+    }
+    if (state.camera.position.y < -limit) {
+        state.camera.position.y = -limit;
+    } else if (state.camera.position.y > limit) {
+        state.camera.position.y = limit;
+    }
+}
+
 pub fn setZoom(zoom: f32, state: *GameState, toMouse: bool) void {
     var limitedZoom = zoom;
     if (limitedZoom > 10) {
@@ -468,6 +482,7 @@ pub fn setZoom(zoom: f32, state: *GameState, toMouse: bool) void {
         state.camera.position.x -= translateX;
         state.camera.position.y -= translateY;
     }
+    limitCameraArea(state);
 }
 
 pub fn setGameSpeed(speed: f32, state: *GameState) void {

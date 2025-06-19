@@ -94,6 +94,7 @@ pub fn handleEvents(state: *main.GameState) !void {
                 state.camera.position.x -= event.motion.xrel / state.camera.zoom;
                 state.camera.position.y -= event.motion.yrel / state.camera.zoom;
             }
+            main.limitCameraArea(state);
         } else if (event.type == sdl.SDL_EVENT_MOUSE_WHEEL) {
             if (event.wheel.y > 0) {
                 main.setZoom(state.camera.zoom / 0.8, state, true);

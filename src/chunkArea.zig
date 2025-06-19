@@ -35,7 +35,28 @@ pub const ChunkArea: type = struct {
     dontUnloadBeforeTime: u32,
     requestedToLoad: bool = false,
     pub const SIZE = 20;
+    pub const MAX_AREA_ROWS_COLUMNS: comptime_int = 20_000;
 };
+
+test "chunks limits" {
+    const areaXYs = [_]ChunkAreaXY{
+        .{ .areaX = 0, .areaY = 0 },
+        .{ .areaX = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1, .areaY = 0 },
+        .{ .areaX = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1, .areaY = 0 },
+        .{ .areaX = 0, .areaY = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1 },
+        .{ .areaX = 0, .areaY = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1 },
+        .{ .areaX = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1, .areaY = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1 },
+        .{ .areaX = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1, .areaY = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1 },
+        .{ .areaX = ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 - 1, .areaY = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1 },
+        .{ .areaX = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1, .areaY = -ChunkArea.MAX_AREA_ROWS_COLUMNS / 2 + 1 },
+    };
+    for (areaXYs) |areaXY| {
+        const resultAreaXY = getAreaXyForKey(getKeyForAreaXY(areaXY));
+        if (areaXY.areaX != resultAreaXY.areaX or areaXY.areaY != resultAreaXY.areaY) {
+            std.debug.print("expected: {}, result {}\n", .{ areaXY, resultAreaXY });
+        }
+    }
+}
 
 test "temp split active chunks" {
     const areaSize = ChunkArea.SIZE;
@@ -82,18 +103,18 @@ pub fn getChunkAreaXyForChunkXy(chunkXY: mapZig.ChunkXY) ChunkAreaXY {
     };
 }
 
-pub fn getKeyForAreaXY(areaXY: ChunkAreaXY) u32 {
-    return @intCast(areaXY.areaX * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS + areaXY.areaY + mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS);
+pub fn getKeyForAreaXY(areaXY: ChunkAreaXY) u64 {
+    return @intCast(areaXY.areaX * ChunkArea.MAX_AREA_ROWS_COLUMNS + areaXY.areaY + ChunkArea.MAX_AREA_ROWS_COLUMNS * ChunkArea.MAX_AREA_ROWS_COLUMNS);
 }
 
 pub fn getAreaXyForKey(chunkKey: u64) ChunkAreaXY {
     var tempAreaXY: ChunkAreaXY = .{
-        .areaX = @divFloor(@as(i32, @intCast(chunkKey)) - mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS, mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS),
-        .areaY = @mod(@as(i32, @intCast(chunkKey)) - mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS * mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS, mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS),
+        .areaX = @divFloor(@as(i32, @intCast(chunkKey)) - ChunkArea.MAX_AREA_ROWS_COLUMNS * ChunkArea.MAX_AREA_ROWS_COLUMNS, ChunkArea.MAX_AREA_ROWS_COLUMNS),
+        .areaY = @mod(@as(i32, @intCast(chunkKey)) - ChunkArea.MAX_AREA_ROWS_COLUMNS * ChunkArea.MAX_AREA_ROWS_COLUMNS, ChunkArea.MAX_AREA_ROWS_COLUMNS),
     };
 
-    if (tempAreaXY.areaY > mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS / 2) {
-        tempAreaXY.areaY -= mapZig.GameMap.MAX_CHUNKS_ROWS_COLUMNS;
+    if (tempAreaXY.areaY > ChunkArea.MAX_AREA_ROWS_COLUMNS / 2) {
+        tempAreaXY.areaY -= ChunkArea.MAX_AREA_ROWS_COLUMNS;
         tempAreaXY.areaX += 1;
     }
     return tempAreaXY;

@@ -10,7 +10,6 @@ pub const GameMap = struct {
     pub const CHUNK_LENGTH: comptime_int = 16;
     pub const TILE_SIZE: comptime_int = 20;
     pub const CHUNK_SIZE: comptime_int = GameMap.CHUNK_LENGTH * GameMap.TILE_SIZE;
-    pub const MAX_CHUNKS_ROWS_COLUMNS: comptime_int = 10_000;
     pub const MAX_BUILDING_TILE_RADIUS: comptime_int = 1;
 };
 
@@ -1134,19 +1133,6 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
 
 pub fn getChunkIndexForChunkXY(chunkXY: ChunkXY) usize {
     return chunkAreaZig.chunkKeyOrder[@intCast(@mod(chunkXY.chunkX, chunkAreaZig.ChunkArea.SIZE))][@intCast(@mod(chunkXY.chunkY, chunkAreaZig.ChunkArea.SIZE))];
-}
-
-pub fn getChunkXyForKey(chunkKey: u64) ChunkXY {
-    var tempChunkXY: ChunkXY = .{
-        .chunkX = @divFloor(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
-        .chunkY = @mod(@as(i32, @intCast(chunkKey)) - GameMap.MAX_CHUNKS_ROWS_COLUMNS * GameMap.MAX_CHUNKS_ROWS_COLUMNS, GameMap.MAX_CHUNKS_ROWS_COLUMNS),
-    };
-
-    if (tempChunkXY.chunkY > GameMap.MAX_CHUNKS_ROWS_COLUMNS / 2) {
-        tempChunkXY.chunkY -= GameMap.MAX_CHUNKS_ROWS_COLUMNS;
-        tempChunkXY.chunkX += 1;
-    }
-    return tempChunkXY;
 }
 
 pub fn getChunkXyForPosition(position: main.Position) ChunkXY {

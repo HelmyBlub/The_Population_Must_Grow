@@ -64,6 +64,7 @@ pub fn tick(state: *main.GameState) void {
     if (keyboardInfo.cameraMoveY != 0) {
         state.camera.position.y += keyboardInfo.cameraMoveY / state.camera.zoom;
     }
+    main.limitCameraArea(state);
 }
 
 pub fn executeAction(actionType: ActionType, state: *main.GameState) !void {

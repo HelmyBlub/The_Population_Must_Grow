@@ -1,10 +1,25 @@
 tasks:
- check "ensureUnusedCapacity" values
-- check: make map round?
-    - or check if limit to break game can be reached in reasonable time
-        - i guess it is reachable in few hours
- 
+- map limits can be reached. how to handle not to break
+    - prevent player from going to far
+    - what is my estimated max citizen count
+
+
+- bug: path flickering if painting
+- bug: first test can have memory leaks
+        D:\mein\github_gamedev\Zig_ChatSim\src\map.zig:1196:42: 0x7ff7f3655df0 in createChunk (test.exe.obj)
+                        try mapChunk.trees.append(tree);
+                                                ^
+        D:\mein\github_gamedev\Zig_ChatSim\src\chunkArea.zig:172:75: 0x7ff7f36562c2 in createChunkAreaDataWhenNoFile (test.exe.obj)
+                    chunks[chunkKeyOrder[chunkX][chunkY]] = try mapZig.createChunk(.{
+                                                                                ^
+        D:\mein\github_gamedev\Zig_ChatSim\src\save.zig:115:72: 0x7ff7f37374e2 in saveAndLoadThreadTick (test.exe.obj)
+                        chunks = try chunkAreaZig.createChunkAreaDataWhenNoFile(areaXY, state);
+                                                                            ^
+        C:\Zeugs\zig\lib\std\Thread.zig:507:21: 0x7ff7f36c5398 in callFn__anon_29841 (test.exe.obj)
+
 - check steam achivements
+- play test with big buildings more
+    - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
 
 - what if game crashes on load, before player can restart?
 - think about what to do with test f-keys
@@ -26,6 +41,5 @@ Offstream:
     - do i know someone for a mac build test?
   
 Some data:
-- FPS: 116, citizens: 33074, gameTime: 330000, end FPS: 85.333954 (18.06.2025)
+- FPS: 114, citizens: 32390, gameTime: 330000, end FPS: 80.47685 (19.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 116, citizens: 32390, gameTime: 330000, end FPS: 83.285225 (changed spawn area)
