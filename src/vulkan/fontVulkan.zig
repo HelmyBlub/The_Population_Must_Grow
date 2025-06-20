@@ -416,7 +416,7 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/fontVert.spv", allocator);
     defer allocator.free(vertShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
@@ -427,7 +427,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pName = "main",
     };
 
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontFrag.spv", allocator);
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/fontFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
@@ -438,7 +438,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pName = "main",
     };
 
-    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/fontGeom.spv", allocator);
+    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/fontGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const geomShaderModule = try paintVulkanZig.createShaderModule(geomShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);

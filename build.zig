@@ -3,16 +3,16 @@ const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
-    // const optimize: std.builtin.OptimizeMode = .ReleaseFast;
+    // const optimize: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
+    const optimize: std.builtin.OptimizeMode = .ReleaseFast;
     const exe = b.addExecutable(.{
         .name = "thePopulationMustGrow",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    if (builtin.mode == .ReleaseFast) {
-        // exe.subsystem = .Windows;
+    if (optimize == .ReleaseFast) {
+        exe.subsystem = .Windows;
     }
     exe.addIncludePath(b.path("dependencies"));
     exe.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });

@@ -1,7 +1,7 @@
 tasks:
 - fix validation problems
     - check minimize
-- split image xcf files from images to not deploy to steam with
+- shader split
 - UX:   
     - double UI Size
 

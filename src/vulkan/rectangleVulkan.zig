@@ -83,9 +83,9 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/rectangleVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/rectangleVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/rectangleFrag.spv", allocator);
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/rectangleFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);

@@ -1394,11 +1394,11 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 }
 
 fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try readShaderFile("shaders/compiled/spriteWithGlobalTransformVert.spv", allocator);
+    const vertShaderCode = try readShaderFile("shaders/spriteWithGlobalTransformVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try readShaderFile("shaders/compiled/imageFrag.spv", allocator);
+    const fragShaderCode = try readShaderFile("shaders/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
-    const geomShaderCode = try readShaderFile("shaders/compiled/spriteWithGlobalTransformGeom.spv", allocator);
+    const geomShaderCode = try readShaderFile("shaders/spriteWithGlobalTransformGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const vertShaderModule = try createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);

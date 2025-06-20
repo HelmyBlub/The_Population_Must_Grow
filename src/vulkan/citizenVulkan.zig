@@ -193,11 +193,11 @@ pub fn destroyCitizen(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allo
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/citizenVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/citizenVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/imageFrag.spv", allocator);
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
-    const geomShaderCitizenComplexCode = try paintVulkanZig.readShaderFile("shaders/compiled/citizenGeom.spv", allocator);
+    const geomShaderCitizenComplexCode = try paintVulkanZig.readShaderFile("shaders/citizenGeom.spv", allocator);
     defer allocator.free(geomShaderCitizenComplexCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);

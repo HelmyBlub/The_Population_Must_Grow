@@ -152,11 +152,11 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, entityCount: u64, alloc
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/spritePathWithGlobalTransformVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/spritePathWithGlobalTransformVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/imageFrag.spv", allocator);
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
-    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/spriteWithGlobalTransformGeom.spv", allocator);
+    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/spriteWithGlobalTransformGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);

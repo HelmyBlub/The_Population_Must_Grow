@@ -576,11 +576,11 @@ pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameS
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
-    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/spriteVert.spv", allocator);
+    const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/spriteVert.spv", allocator);
     defer allocator.free(vertShaderCode);
-    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/spriteGeom.spv", allocator);
+    const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/spriteGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
-    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/compiled/imageFrag.spv", allocator);
+    const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
     defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
