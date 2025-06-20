@@ -821,7 +821,7 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
         },
         .{
             .type = vk.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = Vk_State.MAX_FRAMES_IN_FLIGHT,
+            .descriptorCount = (imageZig.IMAGE_DATA.len + 1) * Vk_State.MAX_FRAMES_IN_FLIGHT,
         },
     };
 
