@@ -1,16 +1,15 @@
 tasks:
-- fix validation problems
-    - check minimize
-- shader split
 - UX:   
     - double UI Size
-
 - check steam achivements
+    - test icon created. Can do others in the same way
+    - how to with zig. A way that could work but not that great: https://zig.news/chapliboy/implementing-steamworks-api-in-zig-5dj3
+- advertise my steam link somewhere on my twitch https://store.steampowered.com/app/3820960/The_Population_Must_Grow/?
+
+
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
 
-- what if game crashes on load, before player can restart?
-    - could not create files to break game, so should be fine
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
@@ -18,6 +17,7 @@ tasks:
 - delete test branches?
 - change to new git repo, remo
 - check background music?
+- update readme
 
 - features:
     - bugfixing/testing

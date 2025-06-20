@@ -19,6 +19,8 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_revision.h");
     @cInclude("SDL3/SDL_vulkan.h");
 });
+pub extern fn SteamAPI_InitFlat(err: ?*[1024]u8) u32;
+pub extern fn SteamAPI_Shutdown() void;
 
 pub const GameState: type = struct {
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
@@ -135,7 +137,18 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    if (SteamAPI_InitFlat(null) == 0) {
+        // var user = c.get_steam_user();
+        // const steam_id = c.get_steam_id(user);
+        // steam_user_stats = c.get_steam_user_stats();
+        // _ = c.steam_request_user_stats(steam_user_stats, steam_id);
+        // if (constants.BUILDER_MODE) helpers.debug_print("steam init done: user stats {d}\n", .{steam_id});
+        std.debug.print("steam init worked1\n", .{});
+    } else {
+        std.debug.print("steam init failed\n", .{});
+    }
     try startGame(allocator, false);
+    SteamAPI_Shutdown();
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {

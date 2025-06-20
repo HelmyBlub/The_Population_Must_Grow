@@ -7,3 +7,4 @@
 zig-out/*
 *.o
 temp*.txt
+*/steam_api64.dll
