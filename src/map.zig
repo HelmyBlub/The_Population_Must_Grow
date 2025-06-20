@@ -927,6 +927,10 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameSta
                         if (newBuildingChunk != chunk) {
                             const moveCitizen = chunk.citizens.swapRemove(i);
                             try newBuildingChunk.citizens.append(moveCitizen);
+                            if (chunk.chunkXY.chunkX != newBuildingChunk.chunkXY.chunkX or chunk.chunkXY.chunkY != newBuildingChunk.chunkXY.chunkY) {
+                                chunk.workingCitizenCounter -= 1;
+                                newBuildingChunk.workingCitizenCounter += 1;
+                            }
                         }
                         break;
                     }
