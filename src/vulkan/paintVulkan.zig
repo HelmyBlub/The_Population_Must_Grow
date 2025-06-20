@@ -51,7 +51,7 @@ pub const Vk_State = struct {
     command_pool: vk.VkCommandPool = undefined,
     command_buffer: []vk.VkCommandBuffer = undefined,
     imageAvailableSemaphore: []vk.VkSemaphore = undefined,
-    renderFinishedSemaphore: []vk.VkSemaphore = undefined,
+    submitSemaphores: []vk.VkSemaphore = undefined,
     inFlightFence: []vk.VkFence = undefined,
     currentFrame: u16 = 0,
     vertexBufferSize: u64 = 0,
@@ -513,6 +513,7 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(state: *main.GameState, allocat
             return false;
         }
 
+        _ = vk.vkDeviceWaitIdle(state.vkState.logicalDevice);
         try createSwapChain(vkState, allocator);
         try createImageViews(vkState, allocator);
         try createColorResources(vkState);
@@ -956,8 +957,10 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         vk.vkDestroySemaphore(vkState.logicalDevice, vkState.imageAvailableSemaphore[i], null);
-        vk.vkDestroySemaphore(vkState.logicalDevice, vkState.renderFinishedSemaphore[i], null);
         vk.vkDestroyFence(vkState.logicalDevice, vkState.inFlightFence[i], null);
+    }
+    for (0..vkState.submitSemaphores.len) |i| {
+        vk.vkDestroySemaphore(vkState.logicalDevice, vkState.submitSemaphores[i], null);
     }
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
@@ -995,7 +998,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     allocator.free(vkState.textureImageView);
     allocator.free(vkState.descriptorSets);
     allocator.free(vkState.imageAvailableSemaphore);
-    allocator.free(vkState.renderFinishedSemaphore);
+    allocator.free(vkState.submitSemaphores);
     allocator.free(vkState.inFlightFence);
     allocator.free(vkState.command_buffer);
     allocator.free(vkState.textureImage);
@@ -1103,7 +1106,14 @@ pub fn drawFrame(state: *main.GameState) !void {
 
     try codePerformanceZig.startMeasure("    vulkan acquire next image", &state.codePerformanceData);
     var imageIndex: u32 = undefined;
-    const acquireImageResult = vk.vkAcquireNextImageKHR(vkState.logicalDevice, vkState.swapchain, std.math.maxInt(u64), vkState.imageAvailableSemaphore[vkState.currentFrame], null, &imageIndex);
+    const acquireImageResult = vk.vkAcquireNextImageKHR(
+        vkState.logicalDevice,
+        vkState.swapchain,
+        std.math.maxInt(u64),
+        vkState.imageAvailableSemaphore[vkState.currentFrame],
+        null,
+        &imageIndex,
+    );
 
     if (acquireImageResult == vk.VK_ERROR_OUT_OF_DATE_KHR) {
         try recreateSwapChain(state, state.allocator);
@@ -1127,14 +1137,14 @@ pub fn drawFrame(state: *main.GameState) !void {
         .commandBufferCount = 1,
         .pCommandBuffers = &vkState.command_buffer[vkState.currentFrame],
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &[_]vk.VkSemaphore{vkState.renderFinishedSemaphore[vkState.currentFrame]},
+        .pSignalSemaphores = &[_]vk.VkSemaphore{vkState.submitSemaphores[imageIndex]},
     };
     try vkcheck(vk.vkQueueSubmit(vkState.queue, 1, &submitInfo, vkState.inFlightFence[vkState.currentFrame]), "Failed to Queue Submit.");
 
     var presentInfo = vk.VkPresentInfoKHR{
         .sType = vk.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &[_]vk.VkSemaphore{vkState.renderFinishedSemaphore[vkState.currentFrame]},
+        .pWaitSemaphores = &[_]vk.VkSemaphore{vkState.submitSemaphores[imageIndex]},
         .swapchainCount = 1,
         .pSwapchains = &[_]vk.VkSwapchainKHR{vkState.swapchain},
         .pImageIndices = &imageIndex,
@@ -1160,16 +1170,21 @@ fn createSyncObjects(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .flags = vk.VK_FENCE_CREATE_SIGNALED_BIT,
     };
     vkState.imageAvailableSemaphore = try allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    vkState.renderFinishedSemaphore = try allocator.alloc(vk.VkSemaphore, Vk_State.MAX_FRAMES_IN_FLIGHT);
+    vkState.submitSemaphores = try allocator.alloc(vk.VkSemaphore, vkState.swapchain_info.images.len);
     vkState.inFlightFence = try allocator.alloc(vk.VkFence, Vk_State.MAX_FRAMES_IN_FLIGHT);
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vk.vkCreateSemaphore(vkState.logicalDevice, &semaphoreInfo, null, &vkState.imageAvailableSemaphore[i]) != vk.VK_SUCCESS or
-            vk.vkCreateSemaphore(vkState.logicalDevice, &semaphoreInfo, null, &vkState.renderFinishedSemaphore[i]) != vk.VK_SUCCESS or
             vk.vkCreateFence(vkState.logicalDevice, &fenceInfo, null, &vkState.inFlightFence[i]) != vk.VK_SUCCESS)
         {
             std.debug.print("Failed to Create Semaphore or Create Fence.\n", .{});
             return error.FailedToCreateSyncObjects;
+        }
+    }
+    for (0..vkState.submitSemaphores.len) |i| {
+        if (vk.vkCreateSemaphore(vkState.logicalDevice, &semaphoreInfo, null, &vkState.submitSemaphores[i]) != vk.VK_SUCCESS) {
+            std.debug.print("Failed to Create submit Semaphore .\n", .{});
+            return error.FailedToCreateSyncObjects2;
         }
     }
 }

@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
 }
 
 fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency) void {
-    const vulkan_sdk = "C:/Zeugs/VulkanSDK/1.4.304.1/";
+    const vulkan_sdk = "C:/Zeugs/VulkanSDK/1.4.313.2/";
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include" });
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include/vulkan" });
     compile.addLibraryPath(.{ .cwd_relative = vulkan_sdk ++ "lib" });

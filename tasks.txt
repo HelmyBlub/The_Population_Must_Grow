@@ -1,5 +1,6 @@
 tasks:
-
+- fix validation problems
+    - check minimize
 - check steam achivements
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
@@ -13,6 +14,7 @@ tasks:
 - delete test branches?
 - change to new git repo, remo
 - check background music?
+- split image xcf files from images to not deploy to steam with
 
 - features:
     - bugfixing/testing

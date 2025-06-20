@@ -189,7 +189,9 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSe
     try saveZig.createSaveAndLoadThread(state);
     try codePerformanceZig.init(state);
     try inputZig.initDefaultKeyBindings(state);
+    std.debug.print("before window and sdl\n", .{});
     try initPaintVulkanAndWindowSdl(state);
+    std.debug.print("after window and sdl\n", .{});
     try soundMixerZig.createSoundMixer(state, allocator);
     const couldLoadGeneralData = saveZig.loadGeneralDataFromFile(state) catch false;
     if (!couldLoadGeneralData) try mapZig.createSpawnArea(state);
@@ -329,6 +331,7 @@ pub fn setupRectangleData(state: *GameState) void {
 
 fn initPaintVulkanAndWindowSdl(state: *GameState) !void {
     try windowSdlZig.initWindowSdl();
+    std.debug.print("sdl done vulkan next\n", .{});
     try paintVulkanZig.initVulkan(state);
 }
 
@@ -342,6 +345,7 @@ fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     var state: GameState = undefined;
     try createGameState(allocator, &state, null, isTest);
     defer destroyGameState(&state);
+    std.debug.print("main loop\n", .{});
     try mainLoop(&state);
 }
 
