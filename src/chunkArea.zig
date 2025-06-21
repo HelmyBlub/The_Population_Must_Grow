@@ -485,24 +485,8 @@ fn setupInitialGraphRectanglesForChunkUnconnected(chunk: *mapZig.MapChunk, state
             blockingTiles[indexX - 1][indexY - 1] = true;
         } else if (indexX > 0) {
             blockingTiles[indexX - 1][indexY] = true;
-            try pathfindingZig.changePathingDataRectangle(.{
-                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
-                .columnCount = 2,
-                .rowCount = 1,
-            }, .blocking, 0, state);
         } else if (indexY > 0) {
             blockingTiles[indexX][indexY - 1] = true;
-            try pathfindingZig.changePathingDataRectangle(.{
-                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
-                .columnCount = 1,
-                .rowCount = 2,
-            }, .blocking, 0, state);
-        } else {
-            try pathfindingZig.changePathingDataRectangle(.{
-                .topLeftTileXY = .{ .tileX = tileXY.tileX - 1, .tileY = tileXY.tileY - 1 },
-                .columnCount = 2,
-                .rowCount = 2,
-            }, .blocking, 0, state);
         }
     }
     var usedTiles: [mapZig.GameMap.CHUNK_LENGTH][mapZig.GameMap.CHUNK_LENGTH]bool = undefined;

@@ -1,4 +1,7 @@
 tasks:
+- bug: load of game panics
+    - i build a big building on the top left edge of area. Probably the reason of crash?
+        - also placed some potato field build orders, but should not be the case
 - UX:   
     - double UI Size
 - check steam achivements
