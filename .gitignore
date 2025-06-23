@@ -8,3 +8,4 @@ zig-out/*
 *.o
 temp*.txt
 */steam_api64.dll
+steam_appid.txt

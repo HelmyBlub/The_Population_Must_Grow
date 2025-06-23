@@ -17,6 +17,7 @@ const imageZig = @import("image.zig");
 const testZig = @import("test.zig");
 const saveZig = @import("save.zig");
 const chunkAreaZig = @import("chunkArea.zig");
+const steamZig = @import("steam.zig");
 
 pub const WindowData = struct {
     window: *sdl.SDL_Window = undefined,
@@ -194,6 +195,7 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
         //
+        _ = steamZig.setAchievement("4");
     }
 }
 

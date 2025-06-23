@@ -1,17 +1,21 @@
 tasks:
-- bug: load of game panics
-    - i build a big building on the top left edge of area. Probably the reason of crash?
-        - also placed some potato field build orders, but should not be the case
+- check steam achivements
+    - create all icons
+    - setup steam side
+    - check if works without steam
+    - code:
+        - set achievement
+        - get achievement to check if already acquired
+        - maybe storeStats so steam popup happens () is rate limited so call max once per minute
+        - do callbacks matter? i did not register any one so i assume nothing should be done
+        - should i store the ISteamUserStats ptr?
 - UX:   
     - double UI Size
-- check steam achivements
-    - test icon created. Can do others in the same way
-    - how to with zig. A way that could work but not that great: https://zig.news/chapliboy/implementing-steamworks-api-in-zig-5dj3
-- advertise my steam link somewhere on my twitch https://store.steampowered.com/app/3820960/The_Population_Must_Grow/?
-
 
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
+- bug: big buildings painted empty on far view when barely not finished
+- bug: come chunks did not come to rest: i guess big building chunks
 
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
