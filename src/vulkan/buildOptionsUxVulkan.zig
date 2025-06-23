@@ -69,8 +69,8 @@ pub fn onWindowResize(state: *main.GameState) !void {
 }
 
 pub fn setupUiButtonLocations(vkState: *paintVulkanZig.Vk_State) void {
-    const sizePixels = 80.0;
-    const spacingPixels = 5.0;
+    const sizePixels = 80 * vkState.uiSizeFactor;
+    const spacingPixels = 5 * vkState.uiSizeFactor;
     const vulkanWidth = sizePixels / windowSdlZig.windowData.widthFloat;
     const vulkanHeight = sizePixels / windowSdlZig.windowData.heightFloat;
     const vulkanSpacing = spacingPixels / windowSdlZig.windowData.widthFloat;
@@ -415,6 +415,7 @@ pub fn setupVertices(state: *main.GameState) !void {
     const lines = &state.vkState.buildOptionsUx.lines;
     const sprites = &state.vkState.buildOptionsUx.sprites;
     const font = &state.vkState.buildOptionsUx.font;
+    const uiSizeFactor = state.vkState.uiSizeFactor;
     triangles.verticeCount = 0;
     lines.verticeCount = 0;
     sprites.verticeCount = 0;
@@ -468,16 +469,16 @@ pub fn setupVertices(state: *main.GameState) !void {
         }
 
         if (optKeyBindChar) |keyBindChar| {
-            font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, uiButton.pos, 16);
+            font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(keyBindChar, uiButton.pos, 16 * uiSizeFactor);
             font.verticeCount += 1;
         }
         if (state.vkState.buildOptionsUx.mouseHoverButtonIndex == uiButtonIndex) {
-            const paddingPixels = 2;
+            const paddingPixels = 2 * uiSizeFactor;
             const paddingXVulkan = paddingPixels / windowSdlZig.windowData.widthFloat * 2;
             const paddingYVulkan = paddingPixels / windowSdlZig.windowData.heightFloat * 2;
-            const fontSizePixels = 20.0;
+            const fontSizePixels = 20.0 * uiSizeFactor;
             const fontSizeVulkan = fontSizePixels / windowSdlZig.windowData.heightFloat * 2;
-            const tooltipBoxVertSpacing = paddingYVulkan * 10;
+            const tooltipBoxVertSpacing = paddingYVulkan * 10 * uiSizeFactor;
             var width: f32 = 0;
             var maxWidth: f32 = 0;
             const height: f32 = fontSizeVulkan * @as(f32, @floatFromInt(uiButton.tooltip.len)) + paddingYVulkan * 2;

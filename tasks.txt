@@ -1,4 +1,5 @@
 tasks:
+- look into: zig test broken
 - check steam achivements
     - create all icons
     - setup steam side
@@ -10,7 +11,8 @@ tasks:
         - do callbacks matter? i did not register any one so i assume nothing should be done
         - should i store the ISteamUserStats ptr?
 - UX:   
-    - double UI Size
+    - UI Size slider
+    - save Ui size
 
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think

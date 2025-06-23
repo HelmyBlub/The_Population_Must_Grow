@@ -86,6 +86,7 @@ pub const Vk_State = struct {
     settingsMenuUx: settingsMenuUxVulkanZig.VkSettingsUx = .{},
     citizenPopulationCounterUx: citizenPopulationCounterUxVulkanZig.VkCitizenPopulationCounterUx = .{},
     depthStencil: vk.VkPipelineDepthStencilStateCreateInfo = undefined,
+    uiSizeFactor: f32 = 1,
     pub const MAX_FRAMES_IN_FLIGHT: u16 = 2;
     pub const BUFFER_ADDITIOAL_SIZE: u16 = 50;
 };

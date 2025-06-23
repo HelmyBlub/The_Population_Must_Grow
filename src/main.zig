@@ -348,7 +348,7 @@ fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     try createGameState(allocator, &state, null, isTest);
     defer destroyGameState(&state);
     std.debug.print("main loop\n", .{});
-    steamZig.steamInit(&state);
+    // steamZig.steamInit(&state);
     try mainLoop(&state);
     if (state.steamEnabled) steamZig.SteamAPI_Shutdown();
 }
