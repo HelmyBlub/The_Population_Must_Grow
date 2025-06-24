@@ -1,8 +1,5 @@
 tasks:
-- bug: big buildings painted empty on far view when barely not finished
-- problem: not visible if one pice of wood is still missing for big building
-    - paint less up based on wood amount
-
+- confused citizens: big buildng citizens did not do anything on spawn
 
 - check steam achivements
     - create all icons (150-195?)
@@ -42,3 +39,4 @@ Offstream:
 Some data:
 - FPS: 116, citizens: 32390, gameTime: 330000, end FPS: 85.204605 (24.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 116, citizens: 32551, gameTime: 330000, end FPS: 87.08622 (fix bug citizen stuck on exact tile corner position)

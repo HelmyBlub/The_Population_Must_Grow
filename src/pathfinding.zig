@@ -983,13 +983,13 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
         }
     } else {
         if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 }, threadIndex, state)) {
-            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 });
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 }, threadIndex, state)) {
-            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 });
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
-            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY });
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
-            result = mapZig.mapTileXyToTilePosition(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY });
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY });
         }
     }
     return result;
