@@ -9,14 +9,13 @@ tasks:
         - maybe storeStats so steam popup happens () is rate limited so call max once per minute
         - do callbacks matter? i did not register any one so i assume nothing should be done
         - should i store the ISteamUserStats ptr?
-- UX:   
-    - UI Size slider
-    - save Ui size
+- bug: big buildings painted empty on far view when barely not finished
 
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
-- bug: big buildings painted empty on far view when barely not finished
+- playtest performance with trapped citizens
 - bug: come chunks did not come to rest: i guess big building chunks
+
 
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
