@@ -7,5 +7,9 @@
 zig-out/*
 *.o
 temp*.txt
-*/steam_api64.dll
+
+# required for build. Not committed in repo. Used version steam sdk version 162.
+*steam_api64.dll
+
+# required for testing with steam api
 steam_appid.txt

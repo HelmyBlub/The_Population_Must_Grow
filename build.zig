@@ -47,6 +47,8 @@ pub fn build(b: *std.Build) void {
     });
     compileShared(exe, zigimg_dependency, b);
     compileShared(unit_tests, zigimg_dependency, b);
+    // this just adds the dll file to zig-out/bin dir
+    b.installBinFile("dependencies/steam_api64.dll", "steam_api64.dll");
 }
 
 fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency, b: *std.Build) void {
@@ -60,12 +62,7 @@ fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency
     compile.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
 
     const steam_sdk = "C:/Zeugs/steamworks_sdk_162/sdk/";
-    // compile.addIncludePath(.{ .cwd_relative = steam_sdk ++ "public/steam" });
-    // compile.addLibraryPath(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/win64" });
-    // compile.linkSystemLibrary("steam_api64");
     compile.addObjectFile(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/win64/steam_api64.lib" });
-    // this just adds the dll file to zig-out/bin dir
-    b.installBinFile("dependencies/steam_api64.dll", "steam_api64.dll");
 
     compile.root_module.addImport("zigimg", zigimg.module("zigimg"));
 }

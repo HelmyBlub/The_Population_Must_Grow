@@ -1,5 +1,4 @@
 tasks:
-- look into: zig test broken
 - check steam achivements
     - create all icons
     - setup steam side
@@ -38,5 +37,5 @@ Offstream:
     - do i know someone for a mac build test?
   
 Some data:
-- FPS: 114, citizens: 32390, gameTime: 330000, end FPS: 80.47685 (19.06.2025)
+- FPS: 116, citizens: 32390, gameTime: 330000, end FPS: 85.204605 (24.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
