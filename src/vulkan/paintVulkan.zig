@@ -412,7 +412,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                         if (building.woodRequired > 15) {
                             imageIndex = imageZig.IMAGE_WHITE_RECTANGLE;
                         } else {
-                            cutY = @as(f32, @floatFromInt(building.woodRequired)) / 16.0 * 0.8 + 0.2;
+                            cutY = @as(f32, @floatFromInt(building.woodRequired)) / mapZig.Building.BIG_HOUSE_WOOD * 0.6 + 0.4;
                         }
                     }
                     vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };

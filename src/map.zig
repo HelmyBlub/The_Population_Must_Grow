@@ -824,6 +824,8 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Game
                     try otherChunk.blockingTiles.append(otherTile);
                 }
             }
+        } else if (building.woodRequired < 4) {
+            building.imageIndex = imageZig.IMAGE_BIG_HOUSE;
         }
     }
 }
