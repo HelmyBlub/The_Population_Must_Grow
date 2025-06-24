@@ -1,5 +1,17 @@
 tasks:
-- confused citizens: big buildng citizens did not do anything on spawn
+- playtest performance with trapped citizens
+    - ghost build orders
+        - citizen have build orders to blocked tiles which never ends
+    - code steps:
+        - when citizen fails path search. 
+            - put build order back or reset potato eat field
+            - increase failed counter
+            - reset failed counter on finished build orders or reached potato field
+            - if failed counter > 2, consider citizens stuck
+                - check if walkable area > something, if not flag citizens stuck
+                - stuck citizens are no longer assigned build orders
+                - stuck citzens needs to recheck beeing stuck every 15 seconds
+- check: citizen stuck between big buildings with valid pathing
 
 - check steam achivements
     - create all icons (150-195?)
@@ -14,7 +26,6 @@ tasks:
 
 - play test with big buildings more
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
-- playtest performance with trapped citizens
 - bug: come chunks did not come to rest: i guess big building chunks
 
 

@@ -399,9 +399,9 @@ pub fn saveChunkAreaToFile(chunkArea: *chunkAreaZig.ChunkArea, state: *main.Game
 }
 
 fn handleActiveCitizensInChunkToUnload(chunk: *mapZig.MapChunk, areaXY: chunkAreaZig.ChunkAreaXY, state: *main.GameState) !void {
-    for (chunk.citizens.items) |citizen| {
+    for (chunk.citizens.items) |*citizen| {
         if (citizen.nextThinkingAction != .idle) {
-            try mapZig.handleDeleteCitizen(citizen, areaXY, state);
+            try main.Citizen.handleRemovingCitizenAction(citizen, areaXY, state);
         }
     }
 }

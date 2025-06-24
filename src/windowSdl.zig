@@ -195,7 +195,6 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
         //
-        _ = steamZig.setAchievement("4");
     }
 }
 

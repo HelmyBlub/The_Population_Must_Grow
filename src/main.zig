@@ -22,6 +22,7 @@ const sdl = @cImport({
 });
 
 pub const GameState: type = struct {
+    pathfindTestValue: f32 = 0,
     steamEnabled: bool = false,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,

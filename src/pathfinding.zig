@@ -887,7 +887,9 @@ pub fn pathfindAStar(
     try openSet.append(startNode);
     const maxSearchDistance = (main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE + mapZig.GameMap.CHUNK_LENGTH * 2) * mapZig.GameMap.TILE_SIZE;
 
+    var counter: usize = 0;
     while (openSet.items.len > 0) {
+        counter += 1;
         var currentIndex: usize = 0;
         var current = openSet.items[0];
         for (openSet.items, 0..) |node, i| {
@@ -899,6 +901,7 @@ pub fn pathfindAStar(
 
         if (cameFrom.ctx.eql(current.rectangle, goal)) {
             try reconstructPath(cameFrom, current.rectangle, goalTile, citizen);
+            state.pathfindTestValue = state.pathfindTestValue * 0.99 + @as(f32, @floatFromInt(counter)) * 0.01;
             return true;
         }
 
@@ -950,6 +953,7 @@ pub fn pathfindAStar(
         }
     }
     if (PATHFINDING_DEBUG) std.debug.print("pathfindings found no available path", .{});
+    state.pathfindTestValue = state.pathfindTestValue * 0.99 + @as(f32, @floatFromInt(counter)) * 0.01;
     return false;
 }
 
@@ -1117,4 +1121,40 @@ fn getMapPositionForPathingIndex(chunk: *mapZig.MapChunk, pathingIndex: usize) m
         .x = @floatFromInt(chunk.chunkXY.chunkX * mapZig.GameMap.CHUNK_SIZE + @as(i32, @intCast(@mod(pathingIndex, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.TILE_SIZE))),
         .y = @floatFromInt(chunk.chunkXY.chunkY * mapZig.GameMap.CHUNK_SIZE + @as(i32, @intCast(@divFloor(pathingIndex, mapZig.GameMap.CHUNK_LENGTH) * mapZig.GameMap.TILE_SIZE))),
     };
+}
+
+pub fn checkIsPositionReachableMovementAreaBiggerThan(position: main.Position, threadIndex: usize, limit: u32, state: *main.GameState) !bool {
+    const visitedGraphRecList = &state.threadData[threadIndex].pathfindingTempData.neighbors;
+    const toVisitGraphRecList = &state.threadData[threadIndex].pathfindingTempData.openSet;
+    visitedGraphRecList.clearRetainingCapacity();
+    toVisitGraphRecList.clearRetainingCapacity();
+
+    const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(position, state);
+    if (optChunk) |chunk| {
+        var reachableAreaSize: u32 = 0;
+        const tileXY = mapZig.mapPositionToTileXy(position);
+        const pathingDataIndex = getPathingIndexForTileXY(tileXY);
+        const optGraphIndex = chunk.pathingData.pathingData[pathingDataIndex];
+        if (optGraphIndex) |graphIndex| {
+            try toVisitGraphRecList.append(.{ .cost = 0, .priority = 0, .rectangle = &chunk.pathingData.graphRectangles.items[graphIndex] });
+            while (toVisitGraphRecList.items.len > 0) {
+                const current = toVisitGraphRecList.swapRemove(0).rectangle;
+                reachableAreaSize += current.tileRectangle.columnCount * current.tileRectangle.rowCount;
+                if (reachableAreaSize >= limit) return true;
+                try visitedGraphRecList.append(current);
+                neighborLoop: for (current.connectionIndexes.items) |neighbor| {
+                    for (visitedGraphRecList.items) |visited| {
+                        if (visited.index == neighbor.index and visited.chunkXY.chunkX == neighbor.chunkXY.chunkX and visited.chunkXY.chunkY == neighbor.chunkXY.chunkY) {
+                            continue :neighborLoop;
+                        }
+                    }
+                    const optNeighborChunk = try mapZig.getChunkByChunkXYWithoutCreateOrLoad(neighbor.chunkXY, state);
+                    if (optNeighborChunk) |neighborChunk| {
+                        try toVisitGraphRecList.append(.{ .cost = 0, .priority = 0, .rectangle = &neighborChunk.pathingData.graphRectangles.items[neighbor.index] });
+                    }
+                }
+            }
+        }
+    }
+    return false;
 }
