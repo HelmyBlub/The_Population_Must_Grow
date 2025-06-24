@@ -1,21 +1,17 @@
 tasks:
 - playtest performance with trapped citizens
+    - continue: seems to be a lot off things with the code
+    - console log sometimes spams and sometimes does not happen at all. should be neither of those if citizens are stuck
     - ghost build orders
         - citizen have build orders to blocked tiles which never ends
-    - code steps:
-        - when citizen fails path search. 
-            - put build order back or reset potato eat field
-            - increase failed counter
-            - reset failed counter on finished build orders or reached potato field
-            - if failed counter > 2, consider citizens stuck
-                - check if walkable area > something, if not flag citizens stuck
-                - stuck citizens are no longer assigned build orders
-                - stuck citzens needs to recheck beeing stuck every 15 seconds
+            - how it happened: build close of areas. Opened area in a maze way
+
 - check: citizen stuck between big buildings with valid pathing
 
+
 - check steam achivements
-    - create all icons (150-195?)
     - setup steam side
+        - estimated work amount 2h
     - check if works without steam
     - code:
         - set achievement
