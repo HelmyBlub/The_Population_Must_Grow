@@ -1,6 +1,5 @@
 tasks:
 - playtest performance with trapped citizens
-    - continue: seems to be a lot off things with the code
     - console log sometimes spams and sometimes does not happen at all. should be neither of those if citizens are stuck
     - ghost build orders
         - citizen have build orders to blocked tiles which never ends

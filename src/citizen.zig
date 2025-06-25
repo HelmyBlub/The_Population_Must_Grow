@@ -44,9 +44,10 @@ pub const Citizen: type = struct {
     nextThinkingTickTimeMs: u32 = 0,
     nextThinkingAction: CitizenThinkAction = .idle,
     pathfindFailedCounter: u8 = 0,
-    stuckCheckTime: ?u32 = null,
+    nextStuckCheckTime: ?u32 = null,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
-    pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 1000;
+    pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 3000;
+    pub const RECHECK_STUCK_TIME_MS = 15_000;
     pub const MOVE_SPEED_STARVING = 0.5;
     pub const MOVE_SPEED_NORMAL = 2.0;
     pub const MOVE_SPEED_WODD_FACTOR = 0.75;
@@ -143,7 +144,7 @@ pub const Citizen: type = struct {
                     const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
                     if (chunk == null) continue;
                     for (chunk.?.citizens.items) |*citizen| {
-                        if (citizen.nextThinkingAction != .idle or citizen.stuckCheckTime != null) continue;
+                        if (citizen.nextThinkingAction != .idle or citizen.nextStuckCheckTime != null) continue;
                         const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
                         if (closestCitizen == null or shortestDistance > tempDistance) {
                             closestCitizen = citizen;
@@ -229,12 +230,17 @@ pub const Citizen: type = struct {
                         }
                     }
                     if (!isSpecialBigBuildingCase) {
+                        std.debug.print("len {}, pos: {}, cit: {}, time: {}\n", .{ buildOrderChunk.buildOrders.items.len, pos, citizen.homePosition, state.gameTimeMs });
                         try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
                     }
                 }
             }
         }
         citizen.hasWood = false;
+        citizen.potatoPosition = null;
+        citizen.buildingPosition = null;
+        citizen.treePosition = null;
+        citizen.farmPosition = null;
     }
 };
 
@@ -284,11 +290,11 @@ fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, sta
         },
         .idle => {
             try setRandomMoveTo(citizen, threadIndex, state);
-            if (citizen.stuckCheckTime != null and citizen.stuckCheckTime.? + 15_000 < state.gameTimeMs) {
+            if (citizen.nextStuckCheckTime != null and citizen.nextStuckCheckTime.? < state.gameTimeMs) {
                 if (try pathfindingZig.checkIsPositionReachableMovementAreaBiggerThan(citizen.position, threadIndex, 50, state)) {
-                    citizen.stuckCheckTime = null;
+                    citizen.nextStuckCheckTime = null;
                 } else {
-                    std.debug.print("citizen still stuck {}\n", .{state.gameTimeMs});
+                    citizen.nextStuckCheckTime = state.gameTimeMs + Citizen.RECHECK_STUCK_TIME_MS;
                 }
             }
         },
@@ -336,7 +342,7 @@ fn onBeingStuck(citizen: *Citizen, state: *main.GameState) !void {
     citizen.nextThinkingAction = .idle;
     citizen.pathfindFailedCounter +|= 1;
     if (citizen.pathfindFailedCounter > 2) {
-        citizen.stuckCheckTime = state.gameTimeMs;
+        citizen.nextStuckCheckTime = state.gameTimeMs + Citizen.RECHECK_STUCK_TIME_MS;
     }
 }
 
@@ -347,9 +353,7 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !voi
             citizen.nextThinkingAction = .treePlantFinished;
         } else {
             if (!try citizen.moveToPosition(.{ .x = treeAndChunk.tree.position.x, .y = treeAndChunk.tree.position.y - 4 }, threadIndex, state)) {
-                //failed
                 try onBeingStuck(citizen, state);
-                citizen.treePosition = null;
             }
         }
     } else {
@@ -414,10 +418,7 @@ fn buildingGetWood(citizen: *Citizen, threadIndex: usize, state: *main.GameState
     } else {
         const treeXOffset: f32 = if (citizen.position.x < citizen.treePosition.?.x) -7 else 7;
         if (!try citizen.moveToPosition(.{ .x = citizen.treePosition.?.x + treeXOffset, .y = citizen.treePosition.?.y + 3 }, threadIndex, state)) {
-            //failed
             try onBeingStuck(citizen, state);
-            citizen.treePosition = null;
-            citizen.buildingPosition = null;
         }
     }
 }
@@ -472,10 +473,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
             citizen.buildingPosition = building.position; // a case exists where a normal building is swapped to big building build order which otherwise would stuck the citizen
             const buildingXOffset: f32 = if (citizen.position.x < building.position.x) -7 else 7;
             if (!try citizen.moveToPosition(.{ .x = building.position.x + buildingXOffset, .y = building.position.y + 3 }, threadIndex, state)) {
-                //failed
                 try onBeingStuck(citizen, state);
-                citizen.buildingPosition = null;
-                citizen.hasWood = false;
             }
         }
     } else {
@@ -510,7 +508,6 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !v
         } else {
             if (!try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 5 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
-                citizen.farmPosition = null;
             }
         }
     } else {
@@ -541,7 +538,6 @@ fn potatoHarvestTick(citizen: *Citizen, threadIndex: usize, state: *main.GameSta
         } else {
             if (!try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 8 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
-                citizen.potatoPosition = null;
             }
         }
     } else {
