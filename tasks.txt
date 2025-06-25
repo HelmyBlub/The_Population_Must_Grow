@@ -1,9 +1,10 @@
 tasks:
-- check: citizen stuck between big buildings with valid pathing
-
 - check more with trapped citizens and big buildings
     - had some confused citizens not wanting to build big building once
     - had citizens walking over bigbuilding(probably was not finished building, but was not visible before when it was nearly finished)
+
+- check citizens not building  for ever if hungry?
+- bug: bug building place from right to left misaligned
 
 - check steam achivements
     - setup steam side
@@ -20,6 +21,9 @@ tasks:
     - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
 - bug: come chunks did not come to rest: i guess big building chunks
 
+- check different OS builds    
+    - linux 
+    - max
 
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
