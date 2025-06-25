@@ -1,16 +1,4 @@
 tasks:
-- check steam achivements
-    - setup steam side
-        - estimated work amount 2h
-    - check if works without steam
-    - code:
-        - set achievement
-        - get achievement to check if already acquired
-        - maybe storeStats so steam popup happens () is rate limited so call max once per minute
-        - do callbacks matter? i did not register any one so i assume nothing should be done
-        - should i store the ISteamUserStats ptr?
-
-
 - check: copy paste move with mouse unselect
     - should not lose selection if mouse moved enough
 - bug: come chunks did not come to rest: i guess big building chunks
@@ -33,7 +21,8 @@ tasks:
     - put on steam
 
 Offstream:
-    - check steam achivements if doable on stream
+    - check steam achivements
+        - check if works without steam
     - test linux build
     - do i know someone for a mac build test?
   

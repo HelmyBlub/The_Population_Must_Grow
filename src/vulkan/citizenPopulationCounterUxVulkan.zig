@@ -11,6 +11,7 @@ const mapZig = @import("../map.zig");
 const inputZig = @import("../input.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 const countryPopulationDataZig = @import("../countryPopulationData.zig");
+const steamZig = @import("../steam.zig");
 
 pub const VkCitizenPopulationCounterUx = struct {
     triangles: paintVulkanZig.VkTriangles = undefined,
@@ -108,6 +109,7 @@ pub fn setupVertices(state: *main.GameState) !void {
         fillPerCent = @as(f32, @floatFromInt(state.citizenCounter)) / @as(f32, @floatFromInt(nextCountryPopulationGoal.?.population));
         if (fillPerCent > 1) {
             popCounterUx.nextCountryPopulationIndex -|= 1;
+            try steamZig.setAchievement(popCounterUx.nextCountryPopulationIndex, state);
             popCounterUx.surpassedMessageDisplayTime = std.time.milliTimestamp();
             fillPerCent = 1;
             if (popCounterUx.nextCountryPopulationIndex > 0) {

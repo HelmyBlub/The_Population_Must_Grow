@@ -23,7 +23,7 @@ const sdl = @cImport({
 
 pub const GameState: type = struct {
     pathfindTestValue: f32 = 0,
-    steamEnabled: bool = false,
+    steam: ?steamZig.SteamData = null,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
     desiredGameSpeed: f32,
@@ -346,9 +346,9 @@ fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     try createGameState(allocator, &state, null, isTest);
     defer destroyGameState(&state);
     std.debug.print("main loop\n", .{});
-    // steamZig.steamInit(&state);
+    steamZig.steamInit(&state);
     try mainLoop(&state);
-    if (state.steamEnabled) steamZig.SteamAPI_Shutdown();
+    if (state.steam != null) steamZig.SteamAPI_Shutdown();
 }
 
 pub fn mainLoop(state: *GameState) !void {
