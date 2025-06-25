@@ -160,7 +160,7 @@ pub fn setupVertices(state: *main.GameState) !void {
         .y = populationRectangle.pos.y + onePixelYInVulkan * fontSize,
     }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
 
-    const timeXOffset = onePixelXInVulkan * fontSize * 4;
+    const timeXOffset = onePixelXInVulkan * fontSize * 5;
     const timeTextWidth = fontVulkanZig.paintText("Time: ", .{ .x = populationRectangle.pos.x - timeXOffset, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
     _ = try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
 

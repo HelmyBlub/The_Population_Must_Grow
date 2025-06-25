@@ -18,7 +18,6 @@ const MIN_STORE_INTERVAL = 60;
 
 pub fn setAchievement(popIndex: usize, state: *main.GameState) !void {
     if (state.steam != null and state.testData == null) {
-        std.debug.print("pleas no steam in test\n", .{});
         if (countryPopulationDataZig.WORLD_POPULATION[popIndex].hasAchievement) {
             var buf: [5]u8 = [_]u8{ 0, 0, 0, 0, 0 };
             _ = try std.fmt.bufPrint(&buf, "{d}", .{(popIndex + 1)});

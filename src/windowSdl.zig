@@ -195,15 +195,16 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             }
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
-        const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(state.camera.position, state);
-        if (optChunk) |chunk| {
-            std.debug.print("building check chunk {}, BO:{}\n", .{ chunk.chunkXY, chunk.buildOrders.items.len });
-            for (chunk.buildings.items) |building| {
-                if (building.inConstruction) {
-                    std.debug.print("building: {}\n", .{building});
-                }
-            }
-        }
+        state.gameTimeMs += 1_000_000_000;
+        // const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(state.camera.position, state);
+        // if (optChunk) |chunk| {
+        //     std.debug.print("building check chunk {}, BO:{}\n", .{ chunk.chunkXY, chunk.buildOrders.items.len });
+        //     for (chunk.buildings.items) |building| {
+        //         if (building.inConstruction) {
+        //             std.debug.print("building: {}\n", .{building});
+        //         }
+        //     }
+        // }
     }
 }
 

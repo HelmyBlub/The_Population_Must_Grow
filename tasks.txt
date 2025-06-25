@@ -1,7 +1,9 @@
 tasks:
-- check: copy paste move with mouse unselect
-    - should not lose selection if mouse moved enough
-- bug: come chunks did not come to rest: i guess big building chunks
+- time display needs a bit more space
+
+- bug: some chunks did not come to rest: i guess big building chunks
+    - no citizens grows but citzens not idle -> means something needs to be build?
+
 
 - check different OS builds    
     - linux 

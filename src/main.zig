@@ -623,7 +623,7 @@ pub fn changeUsedThreadCount(newThreadCount: usize, state: *GameState) !void {
             const oldThreadData = &state.threadData[oldCount - oldIndex - 1];
             const oldThreadAreaKeys = &oldThreadData.chunkAreaKeys;
 
-            if (oldThreadAreaKeys.items.len - minAreasPerThread > 0) {
+            if (oldThreadAreaKeys.items.len > minAreasPerThread) {
                 const amountToMove = oldThreadAreaKeys.items.len - minAreasPerThread;
                 for (0..amountToMove) |_| {
                     const toMoveKey = oldThreadAreaKeys.pop().?;
