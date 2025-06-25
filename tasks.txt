@@ -1,6 +1,4 @@
 tasks:
-- bug: bug building place from right to left misaligned
-
 - check steam achivements
     - setup steam side
         - estimated work amount 2h
@@ -15,8 +13,6 @@ tasks:
 
 - check: copy paste move with mouse unselect
     - should not lose selection if mouse moved enough
-- play test with big buildings more
-    - might be some "ensureUnusedCapacity" crash possible, but very unlikely i think
 - bug: come chunks did not come to rest: i guess big building chunks
 
 - check different OS builds    
