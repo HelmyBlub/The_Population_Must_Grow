@@ -129,7 +129,7 @@ pub fn executeAction(actionType: ActionType, state: *main.GameState) !void {
     if (buildModeChanged) {
         try buildOptionsUxVulkanZig.setSelectedButtonIndex(actionType, state);
         state.copyAreaRectangle = null;
-        state.mouseInfo.mapDown = null;
+        state.mouseInfo.leftButtonMapDown = null;
         state.rectangles[0] = null;
     }
 }

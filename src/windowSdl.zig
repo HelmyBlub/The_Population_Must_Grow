@@ -105,9 +105,10 @@ pub fn handleEvents(state: *main.GameState) !void {
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
             if (event.button.button == 1) {
-                state.mouseInfo.mapDown = null;
+                state.mouseInfo.leftButtonMapDown = null;
                 state.mouseInfo.leftButtonPressedTimeMs = null;
             } else {
+                state.mouseInfo.rightButtonWindowDown = null;
                 state.mouseInfo.rightButtonPressedTimeMs = null;
             }
         } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
@@ -208,10 +209,10 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
 
 fn handleBuildModeDraw(event: *sdl.SDL_Event, state: *main.GameState) !void {
     if (state.buildMode != mapZig.BUILD_MODE_DRAW) return;
-    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mouseInfo.mapDown != null) {
+    if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN or (event.type == sdl.SDL_EVENT_MOUSE_MOTION) and state.mouseInfo.leftButtonMapDown != null) {
         if (state.mouseInfo.leftButtonPressedTimeMs != null) {
-            state.mouseInfo.mapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
-            _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(state.mouseInfo.mapDown.?), state);
+            state.mouseInfo.leftButtonMapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            _ = try mapZig.placePath(mapZig.mapPositionToTileMiddlePosition(state.mouseInfo.leftButtonMapDown.?), state);
         }
     }
 }
@@ -221,22 +222,26 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
 
     if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_UP) {
         if (event.button.button != 1) {
-            if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 100) {
-                state.mouseInfo.mapDown = null;
-                state.copyAreaRectangle = null;
-                state.rectangles[0] = null;
+            if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 175) {
+                if (state.mouseInfo.rightButtonWindowDown != null and
+                    main.calculateDistance(.{ .x = event.motion.x, .y = event.motion.y }, state.mouseInfo.rightButtonWindowDown.?) < 10)
+                {
+                    state.mouseInfo.leftButtonMapDown = null;
+                    state.copyAreaRectangle = null;
+                    state.rectangles[0] = null;
+                }
             }
             return;
         }
-        if (state.mouseInfo.mapDown != null) {
+        if (state.mouseInfo.leftButtonMapDown != null) {
             const mapMouseUp = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
             const topLeft: main.Position = .{
-                .x = @min(mapMouseUp.x, state.mouseInfo.mapDown.?.x),
-                .y = @min(mapMouseUp.y, state.mouseInfo.mapDown.?.y),
+                .x = @min(mapMouseUp.x, state.mouseInfo.leftButtonMapDown.?.x),
+                .y = @min(mapMouseUp.y, state.mouseInfo.leftButtonMapDown.?.y),
             };
             const bottomRight: main.Position = .{
-                .x = @max(mapMouseUp.x, state.mouseInfo.mapDown.?.x),
-                .y = @max(mapMouseUp.y, state.mouseInfo.mapDown.?.y),
+                .x = @max(mapMouseUp.x, state.mouseInfo.leftButtonMapDown.?.x),
+                .y = @max(mapMouseUp.y, state.mouseInfo.leftButtonMapDown.?.y),
             };
 
             const tileXy = mapZig.mapPositionToTileXy(topLeft);
@@ -249,11 +254,11 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
             if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
                 const adjustColumns = @mod(tileRectangle.columnCount, 2);
                 const adjustRows = @mod(tileRectangle.rowCount, 2);
-                if (mapMouseUp.x < state.mouseInfo.mapDown.?.x) {
+                if (mapMouseUp.x < state.mouseInfo.leftButtonMapDown.?.x) {
                     tileRectangle.topLeftTileXY.tileX = tileRectangle.topLeftTileXY.tileX - @as(i32, @intCast(adjustColumns));
                 }
                 tileRectangle.rowCount += adjustRows;
-                if (mapMouseUp.y < state.mouseInfo.mapDown.?.y) {
+                if (mapMouseUp.y < state.mouseInfo.leftButtonMapDown.?.y) {
                     tileRectangle.topLeftTileXY.tileY = tileRectangle.topLeftTileXY.tileY - @as(i32, @intCast(adjustRows));
                 }
                 tileRectangle.columnCount += adjustColumns;
@@ -267,11 +272,14 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
 
             try handleRectangleAreaAction(tileRectangle, state);
         }
-        state.mouseInfo.mapDown = null;
+        state.mouseInfo.leftButtonMapDown = null;
         state.rectangles[0] = null;
     } else if (event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN) {
         if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
-            if (event.button.button != 1) return;
+            if (event.button.button != 1) {
+                state.mouseInfo.rightButtonWindowDown = .{ .x = event.motion.x, .y = event.motion.y };
+                return;
+            }
             const mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
             try mapZig.copyFromTo(
                 state.copyAreaRectangle.?.topLeftTileXY,
@@ -282,7 +290,9 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
             );
         } else {
             if (event.button.button == 1) {
-                state.mouseInfo.mapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+                state.mouseInfo.leftButtonMapDown = mouseWindowPositionToGameMapPoisition(event.motion.x, event.motion.y, state.camera);
+            } else {
+                state.mouseInfo.rightButtonWindowDown = .{ .x = event.motion.x, .y = event.motion.y };
             }
         }
     }

@@ -90,7 +90,8 @@ pub const ThreadData = struct {
 };
 
 pub const MouseInfo = struct {
-    mapDown: ?Position = null,
+    leftButtonMapDown: ?Position = null,
+    rightButtonWindowDown: ?Position = null,
     currentPos: PositionF32 = .{ .x = 0, .y = 0 },
     leftButtonPressedTimeMs: ?i64 = null,
     rightButtonPressedTimeMs: ?i64 = null,
@@ -273,8 +274,8 @@ pub fn setupRectangleData(state: *GameState) void {
                 .pos = .{ vulkanTopleft, vulkanBottomRight },
             };
         } else {
-            if (state.mouseInfo.mapDown != null) {
-                const mapMouseDown = state.mouseInfo.mapDown.?;
+            if (state.mouseInfo.leftButtonMapDown != null) {
+                const mapMouseDown = state.mouseInfo.leftButtonMapDown.?;
                 const mouseUp = state.mouseInfo.currentPos;
                 const mapMouseUp = windowSdlZig.mouseWindowPositionToGameMapPoisition(mouseUp.x, mouseUp.y, state.camera);
                 const mapTopLeft: Position = .{
