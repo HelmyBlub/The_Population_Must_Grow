@@ -195,7 +195,22 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             }
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
-        state.gameTimeMs += 1_000_000_000;
+        for (state.threadData) |thread| {
+            for (thread.chunkAreaKeys.items) |chunkAreaKey| {
+                if (state.chunkAreas.getPtr(chunkAreaKey)) |chunkArea| {
+                    if (chunkArea.chunks) |chunks| {
+                        for (chunks) |*chunk| {
+                            for (chunk.citizens.items) |*citizen| {
+                                if (citizen.nextThinkingAction != .idle) {
+                                    std.debug.print("{}\n\n{}\n", .{ citizen, chunk });
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         // const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(state.camera.position, state);
         // if (optChunk) |chunk| {
         //     std.debug.print("building check chunk {}, BO:{}\n", .{ chunk.chunkXY, chunk.buildOrders.items.len });

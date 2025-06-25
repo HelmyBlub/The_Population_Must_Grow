@@ -353,6 +353,8 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !voi
         } else {
             if (!try citizen.moveToPosition(.{ .x = treeAndChunk.tree.position.x, .y = treeAndChunk.tree.position.y - 4 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
@@ -418,6 +420,8 @@ fn buildingGetWood(citizen: *Citizen, threadIndex: usize, state: *main.GameState
         const treeXOffset: f32 = if (citizen.position.x < citizen.treePosition.?.x) -7 else 7;
         if (!try citizen.moveToPosition(.{ .x = citizen.treePosition.?.x + treeXOffset, .y = citizen.treePosition.?.y + 3 }, threadIndex, state)) {
             try onBeingStuck(citizen, state);
+            const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+            chunk.workingCitizenCounter -= 1;
         }
     }
 }
@@ -473,6 +477,8 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
             const buildingXOffset: f32 = if (citizen.position.x < building.position.x) -7 else 7;
             if (!try citizen.moveToPosition(.{ .x = building.position.x + buildingXOffset, .y = building.position.y + 3 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
@@ -507,6 +513,8 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !v
         } else {
             if (!try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 5 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
