@@ -238,13 +238,27 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
                 .x = @max(mapMouseUp.x, state.mouseInfo.mapDown.?.x),
                 .y = @max(mapMouseUp.y, state.mouseInfo.mapDown.?.y),
             };
+
             const tileXy = mapZig.mapPositionToTileXy(topLeft);
             const tileXyBottomRight = mapZig.mapPositionToTileXyBottomRight(bottomRight);
-            const tileRectangle: mapZig.MapTileRectangle = .{
+            var tileRectangle: mapZig.MapTileRectangle = .{
                 .topLeftTileXY = tileXy,
                 .columnCount = @intCast(tileXyBottomRight.tileX - tileXy.tileX),
                 .rowCount = @intCast(tileXyBottomRight.tileY - tileXy.tileY),
             };
+            if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
+                const adjustColumns = @mod(tileRectangle.columnCount, 2);
+                const adjustRows = @mod(tileRectangle.rowCount, 2);
+                if (mapMouseUp.x < state.mouseInfo.mapDown.?.x) {
+                    tileRectangle.topLeftTileXY.tileX = tileRectangle.topLeftTileXY.tileX - @as(i32, @intCast(adjustColumns));
+                }
+                tileRectangle.rowCount += adjustRows;
+                if (mapMouseUp.y < state.mouseInfo.mapDown.?.y) {
+                    tileRectangle.topLeftTileXY.tileY = tileRectangle.topLeftTileXY.tileY - @as(i32, @intCast(adjustRows));
+                }
+                tileRectangle.columnCount += adjustColumns;
+            }
+
             if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE) {
                 if (state.copyAreaRectangle != null) return;
                 state.copyAreaRectangle = tileRectangle;

@@ -273,9 +273,6 @@ pub fn setupRectangleData(state: *GameState) void {
                 .pos = .{ vulkanTopleft, vulkanBottomRight },
             };
         } else {
-            const rectangleTileColumns: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
-            const rectangleTileRows: u8 = if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) 2 else 1;
-
             if (state.mouseInfo.mapDown != null) {
                 const mapMouseDown = state.mouseInfo.mapDown.?;
                 const mouseUp = state.mouseInfo.currentPos;
@@ -299,11 +296,11 @@ pub fn setupRectangleData(state: *GameState) void {
                     .x = mapBottomRightTileMiddle.x + mapZig.GameMap.TILE_SIZE / 2,
                     .y = mapBottomRightTileMiddle.y + mapZig.GameMap.TILE_SIZE / 2,
                 };
-                if (rectangleTileColumns != 1 or rectangleTileRows != 1) {
+                if (state.currentBuildType == mapZig.BUILD_TYPE_BIG_HOUSE) {
                     const columns: u16 = @intFromFloat((mapBottomRightTileBottomRight.x - mapTopLeftTile.x) / mapZig.GameMap.TILE_SIZE);
                     const rows: u16 = @intFromFloat((mapBottomRightTileBottomRight.y - mapTopLeftTile.y) / mapZig.GameMap.TILE_SIZE);
-                    const adjustColumns = @mod(columns, rectangleTileColumns);
-                    const adjustRows = @mod(rows, rectangleTileRows);
+                    const adjustColumns = @mod(columns, 2);
+                    const adjustRows = @mod(rows, 2);
                     if (mapMouseUp.x < mapMouseDown.x) {
                         mapTopLeftTile.x = mapTopLeftTile.x - @as(f64, @floatFromInt(adjustColumns * mapZig.GameMap.TILE_SIZE));
                     } else {
