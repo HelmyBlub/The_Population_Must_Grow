@@ -103,7 +103,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.GameState, citizenCount: u32
                 vkState.citizen.vertices[index] = .{
                     .pos = .{ citizen.position.x, citizen.position.y },
                     .imageIndex = citizen.imageIndex,
-                    .animationTimer = animationTimer,
+                    .animationTimer = @truncate(animationTimer),
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,
                     .booleans = packBools(citizen, state),
                 };

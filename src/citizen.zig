@@ -39,12 +39,12 @@ pub const Citizen: type = struct {
     hasPotato: bool = false,
     homePosition: Position,
     foodLevel: f32 = 1,
-    foodLevelLastUpdateTimeMs: u32 = 0,
-    nextFoodTickTimeMs: u32 = 0,
-    nextThinkingTickTimeMs: u32 = 0,
+    foodLevelLastUpdateTimeMs: u64 = 0,
+    nextFoodTickTimeMs: u64 = 0,
+    nextThinkingTickTimeMs: u64 = 0,
     nextThinkingAction: CitizenThinkAction = .idle,
     pathfindFailedCounter: u8 = 0,
-    nextStuckCheckTime: ?u32 = null,
+    nextStuckCheckTime: ?u64 = null,
     pub const MAX_SQUARE_TILE_SEARCH_DISTANCE = 50;
     pub const FAILED_PATH_SEARCH_WAIT_TIME_MS = 3000;
     pub const RECHECK_STUCK_TIME_MS = 15_000;

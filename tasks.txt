@@ -1,9 +1,9 @@
 tasks:
-- time display needs a bit more space
-
+- game times needs to be u64
 - bug: some chunks did not come to rest: i guess big building chunks
     - no citizens grows but citzens not idle -> means something needs to be build?
-
+- if save file verion changes, delete all data.
+    - currently only main chunk resets
 
 - check different OS builds    
     - linux 
@@ -31,3 +31,4 @@ Offstream:
 Some data:
 - FPS: 116, citizens: 32551, gameTime: 330000, end FPS: 85.395515 (25.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 113, citizens: 32551, gameTime: 330000, end FPS: 84.37136 (changed game time from u32 to u64)

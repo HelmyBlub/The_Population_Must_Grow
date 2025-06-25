@@ -28,10 +28,10 @@ pub const GameState: type = struct {
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
     desiredGameSpeed: f32,
     actualGameSpeed: f32,
-    lastAutoGameSpeedChangeTime: u32 = 0,
+    lastAutoGameSpeedChangeTime: u64 = 0,
     paintIntervalMs: u8,
     tickIntervalMs: u8,
-    gameTimeMs: u32,
+    gameTimeMs: u64,
     tickStartTimeMicroSeconds: i64 = 0,
     ticksRemainingBeforePaint: f32 = 0,
     gameEnd: bool,
@@ -82,8 +82,8 @@ pub const ThreadData = struct {
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
     measureData: struct {
-        lastMeasureTime: u32 = 0,
-        switchedToThreadCountGameTime: u32 = 0,
+        lastMeasureTime: u64 = 0,
+        switchedToThreadCountGameTime: u64 = 0,
         performancePerTickedCitizens: ?f32 = null,
     },
     pub const VALIDATION_CHUNK_DISTANCE = 37;

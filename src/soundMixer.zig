@@ -33,7 +33,7 @@ const SoundToPlay = struct {
 
 const FutureSoundToPlay = struct {
     soundIndex: usize,
-    startGameTimeMs: u32,
+    startGameTimeMs: u64,
     mapPosition: main.Position,
 };
 
@@ -153,7 +153,7 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     _ = sdl.SDL_PutAudioStreamData(stream, buffer.ptr, additional_amount);
 }
 
-pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u32, mapPosition: main.Position) !void {
+pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u64, mapPosition: main.Position) !void {
     try soundMixer.soundsFutureQueue.append(FutureSoundToPlay{
         .soundIndex = soundIndex,
         .startGameTimeMs = startGameTimeMs,

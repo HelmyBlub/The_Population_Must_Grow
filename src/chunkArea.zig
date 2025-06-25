@@ -17,7 +17,7 @@ pub const ChunkAreaIdleType = enum {
 };
 
 pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
-    waitingForCitizens: u32,
+    waitingForCitizens: u64,
     idle,
     notIdle,
 };
@@ -32,7 +32,7 @@ pub const ChunkArea: type = struct {
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
     idleTypeData: ChunkAreaIdleTypeData = .notIdle,
     visible: bool = false,
-    dontUnloadBeforeTime: u32,
+    dontUnloadBeforeTime: u64,
     requestedToLoad: bool = false,
     pub const SIZE = 20;
     pub const MAX_AREA_ROWS_COLUMNS: comptime_int = 20_000;

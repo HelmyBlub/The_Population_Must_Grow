@@ -1080,7 +1080,7 @@ fn updateUniformBuffer(state: *main.GameState) !void {
 }
 
 pub fn drawFrame(state: *main.GameState) !void {
-    state.framesTotalCounter += 1;
+    state.framesTotalCounter +|= 1;
     var vkState = &state.vkState;
     try codePerformanceZig.startMeasure("    sprite vertice setup", &state.codePerformanceData);
     try setupVerticesForSprites(state);

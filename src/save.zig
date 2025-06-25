@@ -10,7 +10,7 @@ const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
 const settingsMenuUxVulkanZig = @import("vulkan/settingsMenuVulkan.zig");
 
 pub const DEBUG_INFO_SAVE = false;
-const SAFE_FILE_VERSION: u8 = 1;
+const SAFE_FILE_VERSION: u8 = 2;
 
 const SAVE_EMPTY = 0;
 const SAVE_PATH = 1;
@@ -181,7 +181,7 @@ pub fn saveGeneralDataToFile(state: *main.GameState) !void {
     }
     _ = try writer.writeByte(SAFE_FILE_VERSION);
     _ = try writer.writeInt(u64, citizenCounter, .little);
-    _ = try writer.writeInt(u32, state.gameTimeMs, .little);
+    _ = try writer.writeInt(u64, state.gameTimeMs, .little);
     _ = try writer.writeInt(u32, @bitCast(state.soundMixer.volume), .little);
     _ = try writer.writeInt(u32, @bitCast(state.vkState.uiSizeFactor), .little);
     _ = try writer.writeByte(@intFromBool(state.vkState.settingsMenuUx.fullscreen.checked));
@@ -218,7 +218,7 @@ pub fn loadGeneralDataFromFile(state: *main.GameState) !bool {
     }
     state.citizenCounter = try reader.readInt(u64, .little);
     state.citizenCounterLastTick = state.citizenCounter;
-    state.gameTimeMs = try reader.readInt(u32, .little);
+    state.gameTimeMs = try reader.readInt(u64, .little);
     state.soundMixer.volume = @bitCast(try reader.readInt(u32, .little));
     state.vkState.uiSizeFactor = @bitCast(try reader.readInt(u32, .little));
     state.vkState.settingsMenuUx.uiSizeDelayed = state.vkState.uiSizeFactor;

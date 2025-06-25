@@ -35,9 +35,9 @@ pub const PathingType = enum {
 pub const MapChunk = struct {
     chunkXY: ChunkXY,
     workingCitizenCounter: u32 = 0,
-    lastPaintGameTime: u32 = 0,
-    noPotatoLeftInChunkProximityGameTime: u32 = 0,
-    noTreeLeftInChunkProximityGameTime: u32 = 0,
+    lastPaintGameTime: u64 = 0,
+    noPotatoLeftInChunkProximityGameTime: u64 = 0,
+    noTreeLeftInChunkProximityGameTime: u64 = 0,
     trees: std.ArrayList(MapTree),
     buildings: std.ArrayList(Building),
     /// buildings bigger than one tile
@@ -47,7 +47,7 @@ pub const MapChunk = struct {
     /// used for bigBuildings which use more than one tile
     blockingTiles: std.ArrayList(TileXY),
     buildOrders: std.ArrayList(BuildOrder),
-    skipBuildOrdersUntilTimeMs: ?u32 = null,
+    skipBuildOrdersUntilTimeMs: ?u64 = null,
     pathes: std.ArrayList(main.Position),
     pathingData: main.pathfindingZig.PathfindingChunkData,
     queue: std.ArrayList(ChunkQueueItem),
@@ -65,7 +65,7 @@ const ChunkQueueItemData = union(ChunkQueueType) {
 
 pub const ChunkQueueItem = struct {
     itemData: ChunkQueueItemData,
-    executeTime: u32,
+    executeTime: u64,
 };
 
 pub const BuildOrder = struct {
@@ -85,8 +85,8 @@ pub const MapTree = struct {
     position: main.Position,
     citizenOnTheWay: bool = false,
     fullyGrown: bool = false,
-    growStartTimeMs: ?u32 = null,
-    beginCuttingTime: ?u32 = null,
+    growStartTimeMs: ?u64 = null,
+    beginCuttingTime: ?u64 = null,
     regrow: bool = false,
     imageIndex: u8 = imageZig.IMAGE_TREE,
 };
@@ -102,7 +102,7 @@ pub const Building = struct {
     inConstruction: bool = true,
     woodRequired: u8 = 1,
     citizensSpawned: u8 = 0,
-    constructionStartedTime: ?u32 = null,
+    constructionStartedTime: ?u64 = null,
     imageIndex: u8 = imageZig.IMAGE_WHITE_RECTANGLE,
     pub const BIG_HOUSE_WOOD = 16;
 };
@@ -110,7 +110,7 @@ pub const Building = struct {
 pub const PotatoField = struct {
     position: main.Position,
     citizenOnTheWay: u8 = 0,
-    growStartTimeMs: ?u32 = null,
+    growStartTimeMs: ?u64 = null,
     fullyGrown: bool = false,
 };
 
