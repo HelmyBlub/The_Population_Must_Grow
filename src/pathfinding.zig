@@ -865,6 +865,10 @@ pub fn pathfindAStar(
             startRecData = leftOfStart;
         } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX + 1, .tileY = startTile.tileY }, threadIndex, state)) |rightOfStart| {
             startRecData = rightOfStart;
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX, .tileY = startTile.tileY - 2 }, threadIndex, state)) |top2OfStart| {
+            startRecData = top2OfStart;
+        } else if (try getChunkGraphRectangleIndexForTileXY(.{ .tileX = startTile.tileX - 2, .tileY = startTile.tileY }, threadIndex, state)) |left2OfStart| {
+            startRecData = left2OfStart;
         } else {
             if (PATHFINDING_DEBUG) std.debug.print("stuck on blocking tile", .{});
             return false;
@@ -994,6 +998,10 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
             result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX - 1, .tileY = citizenPosTileXy.tileY });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
             result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX + 1, .tileY = citizenPosTileXy.tileY });
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 2 }, threadIndex, state)) {
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 2 });
+        } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX - 2, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
+            result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX - 2, .tileY = citizenPosTileXy.tileY });
         }
     }
     return result;

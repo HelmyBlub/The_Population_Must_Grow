@@ -1,6 +1,9 @@
 tasks:
 - check: citizen stuck between big buildings with valid pathing
 
+- check more with trapped citizens and big buildings
+    - had some confused citizens not wanting to build big building once
+    - had citizens walking over bigbuilding(probably was not finished building, but was not visible before when it was nearly finished)
 
 - check steam achivements
     - setup steam side
