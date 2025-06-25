@@ -230,7 +230,6 @@ pub const Citizen: type = struct {
                         }
                     }
                     if (!isSpecialBigBuildingCase) {
-                        std.debug.print("len {}, pos: {}, cit: {}, time: {}\n", .{ buildOrderChunk.buildOrders.items.len, pos, citizen.homePosition, state.gameTimeMs });
                         try buildOrderChunk.buildOrders.append(.{ .position = pos, .materialCount = 1 });
                     }
                 }
