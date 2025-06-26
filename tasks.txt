@@ -1,6 +1,7 @@
 tasks:
 - check different OS builds    
-    - linux 
+    - linux  
+        - 
     - mac
 
 - random move to no need for pathfind

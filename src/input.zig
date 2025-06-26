@@ -2,11 +2,7 @@ const std = @import("std");
 const main = @import("main.zig");
 const mapZig = @import("map.zig");
 const buildOptionsUxVulkanZig = @import("vulkan/buildOptionsUxVulkan.zig");
-const sdl = @cImport({
-    @cInclude("SDL3/SDL.h");
-    @cInclude("SDL3/SDL_revision.h");
-    @cInclude("SDL3/SDL_vulkan.h");
-});
+const sdl = @import("windowSdl.zig").sdl;
 
 pub const ActionType = enum {
     buildHouse,

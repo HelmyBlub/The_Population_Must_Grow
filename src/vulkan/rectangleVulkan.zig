@@ -1,9 +1,7 @@
 const std = @import("std");
-const vk = @cImport({
-    @cInclude("vulkan.h");
-});
-const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const vk = paintVulkanZig.vk;
+const main = @import("../main.zig");
 const mapZig = @import("../map.zig");
 
 pub const VkRectangle = struct {
@@ -22,10 +20,10 @@ pub fn initRectangle(state: *main.GameState) !void {
 }
 
 pub fn destroyRectangle(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) void {
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.rectangle.vertexBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, null);
-    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.rectangle.graphicsPipeline, null);
-    vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.rectangle.pipelineLayout, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.rectangle.vertexBuffer, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, null);
+    vk.vkDestroyPipeline.?(vkState.logicalDevice, vkState.rectangle.graphicsPipeline, null);
+    vk.vkDestroyPipelineLayout.?(vkState.logicalDevice, vkState.rectangle.pipelineLayout, null);
     allocator.free(vkState.rectangle.vertices);
 }
 
@@ -53,20 +51,20 @@ pub fn setupVertices(rectangles: []?main.VulkanRectangle, state: *main.GameState
 
 pub fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.rectangle.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.rectangle.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]paintVulkanZig.ColoredVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.rectangle.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.rectangle.vertexBufferMemory);
 }
 
 pub fn recordRectangleCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     if (state.vkState.rectangle.verticeCount <= 0) return;
     const vkState = &state.vkState;
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.rectangle.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.rectangle.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(state.vkState.rectangle.verticeCount), 1, 0, 0);
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
@@ -87,9 +85,9 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/rectangleFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, fragShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -192,7 +190,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = null,
     };
-    if (vk.vkCreatePipelineLayout(vkState.logicalDevice, &pipelineLayoutInfo, null, &vkState.rectangle.pipelineLayout) != vk.VK_SUCCESS) return error.createPipelineLayout;
+    if (vk.vkCreatePipelineLayout.?(vkState.logicalDevice, &pipelineLayoutInfo, null, &vkState.rectangle.pipelineLayout) != vk.VK_SUCCESS) return error.createPipelineLayout;
 
     var pipelineInfo = vk.VkGraphicsPipelineCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -211,7 +209,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .basePipelineHandle = null,
         .pNext = null,
     };
-    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.rectangle.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
+    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.rectangle.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
 
     var triangleInputAssembly = vk.VkPipelineInputAssemblyStateCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -248,5 +246,5 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .basePipelineHandle = null,
         .pNext = null,
     };
-    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &trianglePipelineInfo, null, &vkState.triangleGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateTriangleGraphicsPipeline;
+    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &trianglePipelineInfo, null, &vkState.triangleGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateTriangleGraphicsPipeline;
 }

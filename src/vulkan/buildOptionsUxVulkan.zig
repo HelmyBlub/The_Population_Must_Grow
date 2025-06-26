@@ -1,9 +1,7 @@
 const std = @import("std");
-const vk = @cImport({
-    @cInclude("vulkan.h");
-});
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const vk = paintVulkanZig.vk;
 const fontVulkanZig = @import("fontVulkan.zig");
 const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
@@ -335,14 +333,14 @@ pub fn init(state: *main.GameState) !void {
 }
 
 pub fn destroy(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) void {
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBuffer, null);
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBuffer, null);
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBuffer, null);
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBuffer, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBuffer, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBuffer, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBuffer, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory, null);
     allocator.free(vkState.buildOptionsUx.triangles.vertices);
     allocator.free(vkState.buildOptionsUx.lines.vertices);
     allocator.free(vkState.buildOptionsUx.sprites.vertices);
@@ -526,53 +524,53 @@ pub fn setupVertices(state: *main.GameState) !void {
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.buildOptionsUx.triangles.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.buildOptionsUx.triangles.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     var gpu_vertices: [*]paintVulkanZig.ColoredVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.buildOptionsUx.triangles.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.triangles.vertexBufferMemory);
 
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.buildOptionsUx.lines.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.ColoredVertex) * vkState.buildOptionsUx.lines.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     gpu_vertices = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.buildOptionsUx.lines.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.lines.vertexBufferMemory);
 
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.buildOptionsUx.sprites.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.buildOptionsUx.sprites.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpuVerticesSprite: [*]paintVulkanZig.SpriteVertex = @ptrCast(@alignCast(data));
     @memcpy(gpuVerticesSprite, vkState.buildOptionsUx.sprites.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.sprites.vertexBufferMemory);
 
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.buildOptionsUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.buildOptionsUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpuVerticesFont: [*]fontVulkanZig.FontVertex = @ptrCast(@alignCast(data));
     @memcpy(gpuVerticesFont, vkState.buildOptionsUx.font.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.buildOptionsUx.font.vertexBufferMemory);
 }
 
 pub fn recordCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     if (state.vkState.buildOptionsUx.triangles.verticeCount <= 0) return;
     const vkState = &state.vkState;
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.triangleGraphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.triangleGraphicsPipeline);
     var vertexBuffers: [1]vk.VkBuffer = .{vkState.buildOptionsUx.triangles.vertexBuffer};
     var offsets: [1]vk.VkDeviceSize = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.triangles.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(state.vkState.buildOptionsUx.triangles.verticeCount), 1, 0, 0);
 
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.spriteGraphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.spriteGraphicsPipeline);
     vertexBuffers = .{vkState.buildOptionsUx.sprites.vertexBuffer};
     offsets = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.sprites.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(state.vkState.buildOptionsUx.sprites.verticeCount), 1, 0, 0);
 
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
     vertexBuffers = .{vkState.buildOptionsUx.font.vertexBuffer};
     offsets = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.font.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(state.vkState.buildOptionsUx.font.verticeCount), 1, 0, 0);
 
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.rectangle.graphicsPipeline);
     vertexBuffers = .{vkState.buildOptionsUx.lines.vertexBuffer};
     offsets = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(state.vkState.buildOptionsUx.lines.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(state.vkState.buildOptionsUx.lines.verticeCount), 1, 0, 0);
 }
 
 fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) !void {
@@ -583,11 +581,11 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/imageFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, vertShaderModule, null);
     const geomShaderModule = try paintVulkanZig.createShaderModule(geomShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, geomShaderModule, null);
     const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, fragShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -707,5 +705,5 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .basePipelineHandle = null,
         .pNext = null,
     };
-    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.spriteGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline;
+    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.spriteGraphicsPipeline) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline;
 }

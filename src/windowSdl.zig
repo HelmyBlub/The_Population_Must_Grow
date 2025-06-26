@@ -1,6 +1,7 @@
 const std = @import("std");
 const buildin = @import("builtin");
-const sdl = @cImport({
+pub const sdl = @cImport({
+    @cDefine("VK_NO_PROTOTYPES", {});
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
     @cInclude("SDL3/SDL_vulkan.h");

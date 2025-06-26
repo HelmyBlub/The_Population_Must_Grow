@@ -1,9 +1,7 @@
 const std = @import("std");
-const vk = @cImport({
-    @cInclude("vulkan.h");
-});
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const vk = paintVulkanZig.vk;
 const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
 const windowSdlZig = @import("../windowSdl.zig");
@@ -72,8 +70,8 @@ pub fn setupVerticesForComplexCitizens(state: *main.GameState, citizenCount: u32
     // recreate buffer with new size
     if (vkState.citizen.vertexBufferSize == 0) return;
     if (vkState.citizen.vertexBufferCleanUp[vkState.currentFrame] != null) {
-        vk.vkDestroyBuffer(vkState.logicalDevice, vkState.citizen.vertexBufferCleanUp[vkState.currentFrame].?, null);
-        vk.vkFreeMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemoryCleanUp[vkState.currentFrame].?, null);
+        vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.citizen.vertexBufferCleanUp[vkState.currentFrame].?, null);
+        vk.vkFreeMemory.?(vkState.logicalDevice, vkState.citizen.vertexBufferMemoryCleanUp[vkState.currentFrame].?, null);
         vkState.citizen.vertexBufferCleanUp[vkState.currentFrame] = null;
         vkState.citizen.vertexBufferMemoryCleanUp[vkState.currentFrame] = null;
     }
@@ -133,11 +131,11 @@ fn packBools(citizen: *main.Citizen, state: *main.GameState) u8 {
 
 pub fn recordCitizenCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     const vkState = &state.vkState;
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.citizen.graphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.citizen.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.citizen.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(vkState.citizen.entityPaintCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(vkState.citizen.entityPaintCount), 1, 0, 0);
 }
 
 fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, entityCount: u64, allocator: std.mem.Allocator) !void {
@@ -156,10 +154,10 @@ fn createVertexBuffer(vkState: *paintVulkanZig.Vk_State, entityCount: u64, alloc
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemory, 0, @sizeOf(CitizenVertex) * vkState.citizen.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.citizen.vertexBufferMemory, 0, @sizeOf(CitizenVertex) * vkState.citizen.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]CitizenVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.citizen.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.citizen.vertexBufferMemory);
 }
 
 pub fn initCitizen(state: *main.GameState) !void {
@@ -176,16 +174,16 @@ pub fn initCitizen(state: *main.GameState) !void {
 pub fn destroyCitizen(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) void {
     for (0..paintVulkanZig.Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         if (vkState.citizen.vertexBufferSize != 0 and vkState.citizen.vertexBufferCleanUp[i] != null) {
-            vk.vkDestroyBuffer(vkState.logicalDevice, vkState.citizen.vertexBufferCleanUp[i].?, null);
-            vk.vkFreeMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemoryCleanUp[i].?, null);
+            vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.citizen.vertexBufferCleanUp[i].?, null);
+            vk.vkFreeMemory.?(vkState.logicalDevice, vkState.citizen.vertexBufferMemoryCleanUp[i].?, null);
             vkState.citizen.vertexBufferCleanUp[i] = null;
             vkState.citizen.vertexBufferMemoryCleanUp[i] = null;
         }
     }
 
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.citizen.vertexBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.citizen.vertexBufferMemory, null);
-    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.citizen.graphicsPipeline, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.citizen.vertexBuffer, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.citizen.vertexBufferMemory, null);
+    vk.vkDestroyPipeline.?(vkState.logicalDevice, vkState.citizen.graphicsPipeline, null);
     allocator.free(vkState.citizen.vertices);
     allocator.free(vkState.citizen.vertexBufferCleanUp);
     allocator.free(vkState.citizen.vertexBufferMemoryCleanUp);
@@ -199,11 +197,11 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const geomShaderCitizenComplexCode = try paintVulkanZig.readShaderFile("shaders/citizenGeom.spv", allocator);
     defer allocator.free(geomShaderCitizenComplexCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, vertShaderModule, null);
     const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, fragShaderModule, null);
     const geomCitizenComplexShaderModule = try paintVulkanZig.createShaderModule(geomShaderCitizenComplexCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomCitizenComplexShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, geomCitizenComplexShaderModule, null);
 
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -337,5 +335,5 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pNext = null,
         .pDepthStencilState = &vkState.depthStencil,
     };
-    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfoCitizenComplex, null, &vkState.citizen.graphicsPipeline) != vk.VK_SUCCESS) return error.citizenGraphicsPipeline;
+    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfoCitizenComplex, null, &vkState.citizen.graphicsPipeline) != vk.VK_SUCCESS) return error.citizenGraphicsPipeline;
 }

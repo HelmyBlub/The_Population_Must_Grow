@@ -1,9 +1,7 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
-const vk = @cImport({
-    @cInclude("vulkan.h");
-});
+const vk = paintVulkanZig.vk;
 
 pub const IMAGE_DOG = 0;
 pub const IMAGE_TREE = 1;
@@ -107,9 +105,9 @@ pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: st
     try image.convert(.rgba32);
 
     var stagingBuffer: vk.VkBuffer = undefined;
-    defer vk.vkDestroyBuffer(vkState.logicalDevice, stagingBuffer, null);
+    defer vk.vkDestroyBuffer.?(vkState.logicalDevice, stagingBuffer, null);
     var stagingBufferMemory: vk.VkDeviceMemory = undefined;
-    defer vk.vkFreeMemory(vkState.logicalDevice, stagingBufferMemory, null);
+    defer vk.vkFreeMemory.?(vkState.logicalDevice, stagingBufferMemory, null);
     try paintVulkanZig.createBuffer(
         image.imageByteSize(),
         vk.VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -120,12 +118,12 @@ pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: st
     );
 
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, stagingBufferMemory, 0, image.imageByteSize(), 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     @memcpy(
         @as([*]u8, @ptrCast(data))[0..image.imageByteSize()],
         @as([*]u8, @ptrCast(image.pixels.asBytes())),
     );
-    vk.vkUnmapMemory(vkState.logicalDevice, stagingBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, stagingBufferMemory);
     const imageWidth: u32 = @intCast(image.width);
     const imageHeight: u32 = @intCast(image.height);
     const log2: f32 = @log2(@as(f32, @floatFromInt(@max(imageWidth, imageHeight))));
@@ -164,7 +162,7 @@ pub fn createVulkanTextureImage(vkState: *paintVulkanZig.Vk_State, allocator: st
 
 fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: i32, texHeight: i32, mipLevels: u32, vkState: *paintVulkanZig.Vk_State) !void {
     var formatProperties: vk.VkFormatProperties = undefined;
-    vk.vkGetPhysicalDeviceFormatProperties(vkState.physical_device, imageFormat, &formatProperties);
+    vk.vkGetPhysicalDeviceFormatProperties.?(vkState.physical_device, imageFormat, &formatProperties);
 
     if ((formatProperties.optimalTilingFeatures & vk.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) == 0) return error.doesNotSupportOptimailTiling;
 
@@ -192,7 +190,7 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
         barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = vk.VK_ACCESS_TRANSFER_READ_BIT;
 
-        vk.vkCmdPipelineBarrier(
+        vk.vkCmdPipelineBarrier.?(
             commandBuffer,
             vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
             vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -227,7 +225,7 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
                 .layerCount = 1,
             },
         };
-        vk.vkCmdBlitImage(
+        vk.vkCmdBlitImage.?(
             commandBuffer,
             image,
             vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -242,7 +240,7 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
         barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = vk.VK_ACCESS_SHADER_READ_BIT;
 
-        vk.vkCmdPipelineBarrier(
+        vk.vkCmdPipelineBarrier.?(
             commandBuffer,
             vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
             vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -264,7 +262,7 @@ fn generateVulkanMipmaps(image: vk.VkImage, imageFormat: vk.VkFormat, texWidth: 
     barrier.srcAccessMask = vk.VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = vk.VK_ACCESS_SHADER_READ_BIT;
 
-    vk.vkCmdPipelineBarrier(
+    vk.vkCmdPipelineBarrier.?(
         commandBuffer,
         vk.VK_PIPELINE_STAGE_TRANSFER_BIT,
         vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -295,7 +293,7 @@ fn copyBufferToImage(buffer: vk.VkBuffer, image: vk.VkImage, width: u32, height:
         .imageOffset = .{ .x = 0, .y = 0, .z = 0 },
         .imageExtent = .{ .width = width, .height = height, .depth = 1 },
     };
-    vk.vkCmdCopyBufferToImage(
+    vk.vkCmdCopyBufferToImage.?(
         commandBuffer,
         buffer,
         image,
@@ -347,7 +345,7 @@ fn transitionVulkanImageLayout(image: vk.VkImage, oldLayout: vk.VkImageLayout, n
         return error.unsuportetLayoutTransition;
     }
 
-    vk.vkCmdPipelineBarrier(
+    vk.vkCmdPipelineBarrier.?(
         commandBuffer,
         sourceStage,
         destinationStage,

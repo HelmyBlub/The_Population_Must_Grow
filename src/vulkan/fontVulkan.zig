@@ -1,9 +1,7 @@
 const std = @import("std");
-const vk = @cImport({
-    @cInclude("vulkan.h");
-});
 const main = @import("../main.zig");
 const paintVulkanZig = @import("paintVulkan.zig");
+const vk = paintVulkanZig.vk;
 const imageZig = @import("../image.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 const codePerformanceZig = @import("../codePerformance.zig");
@@ -235,33 +233,33 @@ pub fn initFont(state: *main.GameState) !void {
 }
 
 pub fn destroyFont(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.Allocator) void {
-    vk.vkDestroyImageView(vkState.logicalDevice, vkState.font.textureImageView, null);
-    vk.vkDestroyImage(vkState.logicalDevice, vkState.font.textureImage, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.font.textureImageMemory, null);
-    vk.vkDestroyBuffer(vkState.logicalDevice, vkState.font.vkFont.vertexBuffer, null);
-    vk.vkFreeMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, null);
-    vk.vkDestroyPipeline(vkState.logicalDevice, vkState.font.graphicsPipeline, null);
-    vk.vkDestroyPipelineLayout(vkState.logicalDevice, vkState.font.pipelineLayout, null);
+    vk.vkDestroyImageView.?(vkState.logicalDevice, vkState.font.textureImageView, null);
+    vk.vkDestroyImage.?(vkState.logicalDevice, vkState.font.textureImage, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.font.textureImageMemory, null);
+    vk.vkDestroyBuffer.?(vkState.logicalDevice, vkState.font.vkFont.vertexBuffer, null);
+    vk.vkFreeMemory.?(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, null);
+    vk.vkDestroyPipeline.?(vkState.logicalDevice, vkState.font.graphicsPipeline, null);
+    vk.vkDestroyPipelineLayout.?(vkState.logicalDevice, vkState.font.pipelineLayout, null);
     allocator.free(vkState.font.vkFont.vertices);
 }
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     var data: ?*anyopaque = undefined;
-    if (vk.vkMapMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vkFont.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory, 0, @sizeOf(FontVertex) * vkState.font.vkFont.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpu_vertices: [*]FontVertex = @ptrCast(@alignCast(data));
     @memcpy(gpu_vertices, vkState.font.vkFont.vertices[0..]);
-    vk.vkUnmapMemory(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory);
+    vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.font.vkFont.vertexBufferMemory);
 }
 
 pub fn recordFontCommandBuffer(commandBuffer: vk.VkCommandBuffer, state: *main.GameState) !void {
     try dataUpdate(state);
     const vkState = &state.vkState;
     try setupVertexDataForGPU(vkState);
-    vk.vkCmdBindPipeline(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
+    vk.vkCmdBindPipeline.?(commandBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, vkState.font.graphicsPipeline);
     const vertexBuffers: [1]vk.VkBuffer = .{vkState.font.vkFont.vertexBuffer};
     const offsets: [1]vk.VkDeviceSize = .{0};
-    vk.vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
-    vk.vkCmdDraw(commandBuffer, @intCast(vkState.font.vkFont.verticeCount), 1, 0, 0);
+    vk.vkCmdBindVertexBuffers.?(commandBuffer, 0, 1, &vertexBuffers[0], &offsets[0]);
+    vk.vkCmdDraw.?(commandBuffer, @intCast(vkState.font.vkFont.verticeCount), 1, 0, 0);
 }
 
 pub fn charToTexCoords(char: u8, texX: *f32, texWidth: *f32) void {
@@ -420,7 +418,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const vertShaderCode = try paintVulkanZig.readShaderFile("shaders/fontVert.spv", allocator);
     defer allocator.free(vertShaderCode);
     const vertShaderModule = try paintVulkanZig.createShaderModule(vertShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, vertShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, vertShaderModule, null);
     const vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = vk.VK_SHADER_STAGE_VERTEX_BIT,
@@ -431,7 +429,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const fragShaderCode = try paintVulkanZig.readShaderFile("shaders/fontFrag.spv", allocator);
     defer allocator.free(fragShaderCode);
     const fragShaderModule = try paintVulkanZig.createShaderModule(fragShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, fragShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, fragShaderModule, null);
     const fragShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = vk.VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -442,7 +440,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
     const geomShaderCode = try paintVulkanZig.readShaderFile("shaders/fontGeom.spv", allocator);
     defer allocator.free(geomShaderCode);
     const geomShaderModule = try paintVulkanZig.createShaderModule(geomShaderCode, vkState);
-    defer vk.vkDestroyShaderModule(vkState.logicalDevice, geomShaderModule, null);
+    defer vk.vkDestroyShaderModule.?(vkState.logicalDevice, geomShaderModule, null);
     const geomShaderStageInfo = vk.VkPipelineShaderStageCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = vk.VK_SHADER_STAGE_GEOMETRY_BIT,
@@ -537,7 +535,7 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = null,
     };
-    if (vk.vkCreatePipelineLayout(vkState.logicalDevice, &pipelineLayoutInfo, null, &vkState.font.pipelineLayout) != vk.VK_SUCCESS) return error.createPipelineLayout;
+    if (vk.vkCreatePipelineLayout.?(vkState.logicalDevice, &pipelineLayoutInfo, null, &vkState.font.pipelineLayout) != vk.VK_SUCCESS) return error.createPipelineLayout;
 
     var pipelineInfo = vk.VkGraphicsPipelineCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -556,5 +554,5 @@ fn createGraphicsPipeline(vkState: *paintVulkanZig.Vk_State, allocator: std.mem.
         .basePipelineHandle = null,
         .pNext = null,
     };
-    if (vk.vkCreateGraphicsPipelines(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.font.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
+    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.font.graphicsPipeline) != vk.VK_SUCCESS) return error.createGraphicsPipeline;
 }

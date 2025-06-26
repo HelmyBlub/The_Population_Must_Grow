@@ -15,11 +15,7 @@ const countryPopulationDataZig = @import("countryPopulationData.zig");
 const settingsMenuUxVulkanZig = @import("vulkan/settingsMenuVulkan.zig");
 const steamZig = @import("steam.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
-const sdl = @cImport({
-    @cInclude("SDL3/SDL.h");
-    @cInclude("SDL3/SDL_revision.h");
-    @cInclude("SDL3/SDL_vulkan.h");
-});
+const sdl = @import("windowSdl.zig").sdl;
 
 pub const GameState: type = struct {
     pathfindTestValue: f32 = 0,
