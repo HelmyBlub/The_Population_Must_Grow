@@ -131,7 +131,6 @@ pub fn handleEvents(state: *main.GameState) !void {
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
-                state.oneTickNotSleepReaonsLogging = true;
                 var count: u32 = 0;
                 for (state.threadData) |thread| {
                     for (thread.chunkAreaKeys.items) |chunkAreaKey| {
@@ -217,7 +216,6 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             }
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
-        state.oneTickNotSleepReaonsLogging = true;
         for (state.threadData) |thread| {
             for (thread.chunkAreaKeys.items) |chunkAreaKey| {
                 if (state.chunkAreas.getPtr(chunkAreaKey)) |chunkArea| {

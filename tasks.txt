@@ -1,11 +1,4 @@
 tasks:
-- bug: copy paste select area right click should not unselect on move
-    - can not reproduce 
-- toogle value to print out whats is reason for not going idle
-- bug: chunks can go idle when still unfinished work in them but no working citizens
-    - check if citizen working incorrect in some cases as they can eat but have work
-    - citizen is not ticked because not working, but also is not assigned work because he is searching food
-
 - check different OS builds    
     - linux 
     - mac
@@ -31,6 +24,6 @@ Offstream:
     - do i know someone for a mac build test?
   
 Some data:
-- FPS: 114, citizens: 32551, gameTime: 330000, end FPS: 79.85751 (26.06.2025)
+- FPS: 111, citizens: 32755, gameTime: 330000, end FPS: 81.47392 (26.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
 - 
