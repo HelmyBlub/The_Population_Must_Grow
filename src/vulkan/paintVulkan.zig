@@ -3,9 +3,6 @@ const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 pub const vk = @cImport({
-    @cDefine("VOLK_IMPLEMENTATION", {});
-    @cDefine("VK_NO_PROTOTYPES", {});
-    @cInclude("vulkan.h");
     @cInclude("Volk/volk.h");
 });
 const sdl = windowSdlZig.sdl;
