@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     if (optimize == .ReleaseFast) {
-        exe.subsystem = .Windows;
+        // exe.subsystem = .Windows;
     }
 
     const run_cmd = b.addRunArtifact(exe);

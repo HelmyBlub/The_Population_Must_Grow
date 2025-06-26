@@ -856,10 +856,10 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameSta
                         cornerBuilding.citizensSpawned -= 1;
                         const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
                         if (newBuildingChunk != chunk) {
-                            const moveCitizen = chunk.citizens.swapRemove(i);
+                            var moveCitizen = chunk.citizens.swapRemove(i);
                             try newBuildingChunk.citizens.append(moveCitizen);
                             if (chunk.chunkXY.chunkX != newBuildingChunk.chunkXY.chunkX or chunk.chunkXY.chunkY != newBuildingChunk.chunkXY.chunkY) {
-                                if (main.Citizen.isCitizenWorking(moveCitizen)) {
+                                if (main.Citizen.isCitizenWorking(&moveCitizen)) {
                                     chunk.workingCitizenCounter -= 1;
                                     newBuildingChunk.workingCitizenCounter += 1;
                                 }

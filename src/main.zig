@@ -23,6 +23,7 @@ const sdl = @cImport({
 
 pub const GameState: type = struct {
     pathfindTestValue: f32 = 0,
+    oneTickNotSleepReaonsLogging: bool = false,
     steam: ?steamZig.SteamData = null,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
@@ -903,7 +904,7 @@ fn tick(state: *GameState) !void {
         totalTickedCitizens += state.threadData[countThreadDataIndex].tickedCitizenCounter;
     }
     state.totalTickedCitizensSmoothed = @intFromFloat(@as(f32, @floatFromInt(state.totalTickedCitizensSmoothed)) * 0.99 + @as(f32, @floatFromInt(totalTickedCitizens)) * 0.01);
-
+    state.oneTickNotSleepReaonsLogging = false;
     codePerformanceZig.endMeasure("tick total", &state.codePerformanceData);
     codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
@@ -1045,8 +1046,10 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                     switch (mapObject) {
                         mapZig.MapObject.building => |building| {
                             freeCitizen.buildingPosition = building.position;
-                            freeCitizen.nextThinkingAction = .buildingStart;
-                            freeCitizen.moveTo.clearAndFree();
+                            if (freeCitizen.nextThinkingAction == .idle) {
+                                freeCitizen.nextThinkingAction = .buildingStart;
+                                freeCitizen.moveTo.clearAndFree();
+                            }
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
                             const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
@@ -1054,8 +1057,10 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                         },
                         mapZig.MapObject.bigBuilding => |building| {
                             freeCitizen.buildingPosition = building.position;
-                            freeCitizen.nextThinkingAction = .buildingStart;
-                            freeCitizen.moveTo.clearAndFree();
+                            if (freeCitizen.nextThinkingAction == .idle) {
+                                freeCitizen.nextThinkingAction = .buildingStart;
+                                freeCitizen.moveTo.clearAndFree();
+                            }
                             if (buildOrder.materialCount > 1) {
                                 buildOrder.materialCount -= 1;
                                 iterator += 1;
@@ -1068,8 +1073,10 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                         },
                         mapZig.MapObject.potatoField => |potatoField| {
                             freeCitizen.farmPosition = potatoField.position;
-                            freeCitizen.nextThinkingAction = .potatoPlant;
-                            freeCitizen.moveTo.clearAndFree();
+                            if (freeCitizen.nextThinkingAction == .idle) {
+                                freeCitizen.nextThinkingAction = .potatoPlant;
+                                freeCitizen.moveTo.clearAndFree();
+                            }
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
                             const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
@@ -1077,8 +1084,10 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
                         },
                         mapZig.MapObject.tree => |tree| {
                             freeCitizen.treePosition = tree.position;
-                            freeCitizen.nextThinkingAction = .treePlant;
-                            freeCitizen.moveTo.clearAndFree();
+                            if (freeCitizen.nextThinkingAction == .idle) {
+                                freeCitizen.nextThinkingAction = .treePlant;
+                                freeCitizen.moveTo.clearAndFree();
+                            }
                             _ = chunk.buildOrders.pop();
                             freeCitizenData.chunk.workingCitizenCounter += 1;
                             const citizenAreaXY = chunkAreaZig.getChunkAreaXyForPosition(freeCitizen.homePosition);
@@ -1101,6 +1110,9 @@ fn tickSingleChunk(chunkIndex: usize, threadIndex: usize, chunkArea: *chunkAreaZ
         if (!couldAssignOneBuildOrder and chunk.citizens.items.len == 0 and chunk.queue.items.len == 0) result = .{ .waitingForCitizens = state.gameTimeMs + 10_000 };
     } else if (chunk.workingCitizenCounter == 0 and !couldAssignOneBuildOrder and chunk.queue.items.len == 0) {
         result = .idle;
+    }
+    if (result != .idle and state.oneTickNotSleepReaonsLogging) {
+        std.debug.print("r: {}, b:{}, q:{}, w:{}\n", .{ result, chunk.buildOrders.items.len, chunk.queue.items.len, chunk.workingCitizenCounter });
     }
     return result;
 }

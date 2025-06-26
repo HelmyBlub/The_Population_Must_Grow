@@ -1,7 +1,8 @@
 tasks:
 - toogle value to print out whats is reason for not going idle
-- bug: some chunks did not come to rest: i guess big building chunks
-    - no citizens grows but citzens not idle -> means something needs to be build?
+- bug: chunks can go idle when still unfinished work in them but no working citizens
+    - check if citizen working incorrect in some cases as they can eat but have work
+    - citizen is not ticked because not working, but also is not assigned work because he is searching food
 
 - check different OS builds    
     - linux 

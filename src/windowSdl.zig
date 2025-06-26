@@ -130,6 +130,28 @@ pub fn handleEvents(state: *main.GameState) !void {
                 try settingsMenuUxVulkanZig.setupVertices(state);
             } else if (event.key.scancode == sdl.SDL_SCANCODE_F1) {
                 state.vkState.font.displayPerformance = !state.vkState.font.displayPerformance;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_F12) {
+                state.oneTickNotSleepReaonsLogging = true;
+                var count: u32 = 0;
+                for (state.threadData) |thread| {
+                    for (thread.chunkAreaKeys.items) |chunkAreaKey| {
+                        if (state.chunkAreas.getPtr(chunkAreaKey)) |chunkArea| {
+                            if (chunkArea.chunks) |chunks| {
+                                for (chunks) |*chunk| {
+                                    for (chunk.citizens.items) |*citizen| {
+                                        if (main.Citizen.isCitizenWorking(citizen)) {
+                                            std.debug.print("{}\n\n{}\n", .{ citizen, chunk });
+                                            count += 1;
+                                            if (count > 5) {
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }
@@ -195,6 +217,7 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             }
         }
     } else if (scancode == sdl.SDL_SCANCODE_F12) {
+        state.oneTickNotSleepReaonsLogging = true;
         for (state.threadData) |thread| {
             for (thread.chunkAreaKeys.items) |chunkAreaKey| {
                 if (state.chunkAreas.getPtr(chunkAreaKey)) |chunkArea| {
@@ -211,15 +234,6 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
                 }
             }
         }
-        // const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(state.camera.position, state);
-        // if (optChunk) |chunk| {
-        //     std.debug.print("building check chunk {}, BO:{}\n", .{ chunk.chunkXY, chunk.buildOrders.items.len });
-        //     for (chunk.buildings.items) |building| {
-        //         if (building.inConstruction) {
-        //             std.debug.print("building: {}\n", .{building});
-        //         }
-        //     }
-        // }
     }
 }
 

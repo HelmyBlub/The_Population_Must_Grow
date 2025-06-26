@@ -144,7 +144,7 @@ pub const Citizen: type = struct {
                     const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
                     if (chunk == null) continue;
                     for (chunk.?.citizens.items) |*citizen| {
-                        if (citizen.nextThinkingAction != .idle or citizen.nextStuckCheckTime != null) continue;
+                        if (citizen.isCitizenWorking() or citizen.nextStuckCheckTime != null) continue;
                         const tempDistance: f32 = main.calculateDistance(targetPosition, citizen.position);
                         if (closestCitizen == null or shortestDistance > tempDistance) {
                             closestCitizen = citizen;
@@ -241,11 +241,8 @@ pub const Citizen: type = struct {
         citizen.treePosition = null;
         citizen.farmPosition = null;
     }
-    pub fn isCitizenWorking(citizen: Citizen) bool {
-        return citizen.nextThinkingAction != .idle and
-            citizen.nextThinkingAction != .potatoHarvest and
-            citizen.nextThinkingAction != .potatoEat and
-            citizen.nextThinkingAction != .potatoEatFinished;
+    pub fn isCitizenWorking(self: *Citizen) bool {
+        return self.buildingPosition != null or self.treePosition != null or self.farmPosition != null;
     }
 };
 
@@ -343,6 +340,10 @@ fn calculateMoveSpeed(citizen: *Citizen) void {
 }
 
 fn onBeingStuck(citizen: *Citizen, state: *main.GameState) !void {
+    if (citizen.isCitizenWorking()) {
+        const chunk = (try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.position, state)).?;
+        chunk.workingCitizenCounter -= 1;
+    }
     try main.Citizen.handleRemovingCitizenAction(citizen, null, state);
     citizen.nextThinkingAction = .idle;
     citizen.pathfindFailedCounter +|= 1;
@@ -359,8 +360,6 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !voi
         } else {
             if (!try citizen.moveToPosition(.{ .x = treeAndChunk.tree.position.x, .y = treeAndChunk.tree.position.y - 4 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
-                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
@@ -426,8 +425,6 @@ fn buildingGetWood(citizen: *Citizen, threadIndex: usize, state: *main.GameState
         const treeXOffset: f32 = if (citizen.position.x < citizen.treePosition.?.x) -7 else 7;
         if (!try citizen.moveToPosition(.{ .x = citizen.treePosition.?.x + treeXOffset, .y = citizen.treePosition.?.y + 3 }, threadIndex, state)) {
             try onBeingStuck(citizen, state);
-            const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
-            chunk.workingCitizenCounter -= 1;
         }
     }
 }
@@ -483,8 +480,6 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
             const buildingXOffset: f32 = if (citizen.position.x < building.position.x) -7 else 7;
             if (!try citizen.moveToPosition(.{ .x = building.position.x + buildingXOffset, .y = building.position.y + 3 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
-                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
@@ -519,8 +514,6 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !v
         } else {
             if (!try citizen.moveToPosition(.{ .x = farmData.potatoField.position.x, .y = farmData.potatoField.position.y - 5 }, threadIndex, state)) {
                 try onBeingStuck(citizen, state);
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
-                chunk.workingCitizenCounter -= 1;
             }
         }
     } else {
