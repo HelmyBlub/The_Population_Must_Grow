@@ -1,4 +1,5 @@
 tasks:
+- toogle value to print out whats is reason for not going idle
 - bug: some chunks did not come to rest: i guess big building chunks
     - no citizens grows but citzens not idle -> means something needs to be build?
 
@@ -6,6 +7,7 @@ tasks:
     - linux 
     - max
 
+- random move to no need for pathfind
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
@@ -26,6 +28,6 @@ Offstream:
     - do i know someone for a mac build test?
   
 Some data:
-- FPS: 116, citizens: 32551, gameTime: 330000, end FPS: 85.395515 (25.06.2025)
+- FPS: 114, citizens: 32551, gameTime: 330000, end FPS: 79.85751 (26.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 113, citizens: 32551, gameTime: 330000, end FPS: 84.37136 (changed game time from u32 to u64)
+- 

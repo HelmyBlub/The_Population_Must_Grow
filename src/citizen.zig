@@ -241,6 +241,12 @@ pub const Citizen: type = struct {
         citizen.treePosition = null;
         citizen.farmPosition = null;
     }
+    pub fn isCitizenWorking(citizen: Citizen) bool {
+        return citizen.nextThinkingAction != .idle and
+            citizen.nextThinkingAction != .potatoHarvest and
+            citizen.nextThinkingAction != .potatoEat and
+            citizen.nextThinkingAction != .potatoEatFinished;
+    }
 };
 
 fn thinkTick(citizen: *Citizen, threadIndex: usize, chunk: *mapZig.MapChunk, state: *main.GameState) !void {
