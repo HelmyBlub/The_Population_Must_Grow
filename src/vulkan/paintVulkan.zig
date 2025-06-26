@@ -3,9 +3,14 @@ const imageZig = @import("../image.zig");
 const mapZig = @import("../map.zig");
 const windowSdlZig = @import("../windowSdl.zig");
 const vk = @cImport({
-    @cDefine("VK_USE_PLATFORM_WIN32_KHR", "1");
     @cInclude("vulkan.h");
 });
+const sdl = @cImport({
+    @cInclude("SDL3/SDL.h");
+    @cInclude("SDL3/SDL_revision.h");
+    @cInclude("SDL3/SDL_vulkan.h");
+});
+
 const main = @import("../main.zig");
 const rectangleVulkanZig = @import("rectangleVulkan.zig");
 const fontVulkanZig = @import("fontVulkan.zig");
@@ -20,7 +25,6 @@ const chunkAreaZig = @import("../chunkArea.zig");
 const ENABLE_VALIDATION_LAYER = false;
 
 pub const Vk_State = struct {
-    hInstance: vk.HINSTANCE = undefined,
     instance: vk.VkInstance = undefined,
     surface: vk.VkSurfaceKHR = undefined,
     graphics_queue_family_idx: u32 = undefined,
@@ -1029,26 +1033,22 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         instance_create_info.enabledLayerCount = validation_layers.len;
         instance_create_info.ppEnabledLayerNames = &validation_layers;
     }
-    const requiredExtensions = [_][*:0]const u8{
-        vk.VK_KHR_SURFACE_EXTENSION_NAME,
-        vk.VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-    };
-    const extension_count: u32 = requiredExtensions.len;
-    const extensions: [*][*c]const u8 = @constCast(@ptrCast(&requiredExtensions));
-    instance_create_info.enabledExtensionCount = extension_count;
-    instance_create_info.ppEnabledExtensionNames = extensions;
+
+    const requiredExtensions = [_][*:0]const u8{};
 
     var extension_list = std.ArrayList([*c]const u8).init(allocator);
-    for (requiredExtensions[0..extension_count]) |ext| {
+    for (requiredExtensions[0..requiredExtensions.len]) |ext| {
         try extension_list.append(ext);
     }
 
     try extension_list.append(vk.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    instance_create_info.enabledExtensionCount = @intCast(extension_list.items.len);
     const extensions_ = try extension_list.toOwnedSlice();
     defer allocator.free(extensions_);
-    const pp_enabled_layer_names: [*][*c]const u8 = extensions_.ptr;
-    instance_create_info.ppEnabledExtensionNames = pp_enabled_layer_names;
+    // const pp_enabled_layer_names: [*][*c]const u8 = extensions_.ptr;
+
+    var extCount: c_uint = 0;
+    instance_create_info.ppEnabledExtensionNames = sdl.SDL_Vulkan_GetInstanceExtensions(&extCount);
+    instance_create_info.enabledExtensionCount = extCount;
 
     if (vk.vkCreateInstance(&instance_create_info, null, &vkState.instance) != vk.VK_SUCCESS) return error.vkCreateInstance;
 }

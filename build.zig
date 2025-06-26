@@ -11,8 +11,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    if (optimize == .ReleaseFast) {
-        // exe.subsystem = .Windows;
+    if (optimize == .ReleaseFast and target.result.os.tag == .windows) {
+        exe.subsystem = .Windows;
     }
 
     const run_cmd = b.addRunArtifact(exe);
