@@ -254,7 +254,7 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
         if (event.button.button != 1) {
             if (std.time.milliTimestamp() - state.mouseInfo.rightButtonPressedTimeMs.? < 175) {
                 if (state.mouseInfo.rightButtonWindowDown != null and
-                    main.calculateDistance(.{ .x = event.motion.x, .y = event.motion.y }, state.mouseInfo.rightButtonWindowDown.?) < 10)
+                    main.calculateDistance(.{ .x = event.button.x, .y = event.button.y }, state.mouseInfo.rightButtonWindowDown.?) < 5)
                 {
                     state.mouseInfo.leftButtonMapDown = null;
                     state.copyAreaRectangle = null;

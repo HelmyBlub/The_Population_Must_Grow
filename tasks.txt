@@ -1,4 +1,6 @@
 tasks:
+- bug: copy paste select area right click should not unselect on move
+    - can not reproduce 
 - toogle value to print out whats is reason for not going idle
 - bug: chunks can go idle when still unfinished work in them but no working citizens
     - check if citizen working incorrect in some cases as they can eat but have work
@@ -6,7 +8,7 @@ tasks:
 
 - check different OS builds    
     - linux 
-    - max
+    - mac
 
 - random move to no need for pathfind
 - check performance for chunks in chunkAreas
