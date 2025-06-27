@@ -61,6 +61,7 @@ fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency
 
     compile.addIncludePath(b.path("dependencies"));
     compile.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
+    compile.addCSourceFile(.{ .file = b.path("dependencies/volk.c") });
 
     const steam_sdk = "C:/Zeugs/steamworks_sdk_162/sdk/";
     compile.addObjectFile(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/win64/steam_api64.lib" });
