@@ -10,7 +10,6 @@ tasks:
 - delete test branches?
 - change to new git repo, remo
 - check background music?
-- update readme
 
 - features:
     - bugfixing/testing

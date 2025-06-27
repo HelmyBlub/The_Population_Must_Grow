@@ -10,7 +10,7 @@ Released on steam https://store.steampowered.com/app/3820960. See steam store pa
     - account required
     - https://partner.steamgames.com/downloads/list
     - could be removed in the code with a little bit of work. Only used for steam achievements
-    - location hard codede in build.zig. Replace with your own path
+    - location hard coded in build.zig. Replace with your own path
     - manual need to acquire steam_api64.dll when using windows. Found in steam sdk. Needs to be copied to dependency folder.
 - vulkan Graphics API
     - when activating validation layer, sdk is required: https://vulkan.lunarg.com/
