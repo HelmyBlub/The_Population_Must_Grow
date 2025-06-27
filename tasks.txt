@@ -25,6 +25,5 @@ Offstream:
     - do i know someone for a mac build test?
   
 Some data:
-- FPS: 111, citizens: 32755, gameTime: 330000, end FPS: 81.47392 (26.06.2025)
+- FPS: 112, citizens: 32755, gameTime: 330000, end FPS: 82.898994 (27.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- 
