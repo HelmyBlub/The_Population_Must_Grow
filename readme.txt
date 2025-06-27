@@ -17,3 +17,8 @@ zig build-exe -O ReleaseFast src/main.zig
 
 # maybe helpful examples
 https://github.com/ValorZard/awesome-zig-gamedev
+
+
+#
+linux build
+zig build -Dtarget=x86_64-linux-gnu

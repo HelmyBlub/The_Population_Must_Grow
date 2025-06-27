@@ -45,26 +45,30 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    compileShared(exe, zigimg_dependency, b);
-    compileShared(unit_tests, zigimg_dependency, b);
+    compileShared(exe, zigimg_dependency, b, target);
+    compileShared(unit_tests, zigimg_dependency, b, target);
     // this just adds the dll file to zig-out/bin dir
     b.installBinFile("dependencies/steam_api64.dll", "steam_api64.dll");
 }
 
-fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency, b: *std.Build) void {
+fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency, b: *std.Build, target: std.Build.ResolvedTarget) void {
     const vulkan_sdk = "C:/Zeugs/VulkanSDK/1.4.313.2/";
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include/Volk" });
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include" });
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include/vulkan" });
     compile.addLibraryPath(.{ .cwd_relative = vulkan_sdk ++ "lib" });
-    compile.linkSystemLibrary("vulkan-1");
+    // compile.linkSystemLibrary("vulkan-1");
 
     compile.addIncludePath(b.path("dependencies"));
     compile.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
     compile.addCSourceFile(.{ .file = b.path("dependencies/volk.c") });
 
     const steam_sdk = "C:/Zeugs/steamworks_sdk_162/sdk/";
-    compile.addObjectFile(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/win64/steam_api64.lib" });
+    if (target.result.os.tag == .windows) {
+        compile.addObjectFile(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/win64/steam_api64.lib" });
+    } else if (target.result.os.tag == .linux) {
+        compile.addObjectFile(.{ .cwd_relative = steam_sdk ++ "redistributable_bin/linux64/libsteam_api.so" });
+    }
 
     compile.root_module.addImport("zigimg", zigimg.module("zigimg"));
 }

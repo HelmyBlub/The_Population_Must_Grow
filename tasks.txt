@@ -3,6 +3,7 @@ tasks:
     - linux  
         - 
     - mac
+    - check: steam emulation
 
 - random move to no need for pathfind
 - check performance for chunks in chunkAreas
