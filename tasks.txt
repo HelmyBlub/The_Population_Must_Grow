@@ -1,14 +1,12 @@
 tasks:
-- check different OS builds    
-    - linux  
-        - 
-    - mac
-    - check: steam emulation
-
 - random move to no need for pathfind
+- longplay: play to very high citizen count (play for 2h with goal as much citizens as possible)
+
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
+    - i think it happens when an chunk area goes to sleep in one tick, when one other chunk set an ealier chunk back to working, but if the chunk goes to sleep in the same tick it will be lost
+        - could try to let the changing chunk be flag not idle for one more tick
 - check unload/save logic to be on other thread
 - delete test branches?
 - change to new git repo, remo
@@ -20,11 +18,15 @@ tasks:
     - put on steam
 
 Offstream:
-    - check steam achivements
-        - check if works without steam
+    - check: steam emulation
     - test linux build
-    - do i know someone for a mac build test?
+        - install linux on other device. Play with steam
+    - how to setup steam to have both linux and windows build
+        - 2 depots, maybe 3 (linux, windows, shared stuff)
+        - 1 package with all depots
+    - ask friend for mac stuff, but probably not doing it
   
 Some data:
 - FPS: 112, citizens: 32755, gameTime: 330000, end FPS: 82.898994 (27.06.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- FPS: 116, citizens: 33343, gameTime: 330000, end FPS: 92.95135 (different idle citizen pathing)

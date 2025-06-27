@@ -776,6 +776,46 @@ fn heuristic(a: *ChunkGraphRectangle, b: *ChunkGraphRectangle) i32 {
     return @as(i32, @intCast(@abs(a.tileRectangle.topLeftTileXY.tileX - b.tileRectangle.topLeftTileXY.tileX) + @abs(a.tileRectangle.topLeftTileXY.tileY - b.tileRectangle.topLeftTileXY.tileY)));
 }
 
+fn getRectangleCrossingPosition(currentPos: main.Position, fromRec: mapZig.MapTileRectangle, toRec: mapZig.MapTileRectangle) main.Position {
+    var rectangleCrossingPosition: main.Position = .{ .x = 0, .y = 0 };
+    if (fromRec.topLeftTileXY.tileX <= toRec.topLeftTileXY.tileX + @as(i32, @intCast(toRec.columnCount)) - 1 and toRec.topLeftTileXY.tileX <= fromRec.topLeftTileXY.tileX + @as(i32, @intCast(fromRec.columnCount)) - 1) {
+        if (fromRec.topLeftTileXY.tileY < toRec.topLeftTileXY.tileY) {
+            rectangleCrossingPosition.y = @floatFromInt(toRec.topLeftTileXY.tileY * mapZig.GameMap.TILE_SIZE);
+        } else {
+            rectangleCrossingPosition.y = @floatFromInt(fromRec.topLeftTileXY.tileY * mapZig.GameMap.TILE_SIZE);
+        }
+        const leftOverlapTile: i32 = @max(fromRec.topLeftTileXY.tileX, toRec.topLeftTileXY.tileX);
+        const rightOverlapTile: i32 = @min(fromRec.topLeftTileXY.tileX + @as(i32, @intCast(fromRec.columnCount)) - 1, toRec.topLeftTileXY.tileX + @as(i32, @intCast(toRec.columnCount)) - 1);
+        const leftOverlapPos: f32 = @floatFromInt(leftOverlapTile * mapZig.GameMap.TILE_SIZE);
+        const rightOverlapPos: f32 = @floatFromInt(rightOverlapTile * mapZig.GameMap.TILE_SIZE);
+        if (leftOverlapPos > currentPos.x) {
+            rectangleCrossingPosition.x = leftOverlapPos;
+        } else if (rightOverlapPos < currentPos.x) {
+            rectangleCrossingPosition.x = rightOverlapPos;
+        } else {
+            rectangleCrossingPosition.x = currentPos.x;
+        }
+    } else {
+        if (fromRec.topLeftTileXY.tileX < toRec.topLeftTileXY.tileX) {
+            rectangleCrossingPosition.x = @floatFromInt(toRec.topLeftTileXY.tileX * mapZig.GameMap.TILE_SIZE);
+        } else {
+            rectangleCrossingPosition.x = @floatFromInt(fromRec.topLeftTileXY.tileX * mapZig.GameMap.TILE_SIZE);
+        }
+        const topOverlapTile: i32 = @max(fromRec.topLeftTileXY.tileY, toRec.topLeftTileXY.tileY);
+        const bottomOverlapTile: i32 = @min(fromRec.topLeftTileXY.tileY + @as(i32, @intCast(fromRec.rowCount)) - 1, toRec.topLeftTileXY.tileY + @as(i32, @intCast(toRec.rowCount)) - 1);
+        const topOverlapPos: f32 = @floatFromInt(topOverlapTile * mapZig.GameMap.TILE_SIZE);
+        const bottomOverlapPos: f32 = @floatFromInt(bottomOverlapTile * mapZig.GameMap.TILE_SIZE);
+        if (topOverlapPos > currentPos.y) {
+            rectangleCrossingPosition.y = topOverlapPos;
+        } else if (bottomOverlapPos < currentPos.y) {
+            rectangleCrossingPosition.y = bottomOverlapPos;
+        } else {
+            rectangleCrossingPosition.y = currentPos.y;
+        }
+    }
+    return rectangleCrossingPosition;
+}
+
 fn reconstructPath(
     cameFrom: *std.HashMap(*ChunkGraphRectangle, *ChunkGraphRectangle, ChunkGraphRectangleContext, 80),
     goalRectangle: *ChunkGraphRectangle,
@@ -787,42 +827,7 @@ fn reconstructPath(
     try citizen.moveTo.append(lastRectangleCrossingPosition);
     while (true) {
         if (cameFrom.get(current)) |parent| {
-            var rectangleCrossingPosition: main.Position = .{ .x = 0, .y = 0 };
-            if (current.tileRectangle.topLeftTileXY.tileX <= parent.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(parent.tileRectangle.columnCount)) - 1 and parent.tileRectangle.topLeftTileXY.tileX <= current.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(current.tileRectangle.columnCount)) - 1) {
-                if (current.tileRectangle.topLeftTileXY.tileY < parent.tileRectangle.topLeftTileXY.tileY) {
-                    rectangleCrossingPosition.y = @floatFromInt(parent.tileRectangle.topLeftTileXY.tileY * mapZig.GameMap.TILE_SIZE);
-                } else {
-                    rectangleCrossingPosition.y = @floatFromInt(current.tileRectangle.topLeftTileXY.tileY * mapZig.GameMap.TILE_SIZE);
-                }
-                const leftOverlapTile: i32 = @max(current.tileRectangle.topLeftTileXY.tileX, parent.tileRectangle.topLeftTileXY.tileX);
-                const rightOverlapTile: i32 = @min(current.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(current.tileRectangle.columnCount)) - 1, parent.tileRectangle.topLeftTileXY.tileX + @as(i32, @intCast(parent.tileRectangle.columnCount)) - 1);
-                const leftOverlapPos: f32 = @floatFromInt(leftOverlapTile * mapZig.GameMap.TILE_SIZE);
-                const rightOverlapPos: f32 = @floatFromInt(rightOverlapTile * mapZig.GameMap.TILE_SIZE);
-                if (leftOverlapPos > lastRectangleCrossingPosition.x) {
-                    rectangleCrossingPosition.x = leftOverlapPos;
-                } else if (rightOverlapPos < lastRectangleCrossingPosition.x) {
-                    rectangleCrossingPosition.x = rightOverlapPos;
-                } else {
-                    rectangleCrossingPosition.x = lastRectangleCrossingPosition.x;
-                }
-            } else {
-                if (current.tileRectangle.topLeftTileXY.tileX < parent.tileRectangle.topLeftTileXY.tileX) {
-                    rectangleCrossingPosition.x = @floatFromInt(parent.tileRectangle.topLeftTileXY.tileX * mapZig.GameMap.TILE_SIZE);
-                } else {
-                    rectangleCrossingPosition.x = @floatFromInt(current.tileRectangle.topLeftTileXY.tileX * mapZig.GameMap.TILE_SIZE);
-                }
-                const topOverlapTile: i32 = @max(current.tileRectangle.topLeftTileXY.tileY, parent.tileRectangle.topLeftTileXY.tileY);
-                const bottomOverlapTile: i32 = @min(current.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(current.tileRectangle.rowCount)) - 1, parent.tileRectangle.topLeftTileXY.tileY + @as(i32, @intCast(parent.tileRectangle.rowCount)) - 1);
-                const topOverlapPos: f32 = @floatFromInt(topOverlapTile * mapZig.GameMap.TILE_SIZE);
-                const bottomOverlapPos: f32 = @floatFromInt(bottomOverlapTile * mapZig.GameMap.TILE_SIZE);
-                if (topOverlapPos > lastRectangleCrossingPosition.y) {
-                    rectangleCrossingPosition.y = topOverlapPos;
-                } else if (bottomOverlapPos < lastRectangleCrossingPosition.y) {
-                    rectangleCrossingPosition.y = bottomOverlapPos;
-                } else {
-                    rectangleCrossingPosition.y = lastRectangleCrossingPosition.y;
-                }
-            }
+            const rectangleCrossingPosition = getRectangleCrossingPosition(lastRectangleCrossingPosition, current.tileRectangle, parent.tileRectangle);
             current = parent;
             lastRectangleCrossingPosition = rectangleCrossingPosition;
             try citizen.moveTo.append(rectangleCrossingPosition);
@@ -965,23 +970,29 @@ pub fn pathfindAStar(
     return false;
 }
 
-pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize, state: *main.GameState) !?main.Position {
+pub fn setRandomClosePathingPositions(citizen: *main.Citizen, threadIndex: usize, state: *main.GameState) !void {
     const optChunk = try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.position, state);
     if (optChunk == null) {
-        return null;
+        citizen.nextThinkingTickTimeMs = state.gameTimeMs + main.Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+        return;
     }
     const chunk = optChunk.?;
-    var result: ?main.Position = null;
     const citizenPosTileXy = mapZig.mapPositionToTileXy(citizen.position);
     if (chunk.pathingData.pathingData[getPathingIndexForTileXY(citizenPosTileXy)]) |graphIndex| {
         var currentRectangle = &chunk.pathingData.graphRectangles.items[graphIndex];
+        var currentPos = citizen.position;
         const rand = &state.random;
         for (0..2) |_| {
             if (currentRectangle.connectionIndexes.items.len == 0) break;
             const randomConnectionIndex: usize = @intFromFloat(rand.random().float(f32) * @as(f32, @floatFromInt(currentRectangle.connectionIndexes.items.len)));
             const randomCon = currentRectangle.connectionIndexes.items[randomConnectionIndex];
             const optConChunk = (try mapZig.getChunkByChunkXYWithoutCreateOrLoad(randomCon.chunkXY, state));
-            if (optConChunk) |conChunk| currentRectangle = &conChunk.pathingData.graphRectangles.items[randomCon.index];
+            if (optConChunk) |conChunk| {
+                const nextRec = &conChunk.pathingData.graphRectangles.items[randomCon.index];
+                currentPos = getRectangleCrossingPosition(currentPos, currentRectangle.tileRectangle, nextRec.tileRectangle);
+                try citizen.moveTo.insert(0, currentPos);
+                currentRectangle = nextRec;
+            }
         }
         const randomReachableGraphTopLeftPos = mapZig.mapTileXyToTileMiddlePosition(currentRectangle.tileRectangle.topLeftTileXY);
         const homePos: main.Position = citizen.homePosition;
@@ -991,9 +1002,13 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
         };
         const distanceHomeRandomPosition = main.calculateDistance(finalRandomPosition, homePos);
         if (distanceHomeRandomPosition < main.Citizen.MAX_SQUARE_TILE_SEARCH_DISTANCE * mapZig.GameMap.TILE_SIZE * 0.4 or main.calculateDistance(homePos, citizen.position) > distanceHomeRandomPosition) {
-            result = finalRandomPosition;
+            try citizen.moveTo.insert(0, finalRandomPosition);
+        } else {
+            citizen.nextThinkingTickTimeMs = state.gameTimeMs + main.Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS / 2;
+            citizen.moveTo.clearRetainingCapacity();
         }
     } else {
+        var result: ?main.Position = null;
         if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 }, threadIndex, state)) {
             result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY - 1 });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 1 }, threadIndex, state)) {
@@ -1010,9 +1025,12 @@ pub fn getRandomClosePathingPosition(citizen: *main.Citizen, threadIndex: usize,
             result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX, .tileY = citizenPosTileXy.tileY + 2 });
         } else if (!try isTilePathBlocking(.{ .tileX = citizenPosTileXy.tileX + 2, .tileY = citizenPosTileXy.tileY }, threadIndex, state)) {
             result = mapZig.mapTileXyToTileMiddlePosition(.{ .tileX = citizenPosTileXy.tileX + 2, .tileY = citizenPosTileXy.tileY });
+        } else {
+            citizen.nextThinkingTickTimeMs = state.gameTimeMs + main.Citizen.FAILED_PATH_SEARCH_WAIT_TIME_MS;
+            return;
         }
+        try citizen.moveTo.append(result.?);
     }
-    return result;
 }
 
 pub fn paintDebugPathfindingVisualization(state: *main.GameState) !void {

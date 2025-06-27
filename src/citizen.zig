@@ -764,8 +764,12 @@ fn findAndSetFastestTree(citizen: *Citizen, targetPosition: Position, threadInde
 }
 
 fn setRandomMoveTo(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !void {
-    const optRandomPos = try main.pathfindingZig.getRandomClosePathingPosition(citizen, threadIndex, state);
-    if (optRandomPos) |randomPos| {
-        _ = try citizen.moveToPosition(randomPos, threadIndex, state);
+    try pathfindingZig.setRandomClosePathingPositions(citizen, threadIndex, state);
+    if (citizen.moveTo.items.len > 0) {
+        recalculateCitizenImageIndex(citizen);
+        const direction = main.calculateDirection(citizen.position, citizen.moveTo.getLast());
+        citizen.directionX = @cos(direction);
+        citizen.directionY = @sin(direction);
+        calculateMoveSpeed(citizen);
     }
 }
