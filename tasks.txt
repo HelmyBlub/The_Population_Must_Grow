@@ -1,11 +1,10 @@
 tasks:
-- random move to no need for pathfind
 - longplay: play to very high citizen count (play for 2h with goal as much citizens as possible)
 
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
-    - i think it happens when an chunk area goes to sleep in one tick, when one other chunk set an ealier chunk back to working, but if the chunk goes to sleep in the same tick it will be lost
+    - i think it happens when an chunk area goes to sleep in one tick, when one other chunkarea set an ealier chunkarea back to working, but if the chunk goes to sleep in the same tick it will be lost
         - could try to let the changing chunk be flag not idle for one more tick
 - check unload/save logic to be on other thread
 - delete test branches?
@@ -21,6 +20,7 @@ Offstream:
     - check: steam emulation
     - test linux build
         - install linux on other device. Play with steam
+            - check if "libsteam_api.so" needs setup
     - how to setup steam to have both linux and windows build
         - 2 depots, maybe 3 (linux, windows, shared stuff)
         - 1 package with all depots
