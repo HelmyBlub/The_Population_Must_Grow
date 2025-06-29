@@ -1145,6 +1145,7 @@ pub fn destroyGameState(state: *GameState) void {
     if (state.testData) |testData| {
         testData.testInputs.deinit();
     }
+    state.allocator.free(state.threadData);
     inputZig.destroy(state);
     codePerformanceZig.destroy(state);
     state.chunkAreas.deinit();
