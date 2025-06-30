@@ -1124,7 +1124,9 @@ pub fn destroyGameState(state: *GameState) void {
     }
     std.debug.print("threads joined\n", .{});
     soundMixerZig.destroySoundMixer(state);
-    try destroyPaintVulkanAndWindowSdl(state);
+    destroyPaintVulkanAndWindowSdl(state) catch {
+        std.debug.print("failed to destroy window and vulkan\n", .{});
+    };
     var iterator = state.chunkAreas.iterator();
     while (iterator.next()) |chunkArea| {
         if (chunkArea.value_ptr.chunks == null) continue;

@@ -1,6 +1,17 @@
-tasks:
-- longplay: play to very high citizen count (play for 2h with goal as much citizens as possible)
+tasks
+- linux laptop game crashes on start alot 90%. But other 10% it just works
+    - investigate a bit
+- linux steam sdk api file. How to setup?
+- endless loop on quit
+    - game did not quit after 2.5h play, but did save, had 2 threads active
+        - why?, how to reproduce? what could be the reason?
+- look into parallel stuff again
+    - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
 
+
+
+- check: unload waiting chunkAreas
+    - still doable before release?
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
@@ -16,13 +27,13 @@ tasks:
     - put on steam
 
 Offstream:
-    - check: steam emulation
-    - test linux build
-        - install linux on other device. Play with steam
-            - check if "libsteam_api.so" needs setup
     - how to setup steam to have both linux and windows build
         - 2 depots, maybe 3 (linux, windows, shared stuff)
         - 1 package with all depots
+        
+    - look into parallel stuff again
+        - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
+    - check: steam emulation
     - ask friend for mac stuff, but probably not doing it
   
 Some data:

@@ -27,3 +27,6 @@ Released on steam https://store.steampowered.com/app/3820960. See steam store pa
 ## cross compile 
 - linux build
   - `zig build -Dtarget=x86_64-linux-gnu`
+
+## steam upload
+tools\ContentBuilder\builder\steamcmd.exe +login <account_name> <password> +run_app_build ..\scripts\thePopulationMustGrow.vdf +quit

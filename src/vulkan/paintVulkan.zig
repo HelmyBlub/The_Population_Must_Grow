@@ -513,12 +513,12 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(state: *main.GameState, allocat
     const vkState = &state.vkState;
     if (vkState.framebuffers == null) {
         var capabilities: vk.VkSurfaceCapabilitiesKHR = undefined;
-        _ = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &capabilities);
+        if (vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &capabilities) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
         if (capabilities.currentExtent.width == 0 or capabilities.currentExtent.height == 0) {
             return false;
         }
 
-        _ = vk.vkDeviceWaitIdle.?(state.vkState.logicalDevice);
+        if (vk.vkDeviceWaitIdle.?(state.vkState.logicalDevice) != vk.VK_SUCCESS) return false;
         try createSwapChain(vkState, allocator);
         try createImageViews(vkState, allocator);
         try createColorResources(vkState);
@@ -688,20 +688,20 @@ pub fn beginSingleTimeCommands(vkState: *Vk_State) !vk.VkCommandBuffer {
     };
 
     var commandBuffer: vk.VkCommandBuffer = undefined;
-    _ = vk.vkAllocateCommandBuffers.?(vkState.logicalDevice, &allocInfo, &commandBuffer);
+    if (vk.vkAllocateCommandBuffers.?(vkState.logicalDevice, &allocInfo, &commandBuffer) != vk.VK_SUCCESS) return error.vkAllocateCommandBuffersSingleTimeCommands;
 
     const beginInfo: vk.VkCommandBufferBeginInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
 
-    _ = vk.vkBeginCommandBuffer.?(commandBuffer, &beginInfo);
+    if (vk.vkBeginCommandBuffer.?(commandBuffer, &beginInfo) != vk.VK_SUCCESS) return error.vkBeginCommandBufferBeginSingleTimeCommands;
 
     return commandBuffer;
 }
 
 pub fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_State) !void {
-    _ = vk.vkEndCommandBuffer.?(commandBuffer);
+    if (vk.vkEndCommandBuffer.?(commandBuffer) != vk.VK_SUCCESS) return error.vkEndCommandBufferEndSingleTimeCommands;
 
     const submitInfo: vk.VkSubmitInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -709,8 +709,8 @@ pub fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_Sta
         .pCommandBuffers = &commandBuffer,
     };
 
-    _ = vk.vkQueueSubmit.?(vkState.queue, 1, &submitInfo, null);
-    _ = vk.vkQueueWaitIdle.?(vkState.queue);
+    if (vk.vkQueueSubmit.?(vkState.queue, 1, &submitInfo, null) != vk.VK_SUCCESS) return error.vkQueueSubmitEndSingleTimeCommands;
+    if (vk.vkQueueWaitIdle.?(vkState.queue) != vk.VK_SUCCESS) return error.vkQueueWaitIdleEndSingleTimeCommands;
 
     vk.vkFreeCommandBuffers.?(vkState.logicalDevice, vkState.command_pool, 1, &commandBuffer);
 }
@@ -865,6 +865,7 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
         .binding = 0,
         .descriptorType = vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
+        .pImmutableSamplers = null,
         .stageFlags = vk.VK_SHADER_STAGE_VERTEX_BIT | vk.VK_SHADER_STAGE_GEOMETRY_BIT,
     };
     const samplerLayoutBinding: vk.VkDescriptorSetLayoutBinding = .{
@@ -888,6 +889,8 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
         .sType = vk.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = bindings.len,
         .pBindings = &bindings,
+        .pNext = null,
+        .flags = 0,
     };
 
     if (vk.vkCreateDescriptorSetLayout.?(vkState.logicalDevice, &layoutInfo, null, &vkState.descriptorSetLayout) != vk.VK_SUCCESS) return error.createDescriptorSetLayout;
@@ -941,7 +944,7 @@ fn createVertexBuffer(vkState: *Vk_State, entityCount: u64, allocator: std.mem.A
 }
 
 pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
-    _ = vk.vkDeviceWaitIdle.?(vkState.logicalDevice);
+    if (vk.vkDeviceWaitIdle.?(vkState.logicalDevice) != vk.VK_SUCCESS) return error.vkDeviceWaitIdleDestroyPaintVulkan;
     rectangleVulkanZig.destroyRectangle(vkState, allocator);
     fontVulkanZig.destroyFont(vkState, allocator);
     citizenVulkanZig.destroyCitizen(vkState, allocator);
@@ -1101,8 +1104,8 @@ pub fn drawFrame(state: *main.GameState) !void {
     codePerformanceZig.endMeasure("    rectangle data", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure("    fences", &state.codePerformanceData);
-    _ = vk.vkWaitForFences.?(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64));
-    _ = vk.vkResetFences.?(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]);
+    if (vk.vkWaitForFences.?(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame], vk.VK_TRUE, std.math.maxInt(u64)) != vk.VK_SUCCESS) return;
+    if (vk.vkResetFences.?(vkState.logicalDevice, 1, &vkState.inFlightFence[vkState.currentFrame]) != vk.VK_SUCCESS) return;
     codePerformanceZig.endMeasure("    fences", &state.codePerformanceData);
 
     try codePerformanceZig.startMeasure("    vulkan acquire next image", &state.codePerformanceData);
@@ -1628,9 +1631,9 @@ fn createSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 
     try vkcheck(vk.vkCreateSwapchainKHR.?(vkState.logicalDevice, &createInfo, null, &vkState.swapchain), "Failed to create swapchain KHR");
 
-    _ = vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, null);
+    if (vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, null) != vk.VK_SUCCESS) return error.vkGetSwapchainImagesKHRcreateSwapChain;
     vkState.swapchain_info.images = try allocator.alloc(vk.VkImage, imageCount);
-    _ = vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, vkState.swapchain_info.images.ptr);
+    if (vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, vkState.swapchain_info.images.ptr) != vk.VK_SUCCESS) return error.vkGetSwapchainImagesKHR2createSwapChain;
 }
 
 fn querySwapChainSupport(vkState: *Vk_State, allocator: std.mem.Allocator) !SwapChainSupportDetails {
@@ -1642,16 +1645,16 @@ fn querySwapChainSupport(vkState: *Vk_State, allocator: std.mem.Allocator) !Swap
 
     var formatCount: u32 = 0;
     var presentModeCount: u32 = 0;
-    _ = vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &details.capabilities);
-    _ = vk.vkGetPhysicalDeviceSurfaceFormatsKHR.?(vkState.physical_device, vkState.surface, &formatCount, null);
+    if (vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &details.capabilities) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceCapabilitiesKHRquerySwapChainSupport;
+    if (vk.vkGetPhysicalDeviceSurfaceFormatsKHR.?(vkState.physical_device, vkState.surface, &formatCount, null) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceFormatsKHRquerySwapChainSupport;
     if (formatCount > 0) {
         details.formats = try allocator.alloc(vk.VkSurfaceFormatKHR, formatCount);
-        _ = vk.vkGetPhysicalDeviceSurfaceFormatsKHR.?(vkState.physical_device, vkState.surface, &formatCount, details.formats.ptr);
+        if (vk.vkGetPhysicalDeviceSurfaceFormatsKHR.?(vkState.physical_device, vkState.surface, &formatCount, details.formats.ptr) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceFormatsKHR2querySwapChainSupport;
     }
-    _ = vk.vkGetPhysicalDeviceSurfacePresentModesKHR.?(vkState.physical_device, vkState.surface, &presentModeCount, null);
+    if (vk.vkGetPhysicalDeviceSurfacePresentModesKHR.?(vkState.physical_device, vkState.surface, &presentModeCount, null) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfacePresentModesKHRquerySwapChainSupport;
     if (presentModeCount > 0) {
         details.presentModes = try allocator.alloc(vk.VkPresentModeKHR, presentModeCount);
-        _ = vk.vkGetPhysicalDeviceSurfacePresentModesKHR.?(vkState.physical_device, vkState.surface, &presentModeCount, details.presentModes.ptr);
+        if (vk.vkGetPhysicalDeviceSurfacePresentModesKHR.?(vkState.physical_device, vkState.surface, &presentModeCount, details.presentModes.ptr) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfacePresentModesKHR2querySwapChainSupport;
     }
     return details;
 }
@@ -1778,7 +1781,7 @@ fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator:
             indices.graphicsFamily = @intCast(i);
         }
         var presentSupport: vk.VkBool32 = vk.VK_FALSE;
-        _ = vk.vkGetPhysicalDeviceSurfaceSupportKHR.?(device, @intCast(i), vkState.surface, &presentSupport);
+        if (vk.vkGetPhysicalDeviceSurfaceSupportKHR.?(device, @intCast(i), vkState.surface, &presentSupport) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceSupportKHRfindQueueFamilies;
         if (presentSupport == vk.VK_TRUE) {
             indices.presentFamily = @intCast(i);
         }
