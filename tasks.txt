@@ -1,8 +1,7 @@
 tasks
-- linux laptop game crashes on start alot 90%. But other 10% it just works
-    - investigate a bit
-- linux steam sdk api file. How to setup?
+
 - endless loop on quit
+    - happen on linux with 1 citizen and alot of start and quitting after 1sec
     - game did not quit after 2.5h play, but did save, had 2 threads active
         - why?, how to reproduce? what could be the reason?
 - look into parallel stuff again
