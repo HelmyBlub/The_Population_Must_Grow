@@ -28,5 +28,12 @@ Released on steam https://store.steampowered.com/app/3820960. See steam store pa
 - linux build
   - `zig build -Dtarget=x86_64-linux-gnu`
 
-## steam upload
-tools\ContentBuilder\builder\steamcmd.exe +login <account_name> <password> +run_app_build ..\scripts\thePopulationMustGrow.vdf +quit
+## other helpful commands i used 
+### steam upload
+`tools\ContentBuilder\builder\steamcmd.exe +login <account_name> <password> +run_app_build ..\scripts\thePopulationMustGrow.vdf +quit`
+
+### valgrind
+`valgrind --leak-check=full --show-leak-kinds=all <your program here>`
+
+`valgrind --leak-check=full --show-leak-kinds=all --suppressions=val_sup.txt <your program here>`
+
