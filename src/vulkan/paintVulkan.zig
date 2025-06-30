@@ -1375,7 +1375,7 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     };
     const subpasses = [_]vk.VkSubpassDescription{ subpassLayer1, subpassLayer2, subpassWihtoutDepth };
 
-    var dependency: vk.VkSubpassDependency = .{
+    const dependency: vk.VkSubpassDependency = .{
         .srcSubpass = vk.VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
         .srcStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
@@ -1383,16 +1383,33 @@ fn createRenderPass(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
         .dstStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         .dstAccessMask = vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | vk.VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
     };
+    const dependency01: vk.VkSubpassDependency = .{
+        .srcSubpass = 0,
+        .dstSubpass = 1,
+        .srcStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | vk.VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstAccessMask = vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | vk.VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    };
+    const dependency12: vk.VkSubpassDependency = .{
+        .srcSubpass = 1,
+        .dstSubpass = 2,
+        .srcStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | vk.VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | vk.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstAccessMask = vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    };
 
     const attachments = [_]vk.VkAttachmentDescription{ colorAttachment, depthAttachment, colorAttachmentResolve };
+    const dependencies = [_]vk.VkSubpassDependency{ dependency, dependency01, dependency12 };
     var renderPassInfo = vk.VkRenderPassCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachments.len,
         .pAttachments = &attachments,
         .subpassCount = subpasses.len,
         .pSubpasses = &subpasses,
-        .dependencyCount = 1,
-        .pDependencies = &dependency,
+        .dependencyCount = dependencies.len,
+        .pDependencies = &dependencies,
     };
     try vkcheck(vk.vkCreateRenderPass.?(vkState.logicalDevice, &renderPassInfo, null, &vkState.render_pass), "Failed to create Render Pass.");
 }
