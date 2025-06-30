@@ -224,7 +224,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     @memcpy(gpu_vertices, vkState.citizenPopulationCounterUx.lines.vertices[0..]);
     vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.citizenPopulationCounterUx.lines.vertexBufferMemory);
 
-    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.citizenPopulationCounterUx.font.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.citizenPopulationCounterUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.citizenPopulationCounterUx.font.vertexBufferMemory, 0, @sizeOf(fontVulkanZig.FontVertex) * vkState.citizenPopulationCounterUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpuVerticesFont: [*]fontVulkanZig.FontVertex = @ptrCast(@alignCast(data));
     @memcpy(gpuVerticesFont, vkState.citizenPopulationCounterUx.font.vertices[0..]);
     vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.citizenPopulationCounterUx.font.vertexBufferMemory);

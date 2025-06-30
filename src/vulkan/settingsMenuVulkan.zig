@@ -560,7 +560,7 @@ fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {
     @memcpy(gpuVerticesSprite, vkState.settingsMenuUx.sprites.vertices[0..]);
     vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.settingsMenuUx.sprites.vertexBufferMemory);
 
-    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.settingsMenuUx.font.vertexBufferMemory, 0, @sizeOf(paintVulkanZig.SpriteVertex) * vkState.settingsMenuUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
+    if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.settingsMenuUx.font.vertexBufferMemory, 0, @sizeOf(fontVulkanZig.FontVertex) * vkState.settingsMenuUx.font.vertices.len, 0, &data) != vk.VK_SUCCESS) return error.MapMemory;
     const gpuVerticesFont: [*]fontVulkanZig.FontVertex = @ptrCast(@alignCast(data));
     @memcpy(gpuVerticesFont, vkState.settingsMenuUx.font.vertices[0..]);
     vk.vkUnmapMemory.?(vkState.logicalDevice, vkState.settingsMenuUx.font.vertexBufferMemory);
