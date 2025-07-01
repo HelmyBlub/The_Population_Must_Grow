@@ -261,6 +261,33 @@ pub fn deleteSave(allocator: std.mem.Allocator) !void {
     }
 }
 
+pub fn checkForLoadAreaKeyAroundActiveAreaKey(areaKey: u64, state: *main.GameState) !void {
+    const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
+    const neighborsXY = [_]chunkAreaZig.ChunkAreaXY{
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY },
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY - 1 },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY },
+        .{ .areaX = areaXY.areaX + 1, .areaY = areaXY.areaY + 1 },
+        .{ .areaX = areaXY.areaX, .areaY = areaXY.areaY + 1 },
+        .{ .areaX = areaXY.areaX - 1, .areaY = areaXY.areaY + 1 },
+    };
+    for (neighborsXY) |neighborXY| {
+        const neighborKey = chunkAreaZig.getKeyForAreaXY(neighborXY);
+        if (state.chunkAreas.getPtr(neighborKey)) |neighborChunkArea| {
+            if (neighborChunkArea.chunks == null and !neighborChunkArea.requestedToLoad) {
+                try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[0], neighborKey);
+            } else if (neighborChunkArea.idleTypeData == .waitingForCitizens) {
+                try chunkAreaZig.assignChunkAreaBackToThread(neighborChunkArea, neighborKey, state);
+                neighborChunkArea.idleTypeData = .{ .waitingForCitizens = state.gameTimeMs };
+            }
+        } else {
+            try mapZig.appendRequestToLoadChunkAreaKey(&state.threadData[0], neighborKey);
+        }
+    }
+}
+
 pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.GameState) bool {
     const areaXY = chunkAreaZig.getAreaXyForKey(areaKey);
     const neighborsXY = [_]chunkAreaZig.ChunkAreaXY{
@@ -276,7 +303,7 @@ pub fn decideIfUnloadAndSaveAreaKey(areaKey: u64, state: *main.GameState) bool {
     for (neighborsXY) |neighborXY| {
         const neighborKey = chunkAreaZig.getKeyForAreaXY(neighborXY);
         if (state.chunkAreas.getPtr(neighborKey)) |neighborChunkArea| {
-            if ((neighborChunkArea.idleTypeData != .idle and neighborChunkArea.chunks != null) or neighborChunkArea.visible) {
+            if ((neighborChunkArea.idleTypeData == .active and neighborChunkArea.chunks != null) or neighborChunkArea.visible) {
                 return false;
             }
         }

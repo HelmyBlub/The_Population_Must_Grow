@@ -1,19 +1,19 @@
 tasks
-- endless loop on quit
-    - on one more debug line on the wait
-    - happen on linux with 1 citizen and alot of start and quitting after 1sec
-    - game did not quit after 2.5h play, but did save, had 2 threads active
-        - why?, how to reproduce? what could be the reason?
-- final build to steam
-    - validation layer where active on last build
+- check: unload waiting chunkAreas
+    - continue "TODO" in checkForLoadAreaKeyAroundActiveAreaKey
+    - check when quitting and starting game again
 
 - look into parallel stuff again
     - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
 
+- copy paste stick key
+
+- final build to steam
+    - validation layer where active on last build
+
+- zig debugging with windows
 
 
-- check: unload waiting chunkAreas
-    - still doable before release?
 - check performance for chunks in chunkAreas
     - can improve by not always searching area again and just chunk
 - problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
@@ -37,4 +37,4 @@ Offstream:
 Some data:
 - FPS: 115, citizens: 33597, gameTime: 330000, end FPS: 92.21098 (01.07.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- 
+- FPS: 120, citizens: 31813, gameTime: 330000, end FPS: 86.20159 (unload waiting chunkAreas and load adjacent to active once)

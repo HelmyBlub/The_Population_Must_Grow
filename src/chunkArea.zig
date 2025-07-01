@@ -13,13 +13,13 @@ pub const ChunkAreaXY: type = struct {
 pub const ChunkAreaIdleType = enum {
     waitingForCitizens,
     idle,
-    notIdle,
+    active,
 };
 
 pub const ChunkAreaIdleTypeData = union(ChunkAreaIdleType) {
     waitingForCitizens: u64,
     idle,
-    notIdle,
+    active,
 };
 
 pub const chunkKeyOrder: [ChunkArea.SIZE][ChunkArea.SIZE]usize = setupChunkAreaKeyOrder();
@@ -29,8 +29,8 @@ pub const ChunkArea: type = struct {
     chunks: ?[]mapZig.MapChunk,
     currentChunkIndex: usize,
     tickedCitizenCounter: usize = 0,
-    lastTickIdleTypeData: ChunkAreaIdleTypeData = .notIdle,
-    idleTypeData: ChunkAreaIdleTypeData = .notIdle,
+    lastTickIdleTypeData: ChunkAreaIdleTypeData = .active,
+    idleTypeData: ChunkAreaIdleTypeData = .active,
     visible: bool = false,
     dontUnloadBeforeTime: u64,
     requestedToLoad: bool = false,
@@ -131,7 +131,7 @@ pub fn checkIfAreaIsActive(chunkXY: mapZig.ChunkXY, threadIndex: usize, state: *
     const areaXY = getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = getKeyForAreaXY(areaXY);
     if (state.chunkAreas.getPtr(areaKey)) |area| {
-        if (area.idleTypeData != .notIdle) {
+        if (area.idleTypeData != .active) {
             try appendRequestToUnidleChunkAreaKey(&state.threadData[threadIndex], areaKey);
         }
         return;
@@ -227,7 +227,7 @@ fn diagonalNumbering(x: u32, y: u32) usize {
 
 /// should only be done by main thread when not ticking
 pub fn assignChunkAreaBackToThread(chunkArea: *ChunkArea, areaKey: u64, state: *main.GameState) !void {
-    chunkArea.idleTypeData = .notIdle;
+    chunkArea.idleTypeData = .active;
     var threadWithLeastAreas: ?*main.ThreadData = null;
     for (state.threadData, 0..) |*threadData, index| {
         if (index >= state.usedThreadsCount) break;
@@ -279,7 +279,11 @@ pub fn setVisibleFlagOfVisibleAndTickRectangle(visibleChunksData: mapZig.Visible
                 const areaKey = getKeyForAreaXY(areaXY);
                 const optChunkArea = state.chunkAreas.getPtr(areaKey);
                 if (optChunkArea) |area| {
-                    if (isVisible and !area.visible) try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                    if (isVisible and !area.visible and area.idleTypeData != .active) {
+                        const old = area.idleTypeData;
+                        try assignChunkAreaBackToThread(optChunkArea.?, areaKey, state);
+                        optChunkArea.?.idleTypeData = old;
+                    }
                     area.visible = isVisible;
                 }
             }
@@ -296,7 +300,7 @@ pub fn optimizeChunkAreaAssignments(state: *main.GameState) !void {
             while (currentIndex < threadData.recentlyRemovedChunkAreaKeys.items.len) {
                 const currentKey = threadData.recentlyRemovedChunkAreaKeys.items[currentIndex];
                 const chunkArea = state.chunkAreas.getPtr(currentKey).?;
-                if (chunkArea.idleTypeData == .idle and !chunkArea.visible and chunkArea.chunks != null) {
+                if (chunkArea.idleTypeData != .active and !chunkArea.visible and chunkArea.chunks != null) {
                     if (chunkArea.dontUnloadBeforeTime < state.gameTimeMs and saveZig.decideIfUnloadAndSaveAreaKey(currentKey, state)) {
                         try saveZig.saveChunkAreaToFile(chunkArea, state);
                         try saveZig.destroyChunksOfUnloadedArea(chunkArea.areaXY, state);

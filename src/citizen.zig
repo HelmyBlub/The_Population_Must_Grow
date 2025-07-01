@@ -124,7 +124,7 @@ pub const Citizen: type = struct {
         }
     }
 
-    pub fn findCloseFreeCitizen(targetPosition: main.Position, threadIndex: usize, state: *main.GameState) !?struct { citizen: *Citizen, chunk: *mapZig.MapChunk } {
+    pub fn findCloseFreeCitizen(targetPosition: main.Position, state: *main.GameState) !?struct { citizen: *Citizen, chunk: *mapZig.MapChunk } {
         var closestCitizen: ?*Citizen = null;
         var closestChunk: *mapZig.MapChunk = undefined;
         var shortestDistance: f32 = 0;
@@ -141,7 +141,7 @@ pub const Citizen: type = struct {
                         .chunkX = topLeftChunk.chunkX + @as(i32, @intCast(x)),
                         .chunkY = topLeftChunk.chunkY + @as(i32, @intCast(y)),
                     };
-                    const chunk = try mapZig.getChunkByChunkXYWithRequestForLoad(chunkXY, threadIndex, state);
+                    const chunk = try mapZig.getChunkByChunkXYWithoutCreateOrLoad(chunkXY, state);
                     if (chunk == null) continue;
                     for (chunk.?.citizens.items) |*citizen| {
                         if (citizen.isCitizenWorking() or citizen.nextStuckCheckTime != null) continue;
