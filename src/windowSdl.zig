@@ -152,6 +152,8 @@ pub fn handleEvents(state: *main.GameState) !void {
                         }
                     }
                 }
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_LCTRL) {
+                state.keyboardInfo.ctrHold = false;
             } else {
                 try inputZig.executeActionByKeybind(event.key.scancode, state);
             }
@@ -165,6 +167,8 @@ pub fn handleEvents(state: *main.GameState) !void {
                 state.keyboardInfo.cameraMoveY = -10;
             } else if (event.key.scancode == sdl.SDL_SCANCODE_DOWN or event.key.scancode == sdl.SDL_SCANCODE_S) {
                 state.keyboardInfo.cameraMoveY = 10;
+            } else if (event.key.scancode == sdl.SDL_SCANCODE_LCTRL) {
+                state.keyboardInfo.ctrHold = true;
             }
         } else if (event.type == sdl.SDL_EVENT_QUIT) {
             std.debug.print("clicked window X \n", .{});
@@ -309,7 +313,10 @@ fn handleBuildModeRectangle(event: *sdl.SDL_Event, state: *main.GameState) !void
                 state.mouseInfo.rightButtonWindowDown = .{ .x = event.motion.x, .y = event.motion.y };
                 return;
             }
-            const mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
+            var mapTargetTopLeft = mouseWindowPositionToGameMapPoisition(event.button.x, event.button.y, state.camera);
+            if (state.keyboardInfo.ctrHold) {
+                main.alignPasteRectangleOfCopyPaste(&mapTargetTopLeft, state);
+            }
             try mapZig.copyFromTo(
                 state.copyAreaRectangle.?.topLeftTileXY,
                 mapZig.mapPositionToTileXy(mapTargetTopLeft),

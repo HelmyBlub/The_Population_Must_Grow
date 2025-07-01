@@ -188,11 +188,12 @@ fn initUiButtons(state: *main.GameState) !void {
     };
     buttonCounter += 1;
 
-    tooltip = try state.allocator.alloc([]const u8, 4);
+    tooltip = try state.allocator.alloc([]const u8, 5);
     tooltip[0] = "Copy Paste:";
     tooltip[1] = "First Drag Area with Mouse to Mark Area to Copy";
     tooltip[2] = "Second select Area to Paste to";
     tooltip[3] = "Right Mouse Button: Reset Area";
+    tooltip[4] = "Hold Ctrl: Align Paste Area to Copy Area";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
         .type = .{ .action = inputZig.ActionType.copyPaste },
         .fill = .{ .imageIndex = imageZig.IMAGE_ICON_COPY_PASTE },

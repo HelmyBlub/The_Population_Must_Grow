@@ -1,12 +1,11 @@
 tasks
-- check: unload waiting chunkAreas
-    - continue "TODO" in checkForLoadAreaKeyAroundActiveAreaKey
-    - check when quitting and starting game again
+- copy paste stick key
+
+- bug: restart does not tick spawn chunk
 
 - look into parallel stuff again
     - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
 
-- copy paste stick key
 
 - final build to steam
     - validation layer where active on last build

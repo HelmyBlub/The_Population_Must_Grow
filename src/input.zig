@@ -24,6 +24,7 @@ pub const KeyboardInfo = struct {
     cameraMoveX: f32 = 0,
     cameraMoveY: f32 = 0,
     keybindings: []KeyBinding = undefined,
+    ctrHold: bool = false,
 };
 
 pub const KeyBinding = struct {

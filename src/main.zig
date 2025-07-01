@@ -252,6 +252,15 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
     state.soundMixer.mutex.unlock();
 }
 
+pub fn alignPasteRectangleOfCopyPaste(mapTopLeft: *Position, state: *GameState) void {
+    if (state.copyAreaRectangle == null) return;
+    const copyAreaRectangle = state.copyAreaRectangle.?;
+    const xOffset = @as(f32, @floatFromInt(@mod(copyAreaRectangle.topLeftTileXY.tileX, @as(i32, @intCast(copyAreaRectangle.columnCount))) * mapZig.GameMap.TILE_SIZE)) + 0.1;
+    const yOffset = @as(f32, @floatFromInt(@mod(copyAreaRectangle.topLeftTileXY.tileY, @as(i32, @intCast(copyAreaRectangle.rowCount))) * mapZig.GameMap.TILE_SIZE)) + 0.1;
+    mapTopLeft.x -= @mod(mapTopLeft.x - xOffset, @as(f32, @floatFromInt(copyAreaRectangle.columnCount)) * mapZig.GameMap.TILE_SIZE);
+    mapTopLeft.y -= @mod(mapTopLeft.y - yOffset, @as(f32, @floatFromInt(copyAreaRectangle.rowCount)) * mapZig.GameMap.TILE_SIZE);
+}
+
 pub fn setupRectangleData(state: *GameState) void {
     if (state.copyAreaRectangle) |copyAreaRectangle| {
         state.rectangles[1] = .{
@@ -273,7 +282,10 @@ pub fn setupRectangleData(state: *GameState) void {
     if (state.buildMode == mapZig.BUILD_MODE_DRAG_RECTANGLE) {
         if (state.currentBuildType == mapZig.BUILD_TYPE_COPY_PASTE and state.copyAreaRectangle != null) {
             const copyAreaRectangle = state.copyAreaRectangle.?;
-            const mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y, state.camera);
+            var mapTopLeft = windowSdlZig.mouseWindowPositionToGameMapPoisition(state.mouseInfo.currentPos.x, state.mouseInfo.currentPos.y, state.camera);
+            if (state.keyboardInfo.ctrHold) {
+                alignPasteRectangleOfCopyPaste(&mapTopLeft, state);
+            }
             const mapTopLeftMiddleTile = mapZig.mapPositionToTileMiddlePosition(mapTopLeft);
             const mapTopLeftTile: Position = .{
                 .x = mapTopLeftMiddleTile.x - mapZig.GameMap.TILE_SIZE / 2,
