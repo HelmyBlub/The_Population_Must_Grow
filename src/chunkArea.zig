@@ -30,7 +30,7 @@ pub const ChunkArea: type = struct {
     currentChunkIndex: usize,
     tickedCitizenCounter: usize = 0,
     lastTickIdleTypeData: ChunkAreaIdleTypeData = .active,
-    idleTypeData: ChunkAreaIdleTypeData = .active,
+    idleTypeData: ChunkAreaIdleTypeData = .idle,
     visible: bool = false,
     dontUnloadBeforeTime: u64,
     requestedToLoad: bool = false,
