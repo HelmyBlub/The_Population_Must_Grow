@@ -1,9 +1,12 @@
 tasks
-
 - endless loop on quit
+    - on one more debug line on the wait
     - happen on linux with 1 citizen and alot of start and quitting after 1sec
     - game did not quit after 2.5h play, but did save, had 2 threads active
         - why?, how to reproduce? what could be the reason?
+- final build to steam
+    - validation layer where active on last build
+
 - look into parallel stuff again
     - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
 
@@ -19,22 +22,19 @@ tasks
 - check unload/save logic to be on other thread
 - delete test branches?
 - change to new git repo, remo
-- check background music?
 
 - features:
     - bugfixing/testing
     - put on steam
 
 Offstream:
-    - how to setup steam to have both linux and windows build
-        - 2 depots, maybe 3 (linux, windows, shared stuff)
-        - 1 package with all depots
-        
+    - youtube video on weekend
     - look into parallel stuff again
         - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
     - check: steam emulation
     - ask friend for mac stuff, but probably not doing it
   
 Some data:
-- FPS: 114, citizens: 33597, gameTime: 330000, end FPS: 88.51415 (30.06.2025)
+- FPS: 115, citizens: 33597, gameTime: 330000, end FPS: 92.21098 (01.07.2025)
 - ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
+- 

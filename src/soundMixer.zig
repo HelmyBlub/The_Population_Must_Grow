@@ -59,7 +59,7 @@ pub fn createSoundMixer(state: *main.GameState, allocator: std.mem.Allocator) !v
 
 pub fn destroySoundMixer(state: *main.GameState) void {
     state.soundMixer.mutex.lock();
-    defer state.soundMixer.mutex.unlock();
+    state.soundMixer.mutex.unlock(); // just want to make sure, audio callback is not still running. Have to unlock before SDL_DestroyAudioStream as it is waiting for audioCallbacks to finish and this lock would block, resulting in endless wait.
     state.soundMixer.soundsToPlay.deinit();
     state.soundMixer.soundsFutureQueue.deinit();
     sdl.SDL_DestroyAudioStream(state.soundMixer.soundData.stream);
