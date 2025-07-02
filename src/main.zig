@@ -887,16 +887,6 @@ fn tick(state: *GameState) !void {
             while (!state.threadData[i].finishedTick) {
                 state.threadData[i].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) break;
-                //waiting
-                var minIndex: ?usize = null;
-                for (1..state.usedThreadsCount) |j| {
-                    if (!state.threadData[j].finishedTick) {
-                        if (minIndex == null or state.threadData[j].currentPathIndex.load(.unordered) < minIndex.?) {
-                            minIndex = state.threadData[j].currentPathIndex.load(.unordered);
-                        }
-                    }
-                }
-                if (minIndex) |min| state.activeChunkAllowedPathIndex.store(min, .unordered);
             }
         }
     }
