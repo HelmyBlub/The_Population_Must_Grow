@@ -1,37 +1,30 @@
 tasks
-- bug: restart does not tick spawn chunk
-
-- look into parallel stuff again
-    - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
-
-
 - final build to steam
     - validation layer where active on last build
+
+- delete test branches?
+- change to new git repo, remove test stuff
 
 - zig debugging with windows
 
 
-- check performance for chunks in chunkAreas
-    - can improve by not always searching area again and just chunk
-- problem: 600_000 citizens test missed ~8 citizens indicating area can go to sleep to soon?
-    - i think it happens when an chunk area goes to sleep in one tick, when one other chunkarea set an ealier chunkarea back to working, but if the chunk goes to sleep in the same tick it will be lost
-        - could try to let the changing chunk be flag not idle for one more tick
-- check unload/save logic to be on other thread
-- delete test branches?
-- change to new git repo, remo
+features:
+   - release on steam
 
-- features:
-    - bugfixing/testing
-    - put on steam
+thinking what i expect on steam:
+    - goal of 10 reviews
+    - after a week. See what steam statistics say about my game
+
+
 
 Offstream:
     - youtube video on weekend
-    - look into parallel stuff again
-        - @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
-    - check: steam emulation
-    - ask friend for mac stuff, but probably not doing it
+        - show my game
+            - what i used to build it
+                - zig
+                - vulkan
+                - twitch
   
 Some data:
-- FPS: 115, citizens: 33597, gameTime: 330000, end FPS: 92.21098 (01.07.2025)
-- ~85_000 citizen my cpu can not keep 60fps anymore(while streamng + debug mode)
-- FPS: 116, citizens: 32972, gameTime: 330000, end FPS: 93.44972
+- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (02.07.2025)
+- ~85_000 citizen 1 cpu can not keep 60fps anymore(while streamng + debug mode)
