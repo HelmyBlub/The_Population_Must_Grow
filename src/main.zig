@@ -131,26 +131,6 @@ test "test measure performance" {
     try testZig.executePerfromanceTest();
 }
 
-// test "my multi thread problem" {
-//     var counter = std.atomic.Value(usize).init(0);
-//     const thread1 = try std.Thread.spawn(.{}, tickThreadChunks, .{ &counter, 0 });
-//     const thread2 = try std.Thread.spawn(.{}, tickThreadChunks, .{ &counter, 1 });
-//     thread1.join();
-//     thread2.join();
-//     // @cmpxchgStrong(comptime T: type, ptr: *T, expected_value: T, new_value: T, success_order: AtomicOrder, fail_order: AtomicOrder)
-// }
-
-// fn testMultiThread(counter: std.atomic.Value(usize), threadIndex: usize) void {
-//     const countTo = 500;
-//     const threadCount = 2;
-//     while (counter.load(.seq_cst) < countTo) {
-//         if (countTo % threadCount == threadIndex) {
-//             const fetchReturn = counter.fetchAdd(1, .seq_cst);
-//             std.debug.print("{} by thread {}\n", .{ fetchReturn, threadIndex });
-//         }
-//     }
-// }
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
