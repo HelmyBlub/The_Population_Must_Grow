@@ -1,8 +1,4 @@
 tasks
-- final build to steam
-    - validation layer where active on last build
-
-- delete test branches?
 - change to new git repo, remove test stuff
 
 - zig debugging with windows
@@ -26,5 +22,8 @@ Offstream:
                 - twitch
   
 Some data:
-- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (02.07.2025)
+- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (03.07.2025)
 - ~85_000 citizen 1 cpu can not keep 60fps anymore(while streamng + debug mode)
+
+
+git remote set-url origin https://github.com/HelmyBlub/The_Population_Must_Grow.git

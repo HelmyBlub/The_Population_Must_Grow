@@ -8,7 +8,6 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "thePopulationMustGrow",
         .root_source_file = b.path("src/main.zig"),
-        // .root_source_file = b.path("src/tryOutZig/multiThreadSyncTests.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -58,7 +57,6 @@ fn compileShared(compile: *std.Build.Step.Compile, zigimg: *std.Build.Dependency
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include" });
     compile.addIncludePath(.{ .cwd_relative = vulkan_sdk ++ "Include/vulkan" });
     compile.addLibraryPath(.{ .cwd_relative = vulkan_sdk ++ "lib" });
-    // compile.linkSystemLibrary("vulkan-1");
 
     compile.addIncludePath(b.path("dependencies"));
     compile.addCSourceFile(.{ .file = b.path("dependencies/minimp3_ex.c") });
