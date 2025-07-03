@@ -2,6 +2,8 @@
 Simple simulation game to build up an ever growing population.
 
 Released on steam https://store.steampowered.com/app/3820960. See steam store page to more info about the game.
+![image](image-xcf/gameImage1.png)
+![image](image-xcf/gameImage2.png)
 
 ## Requirements to build
 - Zig 
