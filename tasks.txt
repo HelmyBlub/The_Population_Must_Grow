@@ -1,15 +1,26 @@
 tasks
-- change to new git repo, remove test stuff
-
-- zig debugging with windows
-
-
-features:
-   - release on steam
+- release on steam
+    - first user game just crashes. How to handle user problems in easy way
+        - best case: user sees an error message
+        - sleep before stopping application, so user can see messages
+    - print out error codes on failures
 
 thinking what i expect on steam:
     - goal of 10 reviews
     - after a week. See what steam statistics say about my game
+
+Next project ideas:
+- i want to try out shaders to make something look "better"
+    - one simpler game where i can use most time on shaders and trying around with them
+- simple game ideas:
+    - speed dog ninja 
+        - when players draws blade, time stops
+        - has puzzle/tetris like pieces to move
+        - when killing enemy, move set refreshes
+        - when not hitting enemy in x turns, time runs again
+        - try to use shaders to make it look "better"
+
+
 
 
 

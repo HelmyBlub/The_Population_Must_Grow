@@ -513,7 +513,7 @@ fn createSwapChainRelatedStuffAndCheckWindowSize(state: *main.GameState, allocat
     const vkState = &state.vkState;
     if (vkState.framebuffers == null) {
         var capabilities: vk.VkSurfaceCapabilitiesKHR = undefined;
-        if (vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &capabilities) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+        try vkcheck(vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &capabilities), "failed vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
         if (capabilities.currentExtent.width == 0 or capabilities.currentExtent.height == 0) {
             return false;
         }
@@ -649,7 +649,7 @@ fn createTextureSampler(vkState: *Vk_State) !void {
         .minLod = 0.0,
         .maxLod = vk.VK_LOD_CLAMP_NONE,
     };
-    if (vk.vkCreateSampler.?(vkState.logicalDevice, &samplerInfo, null, &vkState.textureSampler) != vk.VK_SUCCESS) return error.createSampler;
+    try vkcheck(vk.vkCreateSampler.?(vkState.logicalDevice, &samplerInfo, null, &vkState.textureSampler), "failed vkCreateSampler");
 }
 
 fn createTextureImageView(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -675,7 +675,7 @@ pub fn createImageView(image: vk.VkImage, format: vk.VkFormat, mipLevels: u32, a
     };
 
     var imageView: vk.VkImageView = undefined;
-    if (vk.vkCreateImageView.?(vkState.logicalDevice, &viewInfo, null, &imageView) != vk.VK_SUCCESS) return error.createImageView;
+    try vkcheck(vk.vkCreateImageView.?(vkState.logicalDevice, &viewInfo, null, &imageView), "failed vkCreateImageView");
     return imageView;
 }
 
@@ -688,20 +688,20 @@ pub fn beginSingleTimeCommands(vkState: *Vk_State) !vk.VkCommandBuffer {
     };
 
     var commandBuffer: vk.VkCommandBuffer = undefined;
-    if (vk.vkAllocateCommandBuffers.?(vkState.logicalDevice, &allocInfo, &commandBuffer) != vk.VK_SUCCESS) return error.vkAllocateCommandBuffersSingleTimeCommands;
+    try vkcheck(vk.vkAllocateCommandBuffers.?(vkState.logicalDevice, &allocInfo, &commandBuffer), "failed vkAllocateCommandBuffers beginSingleTimeCommands");
 
     const beginInfo: vk.VkCommandBufferBeginInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = vk.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
 
-    if (vk.vkBeginCommandBuffer.?(commandBuffer, &beginInfo) != vk.VK_SUCCESS) return error.vkBeginCommandBufferBeginSingleTimeCommands;
+    try vkcheck(vk.vkBeginCommandBuffer.?(commandBuffer, &beginInfo), "failed vkBeginCommandBuffer beginSingleTimeCommands");
 
     return commandBuffer;
 }
 
 pub fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_State) !void {
-    if (vk.vkEndCommandBuffer.?(commandBuffer) != vk.VK_SUCCESS) return error.vkEndCommandBufferEndSingleTimeCommands;
+    try vkcheck(vk.vkEndCommandBuffer.?(commandBuffer), "failed vkEndCommandBuffer endSingleTimeCommands");
 
     const submitInfo: vk.VkSubmitInfo = .{
         .sType = vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -709,8 +709,8 @@ pub fn endSingleTimeCommands(commandBuffer: vk.VkCommandBuffer, vkState: *Vk_Sta
         .pCommandBuffers = &commandBuffer,
     };
 
-    if (vk.vkQueueSubmit.?(vkState.queue, 1, &submitInfo, null) != vk.VK_SUCCESS) return error.vkQueueSubmitEndSingleTimeCommands;
-    if (vk.vkQueueWaitIdle.?(vkState.queue) != vk.VK_SUCCESS) return error.vkQueueWaitIdleEndSingleTimeCommands;
+    try vkcheck(vk.vkQueueSubmit.?(vkState.queue, 1, &submitInfo, null), "failed vkQueueSubmit endSingleTimeCommands");
+    try vkcheck(vk.vkQueueWaitIdle.?(vkState.queue), "failed vkQueueWaitIdle endSingleTimeCommands");
 
     vk.vkFreeCommandBuffers.?(vkState.logicalDevice, vkState.command_pool, 1, &commandBuffer);
 }
@@ -735,7 +735,7 @@ pub fn createImage(width: u32, height: u32, mipLevels: u32, numSamples: vk.VkSam
         .flags = 0,
     };
 
-    if (vk.vkCreateImage.?(vkState.logicalDevice, &imageInfo, null, image) != vk.VK_SUCCESS) return error.createImage;
+    try vkcheck(vk.vkCreateImage.?(vkState.logicalDevice, &imageInfo, null, image), "failed vkCreateImage");
 
     var memRequirements: vk.VkMemoryRequirements = undefined;
     vk.vkGetImageMemoryRequirements.?(vkState.logicalDevice, image.*, &memRequirements);
@@ -746,8 +746,8 @@ pub fn createImage(width: u32, height: u32, mipLevels: u32, numSamples: vk.VkSam
         .memoryTypeIndex = try findMemoryType(memRequirements.memoryTypeBits, properties, vkState),
     };
 
-    if (vk.vkAllocateMemory.?(vkState.logicalDevice, &allocInfo, null, imageMemory) != vk.VK_SUCCESS) return error.vkAllocateMemory;
-    if (vk.vkBindImageMemory.?(vkState.logicalDevice, image.*, imageMemory.*, 0) != vk.VK_SUCCESS) return error.bindImageMemory;
+    try vkcheck(vk.vkAllocateMemory.?(vkState.logicalDevice, &allocInfo, null, imageMemory), "failed vkAllocateMemory createImage");
+    try vkcheck(vk.vkBindImageMemory.?(vkState.logicalDevice, image.*, imageMemory.*, 0), "failed vkBindImageMemory createImage");
 }
 
 fn createDescriptorSets(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -759,7 +759,7 @@ fn createDescriptorSets(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
         .pSetLayouts = &layouts,
     };
     vkState.descriptorSets = try allocator.alloc(vk.VkDescriptorSet, Vk_State.MAX_FRAMES_IN_FLIGHT);
-    if (vk.vkAllocateDescriptorSets.?(vkState.logicalDevice, &allocInfo, @ptrCast(vkState.descriptorSets)) != vk.VK_SUCCESS) return error.allocateDescriptorSets;
+    try vkcheck(vk.vkAllocateDescriptorSets.?(vkState.logicalDevice, &allocInfo, @ptrCast(vkState.descriptorSets)), "failed vkAllocateDescriptorSets createDescriptorSets");
 
     for (0..Vk_State.MAX_FRAMES_IN_FLIGHT) |i| {
         const bufferInfo: vk.VkDescriptorBufferInfo = .{
@@ -837,7 +837,7 @@ fn createDescriptorPool(vkState: *Vk_State) !void {
         .pPoolSizes = &poolSizes,
         .maxSets = Vk_State.MAX_FRAMES_IN_FLIGHT,
     };
-    if (vk.vkCreateDescriptorPool.?(vkState.logicalDevice, &poolInfo, null, &vkState.descriptorPool) != vk.VK_SUCCESS) return error.descriptionPool;
+    try vkcheck(vk.vkCreateDescriptorPool.?(vkState.logicalDevice, &poolInfo, null, &vkState.descriptorPool), "failed vkCreateDescriptorPool createDescriptorPool");
 }
 
 fn createUniformBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
@@ -856,7 +856,7 @@ fn createUniformBuffers(vkState: *Vk_State, allocator: std.mem.Allocator) !void 
             &vkState.uniformBuffersMemory[i],
             vkState,
         );
-        if (vk.vkMapMemory.?(vkState.logicalDevice, vkState.uniformBuffersMemory[i], 0, bufferSize, 0, &vkState.uniformBuffersMapped[i]) != vk.VK_SUCCESS) return error.uniformMapMemory;
+        try vkcheck(vk.vkMapMemory.?(vkState.logicalDevice, vkState.uniformBuffersMemory[i], 0, bufferSize, 0, &vkState.uniformBuffersMapped[i]), "failed vkMapMemory createUniformBuffers");
     }
 }
 
@@ -893,7 +893,7 @@ fn createDescriptorSetLayout(vkState: *Vk_State) !void {
         .flags = 0,
     };
 
-    if (vk.vkCreateDescriptorSetLayout.?(vkState.logicalDevice, &layoutInfo, null, &vkState.descriptorSetLayout) != vk.VK_SUCCESS) return error.createDescriptorSetLayout;
+    try vkcheck(vk.vkCreateDescriptorSetLayout.?(vkState.logicalDevice, &layoutInfo, null, &vkState.descriptorSetLayout), "failed vkCreateDescriptorSetLayout createDescriptorSetLayout");
 }
 
 fn findMemoryType(typeFilter: u32, properties: vk.VkMemoryPropertyFlags, vkState: *Vk_State) !u32 {
@@ -1053,7 +1053,7 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     instance_create_info.ppEnabledExtensionNames = sdl.SDL_Vulkan_GetInstanceExtensions(&extCount);
     instance_create_info.enabledExtensionCount = extCount;
 
-    if (vk.vkCreateInstance.?(&instance_create_info, null, &vkState.instance) != vk.VK_SUCCESS) return error.vkCreateInstance;
+    try vkcheck(vk.vkCreateInstance.?(&instance_create_info, null, &vkState.instance), "failed vkCreateInstance");
 }
 
 pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
@@ -1568,7 +1568,7 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .basePipelineHandle = null,
         .pNext = null,
     };
-    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.graphics_pipeline) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline;
+    try vkcheck(vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo, null, &vkState.graphics_pipeline), "failed vkCreateGraphicsPipelines graphics_pipeline");
 
     var pipelineInfo2 = vk.VkGraphicsPipelineCreateInfo{
         .sType = vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -1588,7 +1588,7 @@ fn createGraphicsPipelines(vkState: *Vk_State, allocator: std.mem.Allocator) !vo
         .pNext = null,
         .pDepthStencilState = &vkState.depthStencil,
     };
-    if (vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2) != vk.VK_SUCCESS) return error.FailedToCreateGraphicsPipeline2;
+    try vkcheck(vk.vkCreateGraphicsPipelines.?(vkState.logicalDevice, null, 1, &pipelineInfo2, null, &vkState.graphicsPipelineLayer2), "failed vkCreateGraphicsPipelines graphicsPipelineLayer2");
 }
 
 pub fn createShaderModule(code: []const u8, vkState: *Vk_State) !vk.VkShaderModule {
@@ -1648,7 +1648,7 @@ fn createSwapChain(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
 
     try vkcheck(vk.vkCreateSwapchainKHR.?(vkState.logicalDevice, &createInfo, null, &vkState.swapchain), "Failed to create swapchain KHR");
 
-    if (vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, null) != vk.VK_SUCCESS) return error.vkGetSwapchainImagesKHRcreateSwapChain;
+    try vkcheck(vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, null), "failed vkGetSwapchainImagesKHR");
     vkState.swapchain_info.images = try allocator.alloc(vk.VkImage, imageCount);
     if (vk.vkGetSwapchainImagesKHR.?(vkState.logicalDevice, vkState.swapchain, &imageCount, vkState.swapchain_info.images.ptr) != vk.VK_SUCCESS) return error.vkGetSwapchainImagesKHR2createSwapChain;
 }
@@ -1662,7 +1662,7 @@ fn querySwapChainSupport(vkState: *Vk_State, allocator: std.mem.Allocator) !Swap
 
     var formatCount: u32 = 0;
     var presentModeCount: u32 = 0;
-    if (vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &details.capabilities) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceCapabilitiesKHRquerySwapChainSupport;
+    try vkcheck(vk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.?(vkState.physical_device, vkState.surface, &details.capabilities), "failed vkGetPhysicalDeviceSurfaceCapabilitiesKHR querySwapChainSupport");
     if (vk.vkGetPhysicalDeviceSurfaceFormatsKHR.?(vkState.physical_device, vkState.surface, &formatCount, null) != vk.VK_SUCCESS) return error.vkGetPhysicalDeviceSurfaceFormatsKHRquerySwapChainSupport;
     if (formatCount > 0) {
         details.formats = try allocator.alloc(vk.VkSurfaceFormatKHR, formatCount);
@@ -1820,7 +1820,7 @@ const QueueFamilyIndices = struct {
 
 fn vkcheck(result: vk.VkResult, comptime err_msg: []const u8) !void {
     if (result != vk.VK_SUCCESS) {
-        std.debug.print("Vulkan error : {s}\n", .{err_msg});
+        std.debug.print("Vulkan error {d}: {s}\n", .{ result, err_msg });
         return error.VulkanError;
     }
 }

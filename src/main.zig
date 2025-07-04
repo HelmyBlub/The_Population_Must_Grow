@@ -1,6 +1,7 @@
 const std = @import("std");
 const expect = @import("std").testing.expect;
 pub const Citizen = @import("citizen.zig").Citizen;
+const buildin = @import("builtin");
 const mapZig = @import("map.zig");
 const paintVulkanZig = @import("vulkan/paintVulkan.zig");
 const windowSdlZig = @import("windowSdl.zig");
@@ -131,11 +132,29 @@ test "test measure performance" {
     try testZig.executePerfromanceTest();
 }
 
+pub const panic = std.debug.FullPanic(myPanic);
+
+fn myPanic(msg: []const u8, first_trace_addr: ?usize) noreturn {
+    _ = first_trace_addr;
+    std.debug.print("Panic! {s}\n", .{msg});
+    if (buildin.mode == .Debug) {
+        std.debug.print("sleep 15 seconds\n", .{});
+        std.Thread.sleep(15_000_000_000);
+    }
+    std.process.exit(1);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    try startGame(allocator, false);
+    startGame(allocator, false) catch |err| {
+        std.debug.print("error: {}\n", .{err});
+        if (buildin.mode == .Debug) {
+            std.debug.print("sleep 15 seconds\n", .{});
+            std.Thread.sleep(15_000_000_000);
+        }
+    };
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
