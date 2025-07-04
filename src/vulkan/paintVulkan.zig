@@ -604,6 +604,7 @@ fn createColorResources(vkState: *Vk_State) !void {
 fn getMaxUsableSampleCount(physicalDevice: vk.VkPhysicalDevice) vk.VkSampleCountFlagBits {
     var physicalDeviceProperties: vk.VkPhysicalDeviceProperties = undefined;
     vk.vkGetPhysicalDeviceProperties.?(physicalDevice, &physicalDeviceProperties);
+    std.debug.print("Graphics Card Selected: {s}\n", .{physicalDeviceProperties.deviceName});
 
     const counts: vk.VkSampleCountFlags = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
     if ((counts & vk.VK_SAMPLE_COUNT_64_BIT) != 0) {
