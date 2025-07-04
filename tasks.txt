@@ -1,5 +1,7 @@
 tasks
 - release on steam
+    - continue: changing all setup functions to print out error code
+    - print out graphics card name when physical device selected
     - first user game just crashes. How to handle user problems in easy way
         - best case: user sees an error message
         - sleep before stopping application, so user can see messages

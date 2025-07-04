@@ -1779,7 +1779,20 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     var supportedFeatures: vk.VkPhysicalDeviceFeatures = undefined;
     vk.vkGetPhysicalDeviceFeatures.?(device, &supportedFeatures);
 
-    return indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and supportedFeatures.geometryShader != 0;
+    const suitable = indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and
+        supportedFeatures.geometryShader != 0 and supportedFeatures.fillModeNonSolid != 0 and
+        supportedFeatures.shaderFloat64 != 0;
+    if (!suitable) return false;
+
+    var supportedFeatures2: vk.VkPhysicalDeviceFeatures2 = .{
+        .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    };
+    var supportedVulkan12Features: vk.VkPhysicalDeviceVulkan12Features = .{
+        .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+    };
+    supportedFeatures2.pNext = &supportedVulkan12Features;
+    vk.vkGetPhysicalDeviceFeatures2.?(device, &supportedFeatures2);
+    return supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing != 0 and supportedVulkan12Features.runtimeDescriptorArray != 0;
 }
 
 fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !QueueFamilyIndices {

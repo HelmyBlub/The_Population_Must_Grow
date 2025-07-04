@@ -32,7 +32,7 @@ Released on steam https://store.steampowered.com/app/3820960. See steam store pa
 
 ## other helpful commands i used 
 ### steam upload
-`tools\ContentBuilder\builder\steamcmd.exe +login <account_name> <password> +run_app_build ..\scripts\thePopulationMustGrow.vdf +quit`
+`tools\ContentBuilder\builder\steamcmd.exe +login <account_name> +run_app_build ..\scripts\thePopulationMustGrow.vdf +quit`
 
 ### valgrind
 `valgrind --leak-check=full --show-leak-kinds=all <your program here>`
