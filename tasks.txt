@@ -1,11 +1,7 @@
 tasks
 - release on steam
-    - continue: changing all setup functions to print out error code
-    - print out graphics card name when physical device selected
-    - first user game just crashes. How to handle user problems in easy way
-        - best case: user sees an error message
-        - sleep before stopping application, so user can see messages
-    - print out error codes on failures
+- i had an endless loop on copy paste
+    - was in releaseFast build, copied with ctrl. 
 
 thinking what i expect on steam:
     - goal of 10 reviews
@@ -21,9 +17,6 @@ Next project ideas:
         - when killing enemy, move set refreshes
         - when not hitting enemy in x turns, time runs again
         - try to use shaders to make it look "better"
-
-
-
 
 
 Offstream:

@@ -1764,15 +1764,22 @@ fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: st
     defer allocator.free(devices);
     try vkcheck(vk.vkEnumeratePhysicalDevices.?(instance, &device_count, devices.ptr), "Failed to enumerate physical devices");
 
+    var bestScore: u32 = 0;
+    var bestDevice: ?vk.VkPhysicalDevice = null;
     for (devices) |device| {
-        if (try isDeviceSuitable(device, vkState, allocator)) {
-            vkState.msaaSamples = getMaxUsableSampleCount(device);
-            return device;
+        const score = try isDeviceSuitable(device, vkState, allocator);
+        if (score > bestScore) {
+            bestScore = score;
+            bestDevice = device;
         }
+    }
+    if (bestDevice) |device| {
+        vkState.msaaSamples = getMaxUsableSampleCount(device);
+        return device;
     }
     return error.NoSuitableGPU;
 }
-fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !bool {
+fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !u32 {
     const indices: QueueFamilyIndices = try findQueueFamilies(device, vkState, allocator);
     vkState.graphics_queue_family_idx = indices.graphicsFamily.?;
 
@@ -1782,7 +1789,7 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     const suitable = indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and
         supportedFeatures.geometryShader != 0 and supportedFeatures.fillModeNonSolid != 0 and
         supportedFeatures.shaderFloat64 != 0;
-    if (!suitable) return false;
+    if (!suitable) return 0;
 
     var supportedFeatures2: vk.VkPhysicalDeviceFeatures2 = .{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -1792,7 +1799,19 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     };
     supportedFeatures2.pNext = &supportedVulkan12Features;
     vk.vkGetPhysicalDeviceFeatures2.?(device, &supportedFeatures2);
-    return supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing != 0 and supportedVulkan12Features.runtimeDescriptorArray != 0;
+    const suitable2 = supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing != 0 and supportedVulkan12Features.runtimeDescriptorArray != 0;
+    if (!suitable2) return 0;
+
+    var score: u32 = 0;
+    var physicalDeviceProperties: vk.VkPhysicalDeviceProperties = undefined;
+    vk.vkGetPhysicalDeviceProperties.?(device, &physicalDeviceProperties);
+    if (physicalDeviceProperties.deviceType == vk.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) score += 1000;
+    score += physicalDeviceProperties.limits.maxImageDimension2D;
+
+    const counts: vk.VkSampleCountFlags = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    score += counts * 16;
+
+    return score;
 }
 
 fn findQueueFamilies(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !QueueFamilyIndices {
