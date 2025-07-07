@@ -341,7 +341,7 @@ fn calculateMoveSpeed(citizen: *Citizen) void {
 
 fn onBeingStuck(citizen: *Citizen, state: *main.GameState) !void {
     if (citizen.isCitizenWorking()) {
-        const chunk = (try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.position, state)).?;
+        const chunk = (try mapZig.getChunkByPositionWithoutCreateOrLoad(citizen.homePosition, state)).?;
         chunk.workingCitizenCounter -= 1;
     }
     try main.Citizen.handleRemovingCitizenAction(citizen, null, state);
