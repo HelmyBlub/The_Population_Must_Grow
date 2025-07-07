@@ -296,7 +296,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                         try main.Citizen.handleRemovingCitizenAction(citizen, null, state);
                         _ = chunk.citizens.swapRemove(j);
                         building.citizensSpawned -= 1;
-                        state.citizenCounter -= 1;
+                        state.citizenCounter -|= 1;
                         break;
                     }
                 }
@@ -340,7 +340,7 @@ pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRect
                         citizen.moveTo.deinit();
                         try main.Citizen.handleRemovingCitizenAction(citizen, null, state);
                         _ = chunk.citizens.swapRemove(index);
-                        state.citizenCounter -= 1;
+                        state.citizenCounter -|= 1;
                         building.citizensSpawned -= 1;
                     }
                 }
