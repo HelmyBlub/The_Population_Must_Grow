@@ -210,7 +210,7 @@ pub fn getMapScreenVisibilityRectangle(state: *main.GameState) MapRectangle {
     };
 }
 
-pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usize, state: *main.GameState) anyerror!*MapChunk {
+pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usize, flagForAutoSave: bool, state: *main.GameState) anyerror!*MapChunk {
     const areaXY = chunkAreaZig.getChunkAreaXyForChunkXy(chunkXY);
     const areaKey = chunkAreaZig.getKeyForAreaXY(areaXY);
     var optChunkArea = state.chunkAreas.getPtr(areaKey);
@@ -226,6 +226,7 @@ pub fn getChunkAndCreateIfNotExistsForChunkXY(chunkXY: ChunkXY, threadIndex: usi
         try chunkAreaZig.putChunkArea(areaXY, areaKey, threadIndex, state);
         optChunkArea = state.chunkAreas.getPtr(areaKey);
     }
+    if (flagForAutoSave) optChunkArea.?.flaggedForAutoSave = flagForAutoSave;
     const chunkIndex = getChunkIndexForChunkXY(chunkXY);
     return &optChunkArea.?.chunks.?[chunkIndex];
 }
@@ -263,9 +264,9 @@ pub fn getChunkByChunkXYWithoutCreateOrLoad(chunkXY: ChunkXY, state: *main.GameS
     return null;
 }
 
-pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !*MapChunk {
+pub fn getChunkAndCreateIfNotExistsForPosition(position: main.Position, threadIndex: usize, flagForAutoSave: bool, state: *main.GameState) !*MapChunk {
     const chunkXY = getChunkXyForPosition(position);
-    return try getChunkAndCreateIfNotExistsForChunkXY(chunkXY, threadIndex, state);
+    return try getChunkAndCreateIfNotExistsForChunkXY(chunkXY, threadIndex, flagForAutoSave, state);
 }
 
 pub fn getChunkByPositionWithRequestForLoad(position: main.Position, threadIndex: usize, state: *main.GameState) !?*MapChunk {
@@ -279,7 +280,7 @@ pub fn getChunkByPositionWithoutCreateOrLoad(position: main.Position, state: *ma
 }
 
 pub fn demolishAnythingOnPosition(position: main.Position, optEntireDemolishRectangle: ?MapTileRectangle, state: *main.GameState) !void {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, 0, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, 0, false, state);
     for (chunk.trees.items, 0..) |tree, i| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             removeTree(i, true, chunk);
@@ -408,7 +409,7 @@ pub fn getObjectOnTile(tileXY: TileXY, threadIndex: usize, state: *main.GameStat
 }
 
 pub fn getObjectOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?MapObject {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, false, state);
     for (chunk.buildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             return .{ .building = building };
@@ -490,7 +491,7 @@ fn isRectangleBuildable(buildRectangle: MapTileRectangle, state: *main.GameState
         }
     }
     for (0..chunksMaxIndex) |chunkIndex| {
-        const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?, 0, state);
+        const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?, 0, false, state);
         if (!ignore1TileBuildings) {
             for (chunk.buildings.items) |building| {
                 if (is1x1ObjectOverlapping(building.position, buildRectangle)) {
@@ -640,7 +641,7 @@ pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) 
 
 pub fn placeTree(tree: MapTree, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(tree.position), state, true, false, false)) return false;
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, 0, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(tree.position, 0, true, state);
     try chunk.trees.append(tree);
     try chunk.buildOrders.append(.{ .position = tree.position, .materialCount = 1 });
     if (tree.regrow) {
@@ -650,7 +651,7 @@ pub fn placeTree(tree: MapTree, state: *main.GameState) !bool {
 }
 
 pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.GameState) !void {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, threadIndex, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(citizen.position, threadIndex, true, state);
     state.threadData[threadIndex].citizensAddedThisTick += 1;
     try chunk.citizens.append(citizen);
     try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, threadIndex, state);
@@ -658,7 +659,7 @@ pub fn placeCitizen(citizen: main.Citizen, threadIndex: usize, state: *main.Game
 
 pub fn placePotatoField(potatoField: PotatoField, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(potatoField.position), state, false, false, true)) return false;
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, 0, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(potatoField.position, 0, true, state);
     try chunk.potatoFields.append(potatoField);
     try chunk.buildOrders.append(.{ .position = potatoField.position, .materialCount = 1 });
     try chunkAreaZig.checkIfAreaIsActive(chunk.chunkXY, 0, state);
@@ -667,7 +668,7 @@ pub fn placePotatoField(potatoField: PotatoField, state: *main.GameState) !bool 
 
 pub fn placePath(pathPos: main.Position, state: *main.GameState) !bool {
     if (!try isRectangleBuildable(get1x1RectangleFromPosition(pathPos), state, false, false, true)) return false;
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(pathPos, 0, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(pathPos, 0, true, state);
     try chunk.pathes.append(pathPos);
     return true;
 }
@@ -690,7 +691,7 @@ pub fn placeBigHouse(position: main.Position, state: *main.GameState, checkPath:
 }
 
 pub fn placeBuilding(building: Building, state: *main.GameState, checkPath: bool, displayHelpText: bool, threadIndex: usize) !bool {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, true, state);
     if (building.type == .bigHouse) {
         const buildRectangle = getBigBuildingRectangle(building.position);
         if (!try isRectangleBuildable(buildRectangle, state, false, true, true)) return false;
@@ -749,7 +750,7 @@ pub fn finishBuilding(building: *Building, threadIndex: usize, state: *main.Game
             for (bigBuildingOtherTiles) |otherTile| {
                 const otherTileChunkXY = getChunkXyForTileXy(otherTile);
                 if (otherTileChunkXY.chunkX != chunkXY.chunkX or otherTileChunkXY.chunkY != chunkXY.chunkY) {
-                    const otherChunk = try getChunkAndCreateIfNotExistsForChunkXY(otherTileChunkXY, 0, state);
+                    const otherChunk = try getChunkAndCreateIfNotExistsForChunkXY(otherTileChunkXY, 0, false, state);
                     try otherChunk.blockingTiles.append(otherTile);
                 }
             }
@@ -820,7 +821,7 @@ fn isRectangleAdjacentToPath(buildRectangle: MapTileRectangle, state: *main.Game
         .y = rectMapTopLeft.y + @as(f64, @floatFromInt(buildRectangle.rowCount * GameMap.TILE_SIZE)),
     };
     for (0..chunksMaxIndex) |chunkIndex| {
-        const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?, 0, state);
+        const chunk = try getChunkAndCreateIfNotExistsForChunkXY(chunkXysToCheck[chunkIndex].?, 0, false, state);
         for (chunk.pathes.items) |pathPos| {
             if (rectMapTopLeft.x - GameMap.TILE_SIZE < pathPos.x and pathPos.x < rectMapBottomRight.x + GameMap.TILE_SIZE and
                 rectMapTopLeft.y - GameMap.TILE_SIZE < pathPos.y and pathPos.y < rectMapBottomRight.y + GameMap.TILE_SIZE)
@@ -848,13 +849,13 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameSta
         if (try getBuildingOnPosition(.{ .x = corner.x, .y = corner.y }, 0, state)) |cornerBuilding| {
             if (!cornerBuilding.inConstruction) {
                 if (building.woodRequired > 1) building.woodRequired -= 1;
-                const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, 0, state);
+                const chunk = try getChunkAndCreateIfNotExistsForPosition(cornerBuilding.position, 0, false, state);
                 for (chunk.citizens.items, 0..) |*citizen, i| {
                     if (citizen.homePosition.x == cornerBuilding.position.x and citizen.homePosition.y == cornerBuilding.position.y) {
                         citizen.homePosition = building.position;
                         building.citizensSpawned += 1;
                         cornerBuilding.citizensSpawned -= 1;
-                        const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, state);
+                        const newBuildingChunk = try getChunkAndCreateIfNotExistsForPosition(building.position, 0, false, state);
                         if (newBuildingChunk != chunk) {
                             var moveCitizen = chunk.citizens.swapRemove(i);
                             try newBuildingChunk.citizens.append(moveCitizen);
@@ -875,7 +876,7 @@ fn replace1TileBuildingsFor2x2Building(building: *Building, state: *main.GameSta
 }
 
 pub fn getPotatoFieldOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?struct { potatoField: *PotatoField, chunk: *MapChunk, potatoIndex: usize } {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, false, state);
     for (chunk.potatoFields.items, 0..) |*field, i| {
         if (main.calculateDistance(position, field.position) < GameMap.TILE_SIZE) {
             return .{ .potatoField = field, .chunk = chunk, .potatoIndex = i };
@@ -900,7 +901,7 @@ pub fn appendToChunkQueue(chunk: *MapChunk, chunkQueueItem: ChunkQueueItem, citi
 }
 
 pub fn getTreeOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?struct { tree: *MapTree, chunk: *MapChunk, treeIndex: usize } {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, false, state);
     for (chunk.trees.items, 0..) |*tree, index| {
         if (main.calculateDistance(position, tree.position) < GameMap.TILE_SIZE) {
             return .{ .tree = tree, .chunk = chunk, .treeIndex = index };
@@ -966,7 +967,7 @@ pub fn removePotatoField(potatoIndex: usize, chunk: *MapChunk) void {
 }
 
 pub fn getBuildingOnPosition(position: main.Position, threadIndex: usize, state: *main.GameState) !?*Building {
-    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, state);
+    const chunk = try getChunkAndCreateIfNotExistsForPosition(position, threadIndex, false, state);
     for (chunk.buildings.items) |*building| {
         if (main.calculateDistance(position, building.position) < GameMap.TILE_SIZE) {
             return building;
@@ -1011,7 +1012,7 @@ pub fn copyFromTo(fromTopLeftTileXY: TileXY, toTopLeftTileXY: TileXY, tileCountC
                 .x = fromTopLeftTileMiddle.x + @as(f64, @floatFromInt(x * GameMap.TILE_SIZE)),
                 .y = fromTopLeftTileMiddle.y + @as(f64, @floatFromInt(y * GameMap.TILE_SIZE)),
             };
-            const chunk = try getChunkAndCreateIfNotExistsForPosition(sourcePosition, 0, state);
+            const chunk = try getChunkAndCreateIfNotExistsForPosition(sourcePosition, 0, false, state);
             const targetPosition: main.Position = .{
                 .x = targetTopLeftTileMiddle.x + @as(f64, @floatFromInt(x * GameMap.TILE_SIZE)),
                 .y = targetTopLeftTileMiddle.y + @as(f64, @floatFromInt(y * GameMap.TILE_SIZE)),

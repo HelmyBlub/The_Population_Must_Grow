@@ -20,6 +20,7 @@ const sdl = @import("windowSdl.zig").sdl;
 
 pub const GameState: type = struct {
     pathfindTestValue: f32 = 0,
+    lastGeneralDataSaveTime: u64 = 0,
     steam: ?steamZig.SteamData = null,
     currentBuildType: u8 = mapZig.BUILD_TYPE_HOUSE,
     buildMode: u8 = mapZig.BUILD_MODE_SINGLE,
@@ -226,9 +227,11 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
         .zoom = 1,
     };
     state.gameTimeMs = 0;
+    state.lastGeneralDataSaveTime = 0;
     state.lastAutoGameSpeedChangeTime = 0;
     var iterator = state.chunkAreas.iterator();
     while (iterator.next()) |entry| {
+        entry.value_ptr.lastSaveTime = 0;
         if (entry.value_ptr.chunks) |chunks| {
             for (chunks) |*chunk| {
                 mapZig.destroyChunk(chunk);
@@ -392,6 +395,7 @@ pub fn mainLoop(state: *GameState) !void {
         try settingsMenuUxVulkanZig.tick(state);
         try mapZig.visibleAndAdjacentChunkRectangle(state);
         try chunkAreaZig.optimizeChunkAreaAssignments(state);
+        try saveZig.autoSaveInterval(state);
         tickStartedTime = std.time.microTimestamp();
         while (state.ticksRemainingBeforePaint >= 1) {
             try tick(state);

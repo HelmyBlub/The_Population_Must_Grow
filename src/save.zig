@@ -219,6 +219,7 @@ pub fn loadGeneralDataFromFile(state: *main.GameState) !bool {
     state.citizenCounter = try reader.readInt(u64, .little);
     state.citizenCounterLastTick = state.citizenCounter;
     state.gameTimeMs = try reader.readInt(u64, .little);
+    state.lastGeneralDataSaveTime = state.gameTimeMs;
     state.soundMixer.volume = @bitCast(try reader.readInt(u32, .little));
     state.vkState.uiSizeFactor = @bitCast(try reader.readInt(u32, .little));
     state.vkState.settingsMenuUx.uiSizeDelayed = state.vkState.uiSizeFactor;
@@ -828,6 +829,27 @@ fn disconnectPathingBetweenChunkAreas(chunk: *mapZig.MapChunk, state: *main.Game
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+pub fn autoSaveInterval(state: *main.GameState) !void {
+    const saveInterval = 15_000;
+    if (state.lastGeneralDataSaveTime + saveInterval > state.gameTimeMs) return;
+    state.lastGeneralDataSaveTime = state.gameTimeMs;
+    try saveGeneralDataToFile(state);
+
+    // save one chunkArea per interval
+    for (state.threadData) |threadData| {
+        for (threadData.chunkAreaKeys.items) |areaKey| {
+            if (state.chunkAreas.getPtr(areaKey)) |area| {
+                if (area.flaggedForAutoSave and area.lastSaveTime + saveInterval * 10 < state.gameTimeMs) {
+                    try saveChunkAreaToFile(area, state);
+                    area.lastSaveTime = state.gameTimeMs;
+                    area.flaggedForAutoSave = false;
+                    return;
                 }
             }
         }

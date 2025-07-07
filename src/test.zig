@@ -123,7 +123,7 @@ pub fn tick(state: *main.GameState) !void {
                     },
                     .restart => {
                         //not a real restart yet
-                        const spawnChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, 0, state);
+                        const spawnChunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(.{ .chunkX = 0, .chunkY = 0 }, 0, false, state);
                         const spawnCitizen = &spawnChunk.citizens.items[0];
                         spawnCitizen.position.x = 0;
                         spawnCitizen.position.y = 0;

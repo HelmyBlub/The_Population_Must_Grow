@@ -34,6 +34,8 @@ pub const ChunkArea: type = struct {
     visible: bool = false,
     dontUnloadBeforeTime: u64,
     requestedToLoad: bool = false,
+    flaggedForAutoSave: bool = false,
+    lastSaveTime: u64 = 0,
     pub const SIZE = 20;
     pub const MAX_AREA_ROWS_COLUMNS: comptime_int = 20_000;
 };

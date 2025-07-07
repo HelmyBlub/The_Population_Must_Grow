@@ -241,6 +241,7 @@ pub const Citizen: type = struct {
         citizen.treePosition = null;
         citizen.farmPosition = null;
     }
+
     pub fn isCitizenWorking(self: *Citizen) bool {
         return self.buildingPosition != null or self.treePosition != null or self.farmPosition != null;
     }
@@ -364,7 +365,7 @@ fn treePlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !voi
         }
     } else {
         citizen.treePosition = null;
-        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, false, state);
         chunk.workingCitizenCounter -= 1;
         try nextThinkingAction(citizen, threadIndex, state);
     }
@@ -387,7 +388,7 @@ fn buildingStart(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
             if (citizen.treePosition == null and try mapZig.getBuildingOnPosition(citizen.buildingPosition.?, threadIndex, state) == null) {
                 citizen.treePosition = null;
                 citizen.buildingPosition = null;
-                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+                const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, false, state);
                 chunk.workingCitizenCounter -= 1;
                 if (citizen.nextThinkingAction == .buildingStart) try nextThinkingAction(citizen, threadIndex, state);
             }
@@ -485,7 +486,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
     } else {
         citizen.hasWood = false;
         citizen.buildingPosition = null;
-        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, false, state);
         chunk.workingCitizenCounter -= 1;
         try nextThinkingAction(citizen, threadIndex, state);
     }
@@ -518,7 +519,7 @@ fn potatoPlant(citizen: *Citizen, threadIndex: usize, state: *main.GameState) !v
         }
     } else {
         citizen.farmPosition = null;
-        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, state);
+        const chunk = try mapZig.getChunkAndCreateIfNotExistsForPosition(citizen.homePosition, threadIndex, false, state);
         chunk.workingCitizenCounter -= 1;
         try nextThinkingAction(citizen, threadIndex, state);
     }

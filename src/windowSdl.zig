@@ -211,6 +211,9 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             state.testData.?.skipSaveAndLoad = false;
             try testZig.setupTestInputsXAreas(&state.testData.?);
         }
+    } else if (scancode == sdl.SDL_SCANCODE_F9) {
+        std.debug.print("pressed button to crash game\n", .{});
+        state.threadData[100].dummyValue += 1;
     } else if (scancode == sdl.SDL_SCANCODE_F10) {
         try main.deleteSaveAndRestart(state);
     } else if (scancode == sdl.SDL_SCANCODE_F11) {
@@ -346,7 +349,7 @@ pub fn handleRectangleAreaAction(mapTileRectangle: mapZig.MapTileRectangle, stat
             const loopChunk = mapZig.getChunkXyForPosition(position);
             if (currentChunkXY == null or loopChunk.chunkX != currentChunkXY.?.chunkX or loopChunk.chunkY != currentChunkXY.?.chunkY) {
                 currentChunkXY = loopChunk;
-                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, 0, state);
+                chunk = try mapZig.getChunkAndCreateIfNotExistsForChunkXY(currentChunkXY.?, 0, false, state);
             }
             if (state.currentBuildType == mapZig.BUILD_TYPE_DEMOLISH) {
                 try mapZig.demolishAnythingOnPosition(position, mapTileRectangle, state);

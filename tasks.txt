@@ -1,7 +1,16 @@
 tasks
-- release on steam
+- auto save, so on crash not everything is lost
+    - in certain intervals save stuff
+    - maybe only limited amount of data?
+    - recalculate citizens count?
+- underflow of citizen count possible?
+- recalculate citizens on start?
 - i had an endless loop on copy paste
     - was in releaseFast build, copied with ctrl. 
+- crash on:
+    thread 9372 panic: integer part of floating point value out of bounds
+    D:\mein\github_gamedev\Zig_ChatSim\src\vulkan\fontVulkan.zig:122:38: 0x7ff71ce3b956 in displayPerformanceDebugInfo (thePopulationMustGrow.exe.obj)
+            _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
 
 thinking what i expect on steam:
     - goal of 10 reviews
@@ -28,7 +37,7 @@ Offstream:
                 - twitch
   
 Some data:
-- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (03.07.2025)
+- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (07.07.2025)
 - ~85_000 citizen 1 cpu can not keep 60fps anymore(while streamng + debug mode)
 
 
