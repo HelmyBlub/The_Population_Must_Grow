@@ -1,10 +1,11 @@
 tasks
-- auto save, so on crash not everything is lost
-    - in certain intervals save stuff
-    - maybe only limited amount of data?
-    - recalculate citizens count?
-- underflow of citizen count possible?
-- recalculate citizens on start?
+- more stuff to console in debug build 
+    - giving information what graphics card is selected and why and what score
+    - around code of "pickPhysicalDevice" and "isDeviceSuitable"
+
+- check if i find anything to my game
+
+
 - i had an endless loop on copy paste
     - was in releaseFast build, copied with ctrl. 
 - crash on:
@@ -13,7 +14,7 @@ tasks
             _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
 
 thinking what i expect on steam:
-    - goal of 10 reviews
+    - goal of 10 reviews (5 review after 3days)
     - after a week. See what steam statistics say about my game
 
 Next project ideas:

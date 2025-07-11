@@ -1779,6 +1779,7 @@ fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: st
     }
     return error.NoSuitableGPU;
 }
+
 fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !u32 {
     const indices: QueueFamilyIndices = try findQueueFamilies(device, vkState, allocator);
     vkState.graphics_queue_family_idx = indices.graphicsFamily.?;
@@ -1786,10 +1787,34 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     var supportedFeatures: vk.VkPhysicalDeviceFeatures = undefined;
     vk.vkGetPhysicalDeviceFeatures.?(device, &supportedFeatures);
 
-    const suitable = indices.isComplete() and supportedFeatures.samplerAnisotropy != 0 and
-        supportedFeatures.geometryShader != 0 and supportedFeatures.fillModeNonSolid != 0 and
-        supportedFeatures.shaderFloat64 != 0;
-    if (!suitable) return 0;
+    var physicalDeviceProperties: vk.VkPhysicalDeviceProperties = undefined;
+    vk.vkGetPhysicalDeviceProperties.?(device, &physicalDeviceProperties);
+    std.debug.print("Evaluating Graphics Card: {s}\n", .{physicalDeviceProperties.deviceName});
+
+    var suitable = true;
+    if (!indices.isComplete()) {
+        std.debug.print("   graphics Family missing\n", .{});
+        suitable = false;
+    }
+    if (supportedFeatures.samplerAnisotropy == 0) {
+        std.debug.print("   missing Feature: samplerAnisotropy\n", .{});
+        suitable = false;
+    }
+    if (supportedFeatures.geometryShader == 0) {
+        std.debug.print("   missing Feature: geometryShader\n", .{});
+        suitable = false;
+    }
+    if (supportedFeatures.geometryShader == 0) {
+        std.debug.print("   missing Feature: fillModeNonSolid\n", .{});
+        suitable = false;
+    }
+    if (supportedFeatures.shaderFloat64 == 0) {
+        std.debug.print("   missing Feature: shaderFloat64\n", .{});
+        suitable = false;
+    }
+    if (!suitable) {
+        return 0;
+    }
 
     var supportedFeatures2: vk.VkPhysicalDeviceFeatures2 = .{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -1799,17 +1824,29 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     };
     supportedFeatures2.pNext = &supportedVulkan12Features;
     vk.vkGetPhysicalDeviceFeatures2.?(device, &supportedFeatures2);
-    const suitable2 = supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing != 0 and supportedVulkan12Features.runtimeDescriptorArray != 0;
-    if (!suitable2) return 0;
+    if (supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing == 0) {
+        std.debug.print("   missing 12 Feature: shaderSampledImageArrayNonUniformIndexing\n", .{});
+        suitable = false;
+    }
+    if (supportedVulkan12Features.runtimeDescriptorArray == 0) {
+        std.debug.print("   missing 12 Feature: runtimeDescriptorArray\n", .{});
+        suitable = false;
+    }
+
+    if (!suitable) return 0;
 
     var score: u32 = 0;
-    var physicalDeviceProperties: vk.VkPhysicalDeviceProperties = undefined;
-    vk.vkGetPhysicalDeviceProperties.?(device, &physicalDeviceProperties);
-    if (physicalDeviceProperties.deviceType == vk.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) score += 1000;
+    if (physicalDeviceProperties.deviceType == vk.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+        std.debug.print("   score + DISCRETE_GPU: {d}\n", .{1000});
+        score += 1000;
+    }
     score += physicalDeviceProperties.limits.maxImageDimension2D;
+    std.debug.print("   score + maxImageDimension2D: {d}\n", .{physicalDeviceProperties.limits.maxImageDimension2D});
 
     const counts: vk.VkSampleCountFlags = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
     score += counts * 16;
+    std.debug.print("   score + framebufferDepthSampleCounts: {d}\n", .{counts * 16});
+    std.debug.print("   end score: {d}\n", .{score});
 
     return score;
 }
