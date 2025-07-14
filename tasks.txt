@@ -1,8 +1,4 @@
 tasks
-- check amount of work to remove "shaderFloat64" feature requirement
-    - list of feature support: https://vulkan.gpuinfo.org/listfeaturescore10.php?platform=windows
-
-
 
 
 - i had an endless loop on copy paste

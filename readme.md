@@ -39,3 +39,7 @@ Released on steam https://store.steampowered.com/app/3820960. See steam store pa
 
 `valgrind --leak-check=full --show-leak-kinds=all --suppressions=val_sup.txt <your program here>`
 
+## vulkan feature support page
+https://vulkan.gpuinfo.org/listfeaturescore10.php?platform=windows
+
+
