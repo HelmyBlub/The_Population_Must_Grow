@@ -1,9 +1,8 @@
 tasks
-- more stuff to console in debug build 
-    - giving information what graphics card is selected and why and what score
-    - around code of "pickPhysicalDevice" and "isDeviceSuitable"
+- check amount of work to remove "shaderFloat64" feature requirement
+    - list of feature support: https://vulkan.gpuinfo.org/listfeaturescore10.php?platform=windows
 
-- check if i find anything to my game
+
 
 
 - i had an endless loop on copy paste
@@ -14,8 +13,9 @@ tasks
             _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
 
 thinking what i expect on steam:
-    - goal of 10 reviews (5 review after 3days)
+    - goal of 10 reviews (8 review after 10days, lifetime unique users: 325)
     - after a week. See what steam statistics say about my game
+    - check if i find anything to my game
 
 Next project ideas:
 - i want to try out shaders to make something look "better"
@@ -38,8 +38,10 @@ Offstream:
                 - twitch
   
 Some data:
-- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (07.07.2025)
+- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (14.07.2025)
 - ~85_000 citizen 1 cpu can not keep 60fps anymore(while streamng + debug mode)
 
+- f32 tests
+    - zoom out max 45 fps, 10700 single tick
 
 git remote set-url origin https://github.com/HelmyBlub/The_Population_Must_Grow.git

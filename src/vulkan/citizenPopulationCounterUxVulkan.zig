@@ -94,7 +94,7 @@ pub fn setupVertices(state: *main.GameState) !void {
     const rectangleVulkanWidth = 1.0;
     const fontSize = 50.0 * state.vkState.uiSizeFactor;
     const fontSizeSmaller: f32 = 25 * state.vkState.uiSizeFactor;
-    const populationRectangle: mapZig.MapRectangle = .{
+    const populationRectangle: main.Rectangle = .{
         .pos = .{ .x = -rectangleVulkanWidth / 2.0, .y = -1.0 + onePixelYInVulkan * fontSizeSmaller },
         .width = rectangleVulkanWidth,
         .height = fontSize * onePixelYInVulkan,

@@ -17,7 +17,7 @@ const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxV
 const codePerformanceZig = @import("../codePerformance.zig");
 const chunkAreaZig = @import("../chunkArea.zig");
 
-const ENABLE_VALIDATION_LAYER = false;
+const ENABLE_VALIDATION_LAYER = true;
 
 pub const Vk_State = struct {
     instance: vk.VkInstance = undefined,
@@ -112,8 +112,8 @@ pub const VkSprites = struct {
 };
 
 const VkCameraData = struct {
-    translate: [2]f64,
     transform: [4][4]f32,
+    translate: [2]f32,
 };
 
 const SwapChainSupportDetails = struct {
@@ -123,7 +123,7 @@ const SwapChainSupportDetails = struct {
 };
 
 const SpriteWithGlobalTransformVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
     imageIndex: u8,
     size: u8,
     rotate: f32,
@@ -144,7 +144,7 @@ const SpriteWithGlobalTransformVertex = struct {
         var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpriteWithGlobalTransformVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -167,7 +167,7 @@ const SpriteWithGlobalTransformVertex = struct {
 };
 
 pub const SpriteVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
     imageIndex: u8,
     width: f32,
     height: f32,
@@ -186,7 +186,7 @@ pub const SpriteVertex = struct {
         var attributeDescriptions: [4]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpriteVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -205,7 +205,7 @@ pub const SpriteVertex = struct {
 };
 
 pub const ColoredVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
     color: [3]f32,
 
     pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
@@ -222,7 +222,7 @@ pub const ColoredVertex = struct {
         var attributeDescriptions: [2]vk.VkVertexInputAttributeDescription = .{ undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(ColoredVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -324,29 +324,29 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                 if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
                 const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 for (chunk.citizens.items) |*citizen| {
-                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
                 for (chunk.trees.items) |*tree| {
                     const size: u8 = mapZig.GameMap.TILE_SIZE;
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = tree.imageIndex, .size = size, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(tree.position.x), @floatCast(tree.position.y) }, .imageIndex = tree.imageIndex, .size = size, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.buildings.items) |*building| {
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.bigBuildings.items) |*building| {
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.potatoFields.items) |*field| {
-                    vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer2] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer2 += 1;
                     if (!field.fullyGrown) {
                         continue;
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
             }
@@ -365,7 +365,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                 const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 if (!doComplexCitizen) {
                     for (chunk.citizens.items) |*citizen| {
-                        vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ citizen.position.x, citizen.position.y }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                        vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                         indexLayer1Citizen += 1;
                     }
                 }
@@ -389,7 +389,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                             rotate = fallingAngle;
                         }
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ tree.position.x, tree.position.y }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(tree.position.x), @floatCast(tree.position.y) }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.buildings.items) |*building| {
@@ -401,7 +401,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                         imageIndex = imageZig.IMAGE_HOUSE;
                         cutY = @max(1 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 3000.0, 0);
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
                     indexLayer1 += 1;
                 }
                 for (chunk.bigBuildings.items) |*building| {
@@ -414,11 +414,11 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                             cutY = @as(f32, @floatFromInt(building.woodRequired)) / mapZig.Building.BIG_HOUSE_WOOD * 0.6 + 0.4;
                         }
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ building.position.x, building.position.y }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
                     indexLayer1 += 1;
                 }
                 for (chunk.potatoFields.items) |*field| {
-                    vkState.vertices[indexLayer2] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer2] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer2 += 1;
                     var size: u8 = mapZig.GameMap.TILE_SIZE;
                     if (field.growStartTimeMs) |time| {
@@ -426,7 +426,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                     } else if (!field.fullyGrown) {
                         size = 0;
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ field.position.x, field.position.y }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
             }
@@ -1067,13 +1067,13 @@ pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
 
 fn updateUniformBuffer(state: *main.GameState) !void {
     var ubo: VkCameraData = .{
+        .translate = .{ @floatCast(-state.camera.position.x), @floatCast(-state.camera.position.y) },
         .transform = .{
             .{ 2 / windowSdlZig.windowData.widthFloat, 0, 0.0, 0.0 },
             .{ 0, 2 / windowSdlZig.windowData.heightFloat, 0.0, 0.0 },
             .{ 0.0, 0.0, 1.0, 0.0 },
             .{ 0.0, 0.0, 0.0, 1 / state.camera.zoom },
         },
-        .translate = .{ -state.camera.position.x, -state.camera.position.y },
     };
     if (state.vkState.uniformBuffersMapped[state.vkState.currentFrame]) |data| {
         @memcpy(

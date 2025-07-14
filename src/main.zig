@@ -96,8 +96,14 @@ pub const MouseInfo = struct {
 };
 
 pub const VulkanRectangle = struct {
-    pos: [2]Position,
+    pos: [2]PositionF32,
     color: [3]f32,
+};
+
+pub const Rectangle = struct {
+    pos: PositionF32,
+    width: f32,
+    height: f32,
 };
 
 pub const Camera: type = struct {
@@ -294,7 +300,7 @@ pub fn setupRectangleData(state: *GameState) void {
                 .y = mapTopLeftMiddleTile.y - mapZig.GameMap.TILE_SIZE / 2,
             };
             const vulkanTopleft = mapZig.mapPositionToVulkanSurfacePoisition(mapTopLeftTile.x, mapTopLeftTile.y, state.camera);
-            const vulkanBottomRight: Position = mapZig.mapPositionToVulkanSurfacePoisition(
+            const vulkanBottomRight: PositionF32 = mapZig.mapPositionToVulkanSurfacePoisition(
                 mapTopLeftTile.x + @as(f64, @floatFromInt(copyAreaRectangle.columnCount * mapZig.GameMap.TILE_SIZE)),
                 mapTopLeftTile.y + @as(f64, @floatFromInt(copyAreaRectangle.rowCount * mapZig.GameMap.TILE_SIZE)),
                 state.camera,

@@ -19,7 +19,7 @@ pub const VkPathVertices = struct {
 };
 
 pub const SpritePathVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
 
     pub fn getBindingDescription() vk.VkVertexInputBindingDescription {
         const bindingDescription: vk.VkVertexInputBindingDescription = .{
@@ -35,7 +35,7 @@ pub const SpritePathVertex = struct {
         var attributeDescriptions: [1]vk.VkVertexInputAttributeDescription = .{undefined};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(SpritePathVertex, "pos");
         return attributeDescriptions;
     }
@@ -60,8 +60,6 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
     }
 
     var index: u32 = 0;
-    var entitiesCounter: u32 = 0;
-    const max = vkState.path.vertices.len;
     var currentAreaXY: ?chunkAreaZig.ChunkAreaXY = null;
     var currentChunkArea: ?*chunkAreaZig.ChunkArea = null;
     for (0..chunkVisible.columns) |x| {
@@ -75,16 +73,13 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
             }
             if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
             const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
-            const len = chunk.pathes.items.len;
-            if (len > 0 and index + len <= max) {
-                const dest: [*]main.Position = @ptrCast(@alignCast(vkState.path.vertices[index..(index + len)]));
-                @memcpy(dest, chunk.pathes.items[0..len]);
-                entitiesCounter += @intCast(len);
+            for (chunk.pathes.items) |path| {
+                vkState.path.vertices[index] = .{ .pos = .{ @floatCast(path.x), @floatCast(path.y) } };
+                index += 1;
             }
-            index += @intCast(len);
         }
     }
-    pathData.entityPaintCount = entitiesCounter;
+    pathData.entityPaintCount = index;
     try setupVertexDataForGPU(vkState);
 }
 

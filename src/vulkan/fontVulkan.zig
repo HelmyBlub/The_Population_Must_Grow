@@ -26,7 +26,7 @@ pub const VkFont = struct {
 };
 
 pub const FontVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
     texX: f32,
     texWidth: f32,
     size: f32,
@@ -46,7 +46,7 @@ pub const FontVertex = struct {
         const attributeDescriptions = [_]vk.VkVertexInputAttributeDescription{ .{
             .binding = 0,
             .location = 0,
-            .format = vk.VK_FORMAT_R64G64_SFLOAT,
+            .format = vk.VK_FORMAT_R32G32_SFLOAT,
             .offset = @offsetOf(FontVertex, "pos"),
         }, .{
             .binding = 0,
@@ -147,10 +147,10 @@ fn displayPerformanceDebugInfo(state: *main.GameState) !void {
 }
 
 /// returns vulkan surface width of text
-pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSize: f32, vkFont: *VkFont) f64 {
+pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.PositionF32, fontSize: f32, vkFont: *VkFont) f32 {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
-    var xOffset: f64 = 0;
+    var xOffset: f32 = 0;
     for (chars) |char| {
         if (vkFont.verticeCount >= vkFont.vertices.len) break;
         charToTexCoords(char, &texX, &texWidth);
@@ -167,7 +167,7 @@ pub fn paintText(chars: []const u8, vulkanSurfacePosition: main.Position, fontSi
     return xOffset;
 }
 
-pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSize: f32) FontVertex {
+pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.PositionF32, fontSize: f32) FontVertex {
     var texX: f32 = 0;
     var texWidth: f32 = 0;
     charToTexCoords(char, &texX, &texWidth);
@@ -180,7 +180,7 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.Position, fontSiz
     };
 }
 
-pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.Position, fontSize: f32, vkFont: *VkFont) !f32 {
+pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.PositionF32, fontSize: f32, vkFont: *VkFont) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
     var numberAsString: []u8 = undefined;

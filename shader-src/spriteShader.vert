@@ -1,6 +1,6 @@
 #version 450
 
-layout(location = 0) in dvec2 inPosition;
+layout(location = 0) in vec2 inPosition;
 layout(location = 1) in uint inSpriteIndex;
 layout(location = 2) in float inWidth;
 layout(location = 3) in float inHeight;

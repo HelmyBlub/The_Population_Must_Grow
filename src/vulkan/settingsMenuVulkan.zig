@@ -15,26 +15,26 @@ pub const VkSettingsUx = struct {
     lines: paintVulkanZig.VkLines = undefined,
     sprites: paintVulkanZig.VkSprites = undefined,
     font: fontVulkanZig.VkFont = undefined,
-    settingsIcon: UiRectangle = undefined,
-    settingsMenuRectangle: UiRectangle = undefined,
+    settingsIcon: main.Rectangle = undefined,
+    settingsMenuRectangle: main.Rectangle = undefined,
     restart: struct {
-        rec: UiRectangle = undefined,
+        rec: main.Rectangle = undefined,
         holdStartTime: ?i64 = null,
         hovering: bool = false,
     } = undefined,
     sliders: [2]struct {
-        recSlider: UiRectangle = undefined,
-        recDragArea: UiRectangle = undefined,
+        recSlider: main.Rectangle = undefined,
+        recDragArea: main.Rectangle = undefined,
         hovering: bool = false,
         holding: bool = false,
     } = undefined,
     fullscreen: struct {
-        rec: UiRectangle = undefined,
+        rec: main.Rectangle = undefined,
         checked: bool = false,
         hovering: bool = false,
     } = undefined,
     quit: struct {
-        rec: UiRectangle = undefined,
+        rec: main.Rectangle = undefined,
         hovering: bool = false,
     } = undefined,
     menuOpen: bool = false,
@@ -46,12 +46,6 @@ pub const VkSettingsUx = struct {
     pub const MAX_VERTICES_SPRITES = UX_RECTANGLES;
     pub const MAX_VERTICES_FONT = UX_RECTANGLES + MAX_FONT_TOOLTIP;
     const RESTART_HOLD_DURATION_MS = 3000;
-};
-
-const UiRectangle = struct {
-    pos: main.Position = .{ .x = 0, .y = 0 },
-    width: f32 = 0,
-    height: f32 = 0,
 };
 
 pub fn onWindowResize(state: *main.GameState) !void {
@@ -320,7 +314,7 @@ pub fn mouseDown(state: *main.GameState, mouseWindowPosition: main.PositionF32) 
     return false;
 }
 
-fn isPositionInUiRec(rec: UiRectangle, pos: main.Position) bool {
+fn isPositionInUiRec(rec: main.Rectangle, pos: main.PositionF32) bool {
     return rec.pos.x <= pos.x and rec.pos.x + rec.width >= pos.x and
         rec.pos.y <= pos.y and rec.pos.y + rec.height >= pos.y;
 }
@@ -430,7 +424,7 @@ pub fn setupVertices(state: *main.GameState) !void {
             const timeDiff = @max(0, time + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp());
             const fillPerCent: f32 = 1 - @as(f32, @floatFromInt(timeDiff)) / VkSettingsUx.RESTART_HOLD_DURATION_MS;
             const holdRecColor: [3]f32 = .{ 0.2, 0.2, 0.2 };
-            const fillRec: UiRectangle = .{
+            const fillRec: main.Rectangle = .{
                 .pos = .{
                     .x = settingsMenuUx.restart.rec.pos.x,
                     .y = settingsMenuUx.restart.rec.pos.y,
@@ -521,7 +515,7 @@ pub fn setupVertices(state: *main.GameState) !void {
     try setupVertexDataForGPU(&state.vkState);
 }
 
-fn setupVerticeForRectangle(rec: UiRectangle, settingsMenuUx: *VkSettingsUx, fillColor: [3]f32, borderColor: [3]f32) void {
+fn setupVerticeForRectangle(rec: main.Rectangle, settingsMenuUx: *VkSettingsUx, fillColor: [3]f32, borderColor: [3]f32) void {
     const triangles = &settingsMenuUx.triangles;
     triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ rec.pos.x, rec.pos.y }, .color = fillColor };
     triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ rec.pos.x + rec.width, rec.pos.y }, .color = fillColor };

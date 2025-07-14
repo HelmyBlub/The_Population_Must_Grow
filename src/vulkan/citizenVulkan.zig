@@ -20,7 +20,7 @@ pub const VkCitizen = struct {
 };
 
 const CitizenVertex = struct {
-    pos: [2]f64,
+    pos: [2]f32,
     imageIndex: u8,
     animationTimer: u32,
     moveSpeed: f32,
@@ -41,7 +41,7 @@ const CitizenVertex = struct {
         var attributeDescriptions: [5]vk.VkVertexInputAttributeDescription = .{ undefined, undefined, undefined, undefined, undefined };
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk.VK_FORMAT_R64G64_SFLOAT;
+        attributeDescriptions[0].format = vk.VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[0].offset = @offsetOf(CitizenVertex, "pos");
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
@@ -98,7 +98,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.GameState, citizenCount: u32
             for (chunk.citizens.items) |*citizen| {
                 const animationTimer = if (citizen.nextThinkingAction != .idle and citizen.nextThinkingTickTimeMs > state.gameTimeMs) citizen.nextThinkingTickTimeMs - state.gameTimeMs else state.gameTimeMs;
                 vkState.citizen.vertices[index] = .{
-                    .pos = .{ citizen.position.x, citizen.position.y },
+                    .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) },
                     .imageIndex = citizen.imageIndex,
                     .animationTimer = @truncate(animationTimer),
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,

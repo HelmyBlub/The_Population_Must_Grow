@@ -602,12 +602,12 @@ pub fn mapTileXyToTilePosition(tileXY: TileXY) main.Position {
     };
 }
 
-pub fn mapTileXyToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.Position {
+pub fn mapTileXyToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.PositionF32 {
     const mapPosition = mapTileXyToTilePosition(tileXY);
     return mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, camera);
 }
 
-pub fn mapTileXyMiddleToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.Position {
+pub fn mapTileXyMiddleToVulkanSurfacePosition(tileXY: TileXY, camera: main.Camera) main.PositionF32 {
     const mapPosition = mapTileXyToTileMiddlePosition(tileXY);
     return mapPositionToVulkanSurfacePoisition(mapPosition.x, mapPosition.y, camera);
 }
@@ -626,16 +626,16 @@ pub fn mapPositionToTileXyBottomRight(position: main.Position) TileXY {
     };
 }
 
-pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) main.Position {
+pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) main.PositionF32 {
     var width: u32 = 0;
     var height: u32 = 0;
     windowSdlZig.getWindowSize(&width, &height);
     const widthFloat = @as(f32, @floatFromInt(width));
     const heightFloat = @as(f32, @floatFromInt(height));
 
-    return main.Position{
-        .x = ((x - camera.position.x) * camera.zoom + widthFloat / 2) / widthFloat * 2 - 1,
-        .y = ((y - camera.position.y) * camera.zoom + heightFloat / 2) / heightFloat * 2 - 1,
+    return main.PositionF32{
+        .x = (@as(f32, @floatCast(x - camera.position.x)) * camera.zoom + widthFloat / 2) / widthFloat * 2 - 1,
+        .y = (@as(f32, @floatCast(y - camera.position.y)) * camera.zoom + heightFloat / 2) / heightFloat * 2 - 1,
     };
 }
 

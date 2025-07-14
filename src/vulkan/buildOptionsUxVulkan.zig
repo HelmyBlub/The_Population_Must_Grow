@@ -52,7 +52,7 @@ const UiButtonTypeData = union(UiButtonType) {
 };
 
 const UiButton = struct {
-    pos: main.Position = .{ .x = 0, .y = 0 },
+    pos: main.PositionF32 = .{ .x = 0, .y = 0 },
     width: f32 = 0,
     height: f32 = 0,
     fill: UiButtonFillData,
@@ -493,7 +493,7 @@ pub fn setupVertices(state: *main.GameState) !void {
                 width = 0;
             }
             maxWidth += paddingXVulkan * 2;
-            const tooltipRectangle = mapZig.MapRectangle{
+            const tooltipRectangle = main.Rectangle{
                 .pos = .{ .x = uiButton.pos.x, .y = uiButton.pos.y - height - tooltipBoxVertSpacing },
                 .width = maxWidth,
                 .height = height,

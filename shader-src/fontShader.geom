@@ -1,8 +1,8 @@
 #version 450
 
 layout(binding = 0) uniform UniformBufferObject {
-    dvec2 translate;
     mat4 transformation;
+    vec2 translate;
 } ubo;
 
 layout(points) in;
@@ -19,7 +19,7 @@ layout(location = 1) out vec3 outColor;
 void main(void)
 {	
     vec4 topLeft = gl_in[0].gl_Position;
-    float height = inSize[0] * ubo.transformation[1][1];
+    float height =  inSize[0] * ubo.transformation[1][1];
     float width = inSize[0] * ubo.transformation[0][0] * (inTexWidth[0] * (1600 / 40));
 
     // top-left vertex
