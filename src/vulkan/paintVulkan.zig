@@ -324,29 +324,47 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                 if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
                 const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 for (chunk.citizens.items) |*citizen| {
-                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1Citizen] = .{ .pos = .{
+                        @floatCast(citizen.position.x - state.camera.position.x),
+                        @floatCast(citizen.position.y - state.camera.position.y),
+                    }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1Citizen += 1;
                 }
                 for (chunk.trees.items) |*tree| {
                     const size: u8 = mapZig.GameMap.TILE_SIZE;
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(tree.position.x), @floatCast(tree.position.y) }, .imageIndex = tree.imageIndex, .size = size, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(tree.position.x - state.camera.position.x),
+                        @floatCast(tree.position.y - state.camera.position.y),
+                    }, .imageIndex = tree.imageIndex, .size = size, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.buildings.items) |*building| {
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(building.position.x - state.camera.position.x),
+                        @floatCast(building.position.y - state.camera.position.y),
+                    }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.bigBuildings.items) |*building| {
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(building.position.x - state.camera.position.x),
+                        @floatCast(building.position.y - state.camera.position.y),
+                    }, .imageIndex = building.imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.potatoFields.items) |*field| {
-                    vkState.vertices[indexLayer2] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer2] = .{ .pos = .{
+                        @floatCast(field.position.x - state.camera.position.x),
+                        @floatCast(field.position.y - state.camera.position.y),
+                    }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer2 += 1;
                     if (!field.fullyGrown) {
                         continue;
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(field.position.x - state.camera.position.x),
+                        @floatCast(field.position.y - state.camera.position.y),
+                    }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
             }
@@ -389,7 +407,10 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                             rotate = fallingAngle;
                         }
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(tree.position.x), @floatCast(tree.position.y) }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(tree.position.x - state.camera.position.x),
+                        @floatCast(tree.position.y - state.camera.position.y),
+                    }, .imageIndex = imageIndex, .size = size, .rotate = rotate, .cutY = 0 };
                     indexLayer1 += 1;
                 }
                 for (chunk.buildings.items) |*building| {
@@ -401,7 +422,10 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                         imageIndex = imageZig.IMAGE_HOUSE;
                         cutY = @max(1 - @as(f32, @floatFromInt(state.gameTimeMs - time)) / 3000.0, 0);
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(building.position.x - state.camera.position.x),
+                        @floatCast(building.position.y - state.camera.position.y),
+                    }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = cutY };
                     indexLayer1 += 1;
                 }
                 for (chunk.bigBuildings.items) |*building| {
@@ -414,11 +438,17 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                             cutY = @as(f32, @floatFromInt(building.woodRequired)) / mapZig.Building.BIG_HOUSE_WOOD * 0.6 + 0.4;
                         }
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(building.position.x), @floatCast(building.position.y) }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(building.position.x - state.camera.position.x),
+                        @floatCast(building.position.y - state.camera.position.y),
+                    }, .imageIndex = imageIndex, .size = mapZig.GameMap.TILE_SIZE * 2, .rotate = 0, .cutY = cutY };
                     indexLayer1 += 1;
                 }
                 for (chunk.potatoFields.items) |*field| {
-                    vkState.vertices[indexLayer2] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer2] = .{ .pos = .{
+                        @floatCast(field.position.x - state.camera.position.x),
+                        @floatCast(field.position.y - state.camera.position.y),
+                    }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer2 += 1;
                     var size: u8 = mapZig.GameMap.TILE_SIZE;
                     if (field.growStartTimeMs) |time| {
@@ -426,7 +456,10 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                     } else if (!field.fullyGrown) {
                         size = 0;
                     }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{ @floatCast(field.position.x), @floatCast(field.position.y) }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
+                    vkState.vertices[indexLayer1] = .{ .pos = .{
+                        @floatCast(field.position.x - state.camera.position.x),
+                        @floatCast(field.position.y - state.camera.position.y),
+                    }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = size, .rotate = 0, .cutY = 0 };
                     indexLayer1 += 1;
                 }
             }
@@ -1723,7 +1756,6 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
         .samplerAnisotropy = vk.VK_TRUE,
         .geometryShader = vk.VK_TRUE,
         .fillModeNonSolid = vk.VK_TRUE,
-        .shaderFloat64 = vk.VK_TRUE,
     };
     var vk12Features = vk.VkPhysicalDeviceVulkan12Features{
         .sType = vk.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -1808,10 +1840,7 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
         std.debug.print("   missing Feature: fillModeNonSolid\n", .{});
         suitable = false;
     }
-    if (supportedFeatures.shaderFloat64 == 0) {
-        std.debug.print("   missing Feature: shaderFloat64\n", .{});
-        suitable = false;
-    }
+
     if (!suitable) {
         return 0;
     }

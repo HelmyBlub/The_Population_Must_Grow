@@ -212,8 +212,9 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             try testZig.setupTestInputsXAreas(&state.testData.?);
         }
     } else if (scancode == sdl.SDL_SCANCODE_F9) {
-        std.debug.print("pressed button to crash game\n", .{});
-        state.threadData[100].dummyValue += 1;
+        std.debug.print("move to map end\n", .{});
+        state.camera.position.x += 50_000_000;
+        state.camera.position.y += 50_000_000;
     } else if (scancode == sdl.SDL_SCANCODE_F10) {
         try main.deleteSaveAndRestart(state);
     } else if (scancode == sdl.SDL_SCANCODE_F11) {

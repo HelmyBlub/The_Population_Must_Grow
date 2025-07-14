@@ -15,7 +15,7 @@ layout(location = 4) out float cutY;
 
 void main() {
     const uint IMAGE_PATH = 9;
-    gl_Position = ubo.transformation * vec4(inPosition + ubo.translate, 1, 1);
+    gl_Position = ubo.transformation * vec4(inPosition, 1, 1);
     gl_Position[2] = 0.9 - (gl_Position[1] / gl_Position[3] + 1) / 3.0;
     spriteIndex = IMAGE_PATH;
     scale[0] = ubo.transformation[0][0];

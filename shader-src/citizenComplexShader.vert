@@ -18,7 +18,7 @@ layout(location = 3) out float moveSpeed;
 layout(location = 4) out uint booleans;
 
 void main() {
-    gl_Position = ubo.transformation * vec4(inPosition + ubo.translate, 1, 1);
+    gl_Position = ubo.transformation * vec4(inPosition, 1, 1);
     gl_Position[2] = 0.9 - (gl_Position[1] / gl_Position[3] + 1) / 3.0;
     spriteIndex = inSpriteIndex;
     scale[0] = ubo.transformation[0][0];

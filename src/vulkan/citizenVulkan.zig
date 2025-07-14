@@ -98,7 +98,7 @@ pub fn setupVerticesForComplexCitizens(state: *main.GameState, citizenCount: u32
             for (chunk.citizens.items) |*citizen| {
                 const animationTimer = if (citizen.nextThinkingAction != .idle and citizen.nextThinkingTickTimeMs > state.gameTimeMs) citizen.nextThinkingTickTimeMs - state.gameTimeMs else state.gameTimeMs;
                 vkState.citizen.vertices[index] = .{
-                    .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) },
+                    .pos = .{ @floatCast(citizen.position.x - state.camera.position.x), @floatCast(citizen.position.y - state.camera.position.y) },
                     .imageIndex = citizen.imageIndex,
                     .animationTimer = @truncate(animationTimer),
                     .moveSpeed = if (citizen.moveTo.items.len > 0) @floatCast(citizen.moveSpeed) else 0,

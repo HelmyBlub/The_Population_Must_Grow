@@ -74,7 +74,7 @@ pub fn setupVertices(state: *main.GameState, chunkVisible: mapZig.VisibleChunksD
             if (currentChunkArea == null or currentChunkArea.?.chunks == null) continue;
             const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
             for (chunk.pathes.items) |path| {
-                vkState.path.vertices[index] = .{ .pos = .{ @floatCast(path.x), @floatCast(path.y) } };
+                vkState.path.vertices[index] = .{ .pos = .{ @floatCast(path.x - state.camera.position.x), @floatCast(path.y - state.camera.position.y) } };
                 index += 1;
             }
         }
