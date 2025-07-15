@@ -1,12 +1,12 @@
 tasks
+- problem helmi case
+    - around zoom ~0.4 citizens stuck to screen middle
+- problems shadaman: mouse incorrect
+    - rectangle to potato fields not matching
+    - mouse not matching 
+        - when zooming
+        - other things
 
-
-- i had an endless loop on copy paste
-    - was in releaseFast build, copied with ctrl. 
-- crash on:
-    thread 9372 panic: integer part of floating point value out of bounds
-    D:\mein\github_gamedev\Zig_ChatSim\src\vulkan\fontVulkan.zig:122:38: 0x7ff71ce3b956 in displayPerformanceDebugInfo (thePopulationMustGrow.exe.obj)
-            _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
 
 thinking what i expect on steam:
     - goal of 10 reviews (8 review after 10days, lifetime unique users: 325)

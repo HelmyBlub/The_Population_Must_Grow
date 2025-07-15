@@ -383,7 +383,10 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                 const chunk = &currentChunkArea.?.chunks.?[mapZig.getChunkIndexForChunkXY(chunkXY)];
                 if (!doComplexCitizen) {
                     for (chunk.citizens.items) |*citizen| {
-                        vkState.vertices[indexLayer1Citizen] = .{ .pos = .{ @floatCast(citizen.position.x), @floatCast(citizen.position.y) }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
+                        vkState.vertices[indexLayer1Citizen] = .{ .pos = .{
+                            @floatCast(citizen.position.x - state.camera.position.x),
+                            @floatCast(citizen.position.y - state.camera.position.y),
+                        }, .imageIndex = citizen.imageIndex, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                         indexLayer1Citizen += 1;
                     }
                 }
