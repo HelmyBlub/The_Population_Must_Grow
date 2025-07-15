@@ -387,12 +387,15 @@ pub fn mouseWindowPositionToGameMapPoisition(x: f32, y: f32, camera: main.Camera
     var width: u32 = 0;
     var height: u32 = 0;
     getWindowSize(&width, &height);
-    const widthFloat = @as(f64, @floatFromInt(width));
-    const heightFloat = @as(f64, @floatFromInt(height));
+    const widthFloatWindow = @as(f64, @floatFromInt(width));
+    const heightFloatWindow = @as(f64, @floatFromInt(height));
+
+    const scaleToPixelX = windowData.widthFloat / widthFloatWindow;
+    const scaleToPixelY = windowData.heightFloat / heightFloatWindow;
 
     return main.Position{
-        .x = (x - widthFloat / 2) / camera.zoom + camera.position.x,
-        .y = (y - heightFloat / 2) / camera.zoom + camera.position.y,
+        .x = (x - widthFloatWindow / 2) * scaleToPixelX / camera.zoom + camera.position.x,
+        .y = (y - heightFloatWindow / 2) * scaleToPixelY / camera.zoom + camera.position.y,
     };
 }
 

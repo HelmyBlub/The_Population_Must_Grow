@@ -1,6 +1,4 @@
 tasks
-- problem helmi case
-    - around zoom ~0.4 citizens stuck to screen middle
 - problems shadaman: mouse incorrect
     - rectangle to potato fields not matching
     - mouse not matching 

@@ -627,12 +627,8 @@ pub fn mapPositionToTileXyBottomRight(position: main.Position) TileXY {
 }
 
 pub fn mapPositionToVulkanSurfacePoisition(x: f64, y: f64, camera: main.Camera) main.PositionF32 {
-    var width: u32 = 0;
-    var height: u32 = 0;
-    windowSdlZig.getWindowSize(&width, &height);
-    const widthFloat = @as(f32, @floatFromInt(width));
-    const heightFloat = @as(f32, @floatFromInt(height));
-
+    const widthFloat = windowSdlZig.windowData.widthFloat;
+    const heightFloat = windowSdlZig.windowData.heightFloat;
     return main.PositionF32{
         .x = (@as(f32, @floatCast(x - camera.position.x)) * camera.zoom + widthFloat / 2) / widthFloat * 2 - 1,
         .y = (@as(f32, @floatCast(y - camera.position.y)) * camera.zoom + heightFloat / 2) / heightFloat * 2 - 1,
