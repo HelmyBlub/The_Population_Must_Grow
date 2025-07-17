@@ -17,7 +17,7 @@ const citizenPopulationCounterUxVulkanZig = @import("citizenPopulationCounterUxV
 const codePerformanceZig = @import("../codePerformance.zig");
 const chunkAreaZig = @import("../chunkArea.zig");
 
-const ENABLE_VALIDATION_LAYER = true;
+const ENABLE_VALIDATION_LAYER = false;
 
 pub const Vk_State = struct {
     instance: vk.VkInstance = undefined,
