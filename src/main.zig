@@ -434,9 +434,11 @@ pub fn mainLoop(state: *GameState) !void {
         }
         const thisFrameFps = @divFloor(1_000_000, @as(u64, @intCast((std.time.microTimestamp() - state.tickStartTimeMicroSeconds))));
         state.fpsCounter = state.fpsCounter * 0.99 + @as(f32, @floatFromInt(thisFrameFps)) * 0.01;
-        const passedTimePerTick = @as(f32, @floatFromInt(passedTickTime)) / state.actualGameSpeed;
-        const perCentGameSpeed = state.actualGameSpeed * 0.01;
-        state.tickDurationSmoothedMircoSeconds = state.tickDurationSmoothedMircoSeconds * (1 - perCentGameSpeed) + passedTimePerTick * perCentGameSpeed;
+        if (state.actualGameSpeed > 0) {
+            const passedTimePerTick = @as(f32, @floatFromInt(passedTickTime)) / state.actualGameSpeed;
+            const perCentGameSpeed = state.actualGameSpeed * 0.01;
+            state.tickDurationSmoothedMircoSeconds = state.tickDurationSmoothedMircoSeconds * (1 - perCentGameSpeed) + passedTimePerTick * perCentGameSpeed;
+        }
 
         autoBalanceActualGameSpeed(state);
         try autoBalanceThreadCount(state);

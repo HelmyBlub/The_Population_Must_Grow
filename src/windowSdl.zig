@@ -212,9 +212,11 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
             try testZig.setupTestInputsXAreas(&state.testData.?);
         }
     } else if (scancode == sdl.SDL_SCANCODE_F9) {
-        std.debug.print("move to map end\n", .{});
-        state.camera.position.x += 50_000_000;
-        state.camera.position.y += 50_000_000;
+        std.debug.print("stop game end remove frame limiter\n", .{});
+        state.actualGameSpeed = 0;
+        state.desiredGameSpeed = 0;
+        state.testData = testZig.createTestData(state.allocator);
+        state.testData.?.fpsLimiter = false;
     } else if (scancode == sdl.SDL_SCANCODE_F10) {
         try main.deleteSaveAndRestart(state);
     } else if (scancode == sdl.SDL_SCANCODE_F11) {

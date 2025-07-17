@@ -1,10 +1,7 @@
 tasks
-- problems shadaman: mouse incorrect
-    - rectangle to potato fields not matching
-    - mouse not matching 
-        - when zooming
-        - other things
-
+- Problem: visual artifact: some building images beeing paint on wrong position, like part of image is not reset for multiple frames
+    - mainly was happening on far away zoom levels. Indicating enough data needs to be present
+    - shadaman code example, some 
 
 thinking what i expect on steam:
     - goal of 10 reviews (8 review after 10days, lifetime unique users: 325)

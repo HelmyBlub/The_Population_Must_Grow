@@ -253,6 +253,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
     try codePerformanceZig.startMeasure("      sprite entity count", &state.codePerformanceData);
     var currentAreaXY: ?chunkAreaZig.ChunkAreaXY = null;
     var currentChunkArea: ?*chunkAreaZig.ChunkArea = null;
+    const simple: bool = state.camera.zoom < 0.25;
     for (0..chunkVisible.columns) |x| {
         for (0..chunkVisible.rows) |y| {
             const chunkXY: mapZig.ChunkXY = .{ .chunkX = chunkVisible.left + @as(i32, @intCast(x)), .chunkY = chunkVisible.top + @as(i32, @intCast(y)) };
@@ -273,7 +274,7 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
             entityPaintCountLayer1 += chunk.buildings.items.len;
             entityPaintCountLayer1 += chunk.bigBuildings.items.len;
             entityPaintCountLayer1 += chunk.trees.items.len;
-            entityPaintCountLayer1 += chunk.potatoFields.items.len;
+            if (!simple) entityPaintCountLayer1 += chunk.potatoFields.items.len;
             entityPaintCountLayer2 += chunk.potatoFields.items.len;
             entityPaintCountPath += chunk.pathes.items.len;
         }
@@ -310,7 +311,6 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
     var indexLayer1Citizen: u32 = 0;
     var indexLayer1: u32 = state.vkState.entityPaintCountLayer1Citizen;
     var indexLayer2: u32 = indexLayer1 + state.vkState.entityPaintCountLayer1;
-    const simple: bool = state.camera.zoom < 0.25;
     if (simple) {
         for (0..chunkVisible.columns) |x| {
             for (0..chunkVisible.rows) |y| {
@@ -358,14 +358,6 @@ fn setupVerticesForSprites(state: *main.GameState) !void {
                         @floatCast(field.position.y - state.camera.position.y),
                     }, .imageIndex = imageZig.IMAGE_FARM_FIELD, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
                     indexLayer2 += 1;
-                    if (!field.fullyGrown) {
-                        continue;
-                    }
-                    vkState.vertices[indexLayer1] = .{ .pos = .{
-                        @floatCast(field.position.x - state.camera.position.x),
-                        @floatCast(field.position.y - state.camera.position.y),
-                    }, .imageIndex = imageZig.IMAGE_POTATO_PLANT, .size = mapZig.GameMap.TILE_SIZE, .rotate = 0, .cutY = 0 };
-                    indexLayer1 += 1;
                 }
             }
         }
