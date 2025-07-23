@@ -21,7 +21,7 @@ const chunkAreaZig = @import("chunkArea.zig");
 const steamZig = @import("steam.zig");
 
 pub const WindowData = struct {
-    window: *sdl.SDL_Window = undefined,
+    window: ?*sdl.SDL_Window = null,
     widthFloat: f32 = 1600,
     heightFloat: f32 = 800,
 };
@@ -32,35 +32,35 @@ pub fn initWindowSdl() !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_AUDIO);
     const flags = sdl.SDL_WINDOW_VULKAN | sdl.SDL_WINDOW_RESIZABLE;
     windowData.window = try (sdl.SDL_CreateWindow("The Population Must Grow", @intFromFloat(windowData.widthFloat), @intFromFloat(windowData.heightFloat), flags) orelse error.createWindow);
-    _ = sdl.SDL_ShowWindow(windowData.window);
+    _ = sdl.SDL_ShowWindow(windowData.window.?);
 }
 
 pub fn destroyWindowSdl() void {
-    sdl.SDL_DestroyWindow(windowData.window);
+    if (windowData.window) |window| sdl.SDL_DestroyWindow(window);
     sdl.SDL_Quit();
 }
 
 pub fn getSurfaceForVulkan(instance: sdl.VkInstance) sdl.VkSurfaceKHR {
     var surface: sdl.VkSurfaceKHR = undefined;
-    _ = sdl.SDL_Vulkan_CreateSurface(windowData.window, instance, null, &surface);
+    _ = sdl.SDL_Vulkan_CreateSurface(windowData.window.?, instance, null, &surface);
     return surface;
 }
 
 pub fn getWindowSize(width: *u32, height: *u32) void {
     var w: c_int = undefined;
     var h: c_int = undefined;
-    _ = sdl.SDL_GetWindowSize(windowData.window, &w, &h);
+    _ = sdl.SDL_GetWindowSize(windowData.window.?, &w, &h);
     width.* = @intCast(w);
     height.* = @intCast(h);
 }
 
 pub fn toggleFullscreen() bool {
-    const flags = sdl.SDL_GetWindowFlags(windowData.window);
+    const flags = sdl.SDL_GetWindowFlags(windowData.window.?);
     if ((flags & sdl.SDL_WINDOW_FULLSCREEN) == 0) {
-        _ = sdl.SDL_SetWindowFullscreen(windowData.window, true);
+        _ = sdl.SDL_SetWindowFullscreen(windowData.window.?, true);
         return true;
     } else {
-        _ = sdl.SDL_SetWindowFullscreen(windowData.window, false);
+        _ = sdl.SDL_SetWindowFullscreen(windowData.window.?, false);
         return false;
     }
 }

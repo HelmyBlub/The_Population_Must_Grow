@@ -17,8 +17,10 @@ const settingsMenuUxVulkanZig = @import("vulkan/settingsMenuVulkan.zig");
 const steamZig = @import("steam.zig");
 pub const pathfindingZig = @import("pathfinding.zig");
 const sdl = @import("windowSdl.zig").sdl;
+const onCrashDisplay = @import("onCrashDisplay.zig");
 
 pub const GameState: type = struct {
+    errorMessagesForUserDisplay: std.ArrayList([]const u8),
     pathfindTestValue: f32 = 0,
     lastGeneralDataSaveTime: u64 = 0,
     steam: ?steamZig.SteamData = null,
@@ -155,13 +157,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    startGame(allocator, false) catch |err| {
-        std.debug.print("error: {}\n", .{err});
-        if (buildin.mode == .Debug) {
-            std.debug.print("sleep 15 seconds\n", .{});
-            std.Thread.sleep(15_000_000_000);
-        }
-    };
+    try startGame(allocator, false);
 }
 
 pub fn calculateDistance(pos1: Position, pos2: Position) f32 {
@@ -199,6 +195,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSe
         .usedThreadsCount = 1,
         .chunkAreas = std.AutoArrayHashMap(u64, chunkAreaZig.ChunkArea).init(allocator),
         .testData = if (isTest) testZig.createTestData(allocator) else null,
+        .errorMessagesForUserDisplay = std.ArrayList([]const u8).init(allocator),
     };
     state.threadData = try allocator.alloc(ThreadData, state.maxThreadCount);
     for (0..state.maxThreadCount) |i| {
@@ -254,10 +251,8 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
     }
     try mapZig.createSpawnArea(state);
     state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len;
-    state.soundMixer.mutex.lock();
     state.soundMixer.soundsFutureQueue.clearRetainingCapacity();
     state.soundMixer.soundsToPlay.clearRetainingCapacity();
-    state.soundMixer.mutex.unlock();
 }
 
 pub fn alignPasteRectangleOfCopyPaste(mapTopLeft: *Position, state: *GameState) void {
@@ -380,7 +375,15 @@ fn destroyPaintVulkanAndWindowSdl(state: *GameState) !void {
 fn startGame(allocator: std.mem.Allocator, isTest: bool) !void {
     std.debug.print("game run start\n", .{});
     var state: GameState = undefined;
-    try createGameState(allocator, &state, null, isTest);
+    createGameState(allocator, &state, null, isTest) catch |err| {
+        std.debug.print("error: {}\n", .{err});
+        const formatted = try std.fmt.allocPrint(state.allocator, "{s}", .{@errorName(err)});
+        try state.errorMessagesForUserDisplay.append(formatted);
+        try state.errorMessagesForUserDisplay.insert(0, "Game Start Failed");
+        try onCrashDisplay.displayLastErrorMessageInWindow(&state);
+        return;
+    };
+
     defer destroyGameState(&state);
     std.debug.print("main loop\n", .{});
     steamZig.steamInit(&state);
@@ -1189,6 +1192,10 @@ pub fn destroyGameState(state: *GameState) void {
     inputZig.destroy(state);
     codePerformanceZig.destroy(state);
     state.chunkAreas.deinit();
+    for (state.errorMessagesForUserDisplay.items) |item| {
+        state.allocator.free(item);
+    }
+    state.errorMessagesForUserDisplay.deinit();
 }
 
 pub fn calculateDirection(start: Position, end: Position) f32 {

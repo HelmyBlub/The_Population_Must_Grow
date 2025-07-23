@@ -475,10 +475,10 @@ pub fn initVulkan(state: *main.GameState) !void {
     const vkGetInstanceProcAddr: vk.PFN_vkGetInstanceProcAddr = @ptrCast(something);
     vk.volkInitializeCustom(vkGetInstanceProcAddr);
 
-    try createInstance(vkState, state.allocator);
+    try createInstance(state, state.allocator);
     vk.volkLoadInstance(vkState.instance);
     vkState.surface = @ptrCast(windowSdlZig.getSurfaceForVulkan(@ptrCast(vkState.instance)));
-    vkState.physical_device = try pickPhysicalDevice(vkState.instance, vkState, state.allocator);
+    vkState.physical_device = try pickPhysicalDevice(vkState.instance, state, state.allocator);
     try createLogicalDevice(vkState.physical_device, vkState);
     try createSwapChain(vkState, state.allocator);
     try createImageViews(vkState, state.allocator);
@@ -1043,7 +1043,7 @@ pub fn destroyPaintVulkan(vkState: *Vk_State, allocator: std.mem.Allocator) !voi
     allocator.free(vkState.mipLevels);
 }
 
-fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
+fn createInstance(state: *main.GameState, allocator: std.mem.Allocator) !void {
     var app_info = vk.VkApplicationInfo{
         .sType = vk.VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = null,
@@ -1081,8 +1081,7 @@ fn createInstance(vkState: *Vk_State, allocator: std.mem.Allocator) !void {
     var extCount: c_uint = 0;
     instance_create_info.ppEnabledExtensionNames = sdl.SDL_Vulkan_GetInstanceExtensions(&extCount);
     instance_create_info.enabledExtensionCount = extCount;
-
-    try vkcheck(vk.vkCreateInstance.?(&instance_create_info, null, &vkState.instance), "failed vkCreateInstance");
+    try vkcheck2(vk.vkCreateInstance.?(&instance_create_info, null, &state.vkState.instance), "failed vkCreateInstance", state);
 }
 
 pub fn setupVertexDataForGPU(vkState: *Vk_State) !void {
@@ -1780,7 +1779,8 @@ fn createLogicalDevice(physical_device: vk.VkPhysicalDevice, vkState: *Vk_State)
     vk.vkGetDeviceQueue.?(vkState.logicalDevice, vkState.graphics_queue_family_idx, 0, &vkState.queue);
 }
 
-fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: std.mem.Allocator) !vk.VkPhysicalDevice {
+fn pickPhysicalDevice(instance: vk.VkInstance, state: *main.GameState, allocator: std.mem.Allocator) !vk.VkPhysicalDevice {
+    const vkState = &state.vkState;
     var device_count: u32 = 0;
     try vkcheck(vk.vkEnumeratePhysicalDevices.?(instance, &device_count, null), "Failed to enumerate physical devices");
     if (device_count == 0) {
@@ -1794,7 +1794,7 @@ fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: st
     var bestScore: u32 = 0;
     var bestDevice: ?vk.VkPhysicalDevice = null;
     for (devices) |device| {
-        const score = try isDeviceSuitable(device, vkState, allocator);
+        const score = try isDeviceSuitable(device, state, allocator);
         if (score > bestScore) {
             bestScore = score;
             bestDevice = device;
@@ -1804,10 +1804,13 @@ fn pickPhysicalDevice(instance: vk.VkInstance, vkState: *Vk_State, allocator: st
         vkState.msaaSamples = getMaxUsableSampleCount(device);
         return device;
     }
+    const formatted = try std.fmt.allocPrint(state.allocator, "Vulkan Error no suitable GPU found", .{});
+    try state.errorMessagesForUserDisplay.append(formatted);
     return error.NoSuitableGPU;
 }
 
-fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: std.mem.Allocator) !u32 {
+fn isDeviceSuitable(device: vk.VkPhysicalDevice, state: *main.GameState, allocator: std.mem.Allocator) !u32 {
+    const vkState = &state.vkState;
     const indices: QueueFamilyIndices = try findQueueFamilies(device, vkState, allocator);
     vkState.graphics_queue_family_idx = indices.graphicsFamily.?;
 
@@ -1817,22 +1820,32 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     var physicalDeviceProperties: vk.VkPhysicalDeviceProperties = undefined;
     vk.vkGetPhysicalDeviceProperties.?(device, &physicalDeviceProperties);
     std.debug.print("Evaluating Graphics Card: {s}\n", .{physicalDeviceProperties.deviceName});
+    const formatted = try std.fmt.allocPrint(state.allocator, "Evaluating Graphics Card: {s}", .{physicalDeviceProperties.deviceName});
+    try state.errorMessagesForUserDisplay.append(formatted);
 
     var suitable = true;
     if (!indices.isComplete()) {
         std.debug.print("   graphics Family missing\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    graphics Family missing", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
     if (supportedFeatures.samplerAnisotropy == 0) {
         std.debug.print("   missing Feature: samplerAnisotropy\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    missing Feature: samplerAnisotropy", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
     if (supportedFeatures.geometryShader == 0) {
         std.debug.print("   missing Feature: geometryShader\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    missing Feature: geometryShader", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
-    if (supportedFeatures.geometryShader == 0) {
+    if (supportedFeatures.fillModeNonSolid == 0) {
         std.debug.print("   missing Feature: fillModeNonSolid\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    missing Feature: fillModeNonSolid", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
 
@@ -1850,10 +1863,14 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, vkState: *Vk_State, allocator: 
     vk.vkGetPhysicalDeviceFeatures2.?(device, &supportedFeatures2);
     if (supportedVulkan12Features.shaderSampledImageArrayNonUniformIndexing == 0) {
         std.debug.print("   missing 12 Feature: shaderSampledImageArrayNonUniformIndexing\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    missing 12 Feature: shaderSampledImageArrayNonUniformIndexing", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
     if (supportedVulkan12Features.runtimeDescriptorArray == 0) {
         std.debug.print("   missing 12 Feature: runtimeDescriptorArray\n", .{});
+        const formattedMissing = try std.fmt.allocPrint(state.allocator, "    missing 12 Feature: runtimeDescriptorArray", .{});
+        try state.errorMessagesForUserDisplay.append(formattedMissing);
         suitable = false;
     }
 
@@ -1911,6 +1928,15 @@ const QueueFamilyIndices = struct {
         return self.graphicsFamily != null;
     }
 };
+
+fn vkcheck2(result: vk.VkResult, comptime err_msg: []const u8, state: *main.GameState) !void {
+    if (result != vk.VK_SUCCESS) {
+        std.debug.print("Vulkan error {d}: {s}\n", .{ result, err_msg });
+        const formatted = try std.fmt.allocPrint(state.allocator, "Vulkan Error {}: {s}", .{ result, err_msg });
+        try state.errorMessagesForUserDisplay.append(formatted);
+        return error.VulkanError;
+    }
+}
 
 fn vkcheck(result: vk.VkResult, comptime err_msg: []const u8) !void {
     if (result != vk.VK_SUCCESS) {

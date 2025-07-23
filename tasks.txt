@@ -1,11 +1,13 @@
 tasks
-- Problem: visual artifact: some building images beeing paint on wrong position, like part of image is not reset for multiple frames
-    - mainly was happening on far away zoom levels. Indicating enough data needs to be present
-    - shadaman code example, some 
+- timer to hh:mm:ss
+- Problem: user can not easily tell why the game does not start
+    - try to display error on startup graphically when vulkan not supported
+    - use sdl and hope it finds a way
+- fix error messages when no graphics card found
+
+- mutex removed: try around with delay in callback
 
 thinking what i expect on steam:
-    - goal of 10 reviews (8 review after 10days, lifetime unique users: 325)
-    - after a week. See what steam statistics say about my game
     - check if i find anything to my game
 
 Next project ideas:
@@ -29,10 +31,7 @@ Offstream:
                 - twitch
   
 Some data:
-- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (14.07.2025)
+- FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (17.07.2025)
 - ~85_000 citizen 1 cpu can not keep 60fps anymore(while streamng + debug mode)
-
-- f32 tests
-    - zoom out max 45 fps, 10700 single tick
 
 git remote set-url origin https://github.com/HelmyBlub/The_Population_Must_Grow.git

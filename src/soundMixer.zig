@@ -10,7 +10,6 @@ const sdl = @cImport({
 });
 
 pub const SoundMixer = struct {
-    mutex: std.Thread.Mutex = .{},
     volume: f32 = 1,
     addedSoundDataUntilTimeMs: i64 = 0,
     soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
@@ -58,11 +57,9 @@ pub fn createSoundMixer(state: *main.GameState, allocator: std.mem.Allocator) !v
 }
 
 pub fn destroySoundMixer(state: *main.GameState) void {
-    state.soundMixer.mutex.lock();
-    state.soundMixer.mutex.unlock(); // just want to make sure, audio callback is not still running. Have to unlock before SDL_DestroyAudioStream as it is waiting for audioCallbacks to finish and this lock would block, resulting in endless wait.
+    sdl.SDL_DestroyAudioStream(state.soundMixer.soundData.stream);
     state.soundMixer.soundsToPlay.deinit();
     state.soundMixer.soundsFutureQueue.deinit();
-    sdl.SDL_DestroyAudioStream(state.soundMixer.soundData.stream);
     for (state.soundMixer.soundData.sounds) |sound| {
         if (sound.mp3) |dealocate| {
             state.allocator.free(dealocate);
@@ -114,8 +111,6 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     _ = len;
     const Sample = i16;
     const state: *main.GameState = @ptrCast(@alignCast(userdata.?));
-    state.soundMixer.mutex.lock();
-    defer state.soundMixer.mutex.unlock();
     if (state.gameEnd) return;
 
     const sampleCount = @divExact(additional_amount, @sizeOf(Sample));
