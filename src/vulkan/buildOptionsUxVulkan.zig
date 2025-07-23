@@ -176,11 +176,12 @@ fn initUiButtons(state: *main.GameState) !void {
     };
     buttonCounter += 1;
 
-    tooltip = try state.allocator.alloc([]const u8, 4);
+    tooltip = try state.allocator.alloc([]const u8, 5);
     tooltip[0] = "Potato Fields Area:";
     tooltip[1] = "Drag Area with Mouse for Potato Fields";
     tooltip[2] = "Each Potato Field Produces a Potato every 10 seconds";
     tooltip[3] = "Each Citizen wants to eat a Potato every 30 seconds";
+    tooltip[4] = "Hungry Citizens work slower";
     state.vkState.buildOptionsUx.uiButtons[buttonCounter] = UiButton{
         .type = .{ .action = inputZig.ActionType.buildPotatoFarmArea },
         .fill = .{ .imageIndex = imageZig.IMAGE_POTATO },

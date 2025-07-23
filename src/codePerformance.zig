@@ -66,7 +66,7 @@ pub fn paintData(state: *main.GameState, startY: f32) !void {
     var yOffset: f32 = 0.0;
     while (iterator.next()) |entry| {
         const textWidth = fontVulkanZig.paintText(entry.key_ptr.*, .{ .x = -0.99, .y = startY + yOffset }, performanceFontSize, &state.vkState.font.vkFont) + onePixelXInVulkan * 5;
-        _ = try fontVulkanZig.paintNumber(@as(u32, @intCast(entry.value_ptr.lastMeasurement)), .{ .x = -0.99 + textWidth, .y = startY + yOffset }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try fontVulkanZig.paintNumber(@as(u32, @intCast(entry.value_ptr.lastMeasurement)), .{ .x = -0.99 + textWidth, .y = startY + yOffset }, performanceFontSize, &state.vkState.font.vkFont, true);
         yOffset += onePixelYInVulkan * performanceFontSize;
     }
 }

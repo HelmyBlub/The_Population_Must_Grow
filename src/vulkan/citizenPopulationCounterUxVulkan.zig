@@ -146,7 +146,7 @@ pub fn setupVertices(state: *main.GameState) !void {
     _ = try fontVulkanZig.paintNumber(state.citizenCounter, .{
         .x = populationRectangle.pos.x + citizenTextWidth,
         .y = populationRectangle.pos.y,
-    }, fontSize, &state.vkState.citizenPopulationCounterUx.font);
+    }, fontSize, &state.vkState.citizenPopulationCounterUx.font, true);
 
     const citizenPerMinuteTextWidth = fontVulkanZig.paintText("Citizen Grows Per Minute: ", .{
         .x = populationRectangle.pos.x,
@@ -155,11 +155,21 @@ pub fn setupVertices(state: *main.GameState) !void {
     _ = try fontVulkanZig.paintNumber(@as(u32, @intFromFloat(state.citizensPerMinuteCounter)), .{
         .x = populationRectangle.pos.x + citizenPerMinuteTextWidth,
         .y = populationRectangle.pos.y + onePixelYInVulkan * fontSize,
-    }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
+    }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font, true);
 
     const timeXOffset = onePixelXInVulkan * fontSize * 5;
-    const timeTextWidth = fontVulkanZig.paintText("Time: ", .{ .x = populationRectangle.pos.x - timeXOffset, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
-    _ = try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
+    var timeTextWidth = fontVulkanZig.paintText("Time: ", .{ .x = populationRectangle.pos.x - timeXOffset, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
+    const timeOneHour = 1000 * 60 * 60;
+    if (state.gameTimeMs > timeOneHour) {
+        timeTextWidth += try fontVulkanZig.paintNumber(@divFloor(state.gameTimeMs, timeOneHour), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font, false);
+        timeTextWidth += fontVulkanZig.paintText(":", .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
+    }
+    const timeOneMinute = 1000 * 60;
+    if (state.gameTimeMs > timeOneMinute) {
+        timeTextWidth += try fontVulkanZig.paintNumberWithZeroPrefix(@divFloor(@mod(state.gameTimeMs, timeOneHour), timeOneMinute), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font, false, true);
+        timeTextWidth += fontVulkanZig.paintText(":", .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font);
+    }
+    _ = try fontVulkanZig.paintNumberWithZeroPrefix(@divFloor(@mod(state.gameTimeMs, timeOneMinute), 1000), .{ .x = populationRectangle.pos.x - timeXOffset + timeTextWidth, .y = populationRectangle.pos.y }, fontSizeSmaller, &state.vkState.citizenPopulationCounterUx.font, false, true);
 
     if (optLastCountryPopulationGoal) |lastCountryPopulationGoal| {
         if (nextCountryPopulationGoal) |popGoal| {
@@ -170,7 +180,7 @@ pub fn setupVertices(state: *main.GameState) !void {
             _ = try fontVulkanZig.paintNumber(popGoal.population, .{
                 .x = populationRectangle.pos.x + populationRectangle.width,
                 .y = populationRectangle.pos.y + fontSize / 2.0 * onePixelYInVulkan,
-            }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font);
+            }, fontSize / 2.0, &state.vkState.citizenPopulationCounterUx.font, true);
         }
 
         const timeDiffSurpassed = popCounterUx.surpassedMessageDisplayTime + VkCitizenPopulationCounterUx.MESSAGE_SURPASSED_DURATION -| std.time.milliTimestamp();

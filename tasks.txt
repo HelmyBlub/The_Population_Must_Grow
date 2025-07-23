@@ -1,11 +1,7 @@
 tasks
 - timer to hh:mm:ss
-- Problem: user can not easily tell why the game does not start
-    - try to display error on startup graphically when vulkan not supported
-    - use sdl and hope it finds a way
-- fix error messages when no graphics card found
 
-- mutex removed: try around with delay in callback
+
 
 thinking what i expect on steam:
     - check if i find anything to my game

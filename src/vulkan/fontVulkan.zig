@@ -86,26 +86,26 @@ fn dataUpdate(state: *main.GameState) !void {
             const speedFontSize = 30 * state.vkState.uiSizeFactor;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
             if (1 > state.desiredGameSpeed) {
-                _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
+                _ = try paintNumber(state.actualGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont, false);
             } else {
-                _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont);
+                _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y + textOntoButton.height / 8 }, speedFontSize, &state.vkState.font.vkFont, false);
             }
         } else {
             const speedFontSize = 16 * state.vkState.uiSizeFactor;
             const textWidth = paintText("Speed: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
             if (1 > state.desiredGameSpeed) {
-                _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
+                _ = try paintNumber(state.desiredGameSpeed, .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont, false);
             } else {
-                _ = try paintNumber(@as(u32, @intFromFloat(state.desiredGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont);
+                _ = try paintNumber(@as(u32, @intFromFloat(state.desiredGameSpeed)), .{ .x = textOntoButton.pos.x + textWidth, .y = textOntoButton.pos.y }, speedFontSize, &state.vkState.font.vkFont, false);
             }
             const textWidthLimit = paintText("limit: ", .{ .x = textOntoButton.pos.x, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, &state.vkState.font.vkFont);
-            _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, &state.vkState.font.vkFont);
+            _ = try paintNumber(@as(u32, @intFromFloat(state.actualGameSpeed)), .{ .x = textOntoButton.pos.x + textWidthLimit, .y = textOntoButton.pos.y + textOntoButton.height / 2 }, speedFontSize, &state.vkState.font.vkFont, false);
         }
 
         const textOntoZoomButton = state.vkState.buildOptionsUx.uiButtons[14];
         const zoomFontSize = 30 * state.vkState.uiSizeFactor;
         const textWidth = paintText("Zoom: ", .{ .x = textOntoZoomButton.pos.x, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, &state.vkState.font.vkFont);
-        _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(state.camera.zoom, .{ .x = textOntoZoomButton.pos.x + textWidth, .y = textOntoZoomButton.pos.y + textOntoZoomButton.height / 8 }, zoomFontSize, &state.vkState.font.vkFont, false);
     }
     try main.pathfindingZig.paintDebugPathfindingVisualizationFont(state);
 }
@@ -116,30 +116,30 @@ fn displayPerformanceDebugInfo(state: *main.GameState) !void {
         const performanceFontSize = 20.0;
         var offsetY: f32 = -0.99;
         const fpsTextWidth = paintText("FPS: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.fpsCounter)), .{ .x = -0.99 + fpsTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
         offsetY += onePixelYInVulkan * performanceFontSize;
         const tickDurationTextWidth = paintText("Single Tick: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(@as(u32, @intFromFloat(state.tickDurationSmoothedMircoSeconds)), .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, true);
         offsetY += onePixelYInVulkan * performanceFontSize;
-        _ = try paintNumber(state.pathfindTestValue, .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+        _ = try paintNumber(state.pathfindTestValue, .{ .x = -0.99 + tickDurationTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
         offsetY += onePixelYInVulkan * performanceFontSize;
 
         if (state.cpuPerCent) |cpuPerCent| {
             var cpuTextWidth = paintText("CPU: ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            cpuTextWidth += try paintNumber(@as(u32, @intFromFloat(cpuPerCent * 100)), .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
             _ = paintText("%", .{ .x = -0.99 + cpuTextWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         for (0..state.usedThreadsCount) |threadIndex| {
             const thread = state.threadData[threadIndex];
             var textWidth = paintText("Thread", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(threadIndex)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.recentlyRemovedChunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.recentlyRemovedChunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            textWidth += try paintNumber(@as(u32, @intCast(thread.chunkAreaKeys.items.len)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, false);
             textWidth += paintText("  ", .{ .x = -0.99, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
-            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont);
+            _ = try paintNumber(@as(u32, @intCast(thread.tickedCitizenCounter)), .{ .x = -0.99 + textWidth, .y = offsetY }, performanceFontSize, &state.vkState.font.vkFont, true);
             offsetY += onePixelYInVulkan * performanceFontSize;
         }
         try codePerformanceZig.paintData(state, offsetY);
@@ -180,14 +180,22 @@ pub fn getCharFontVertex(char: u8, vulkanSurfacePosition: main.PositionF32, font
     };
 }
 
-pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.PositionF32, fontSize: f32, vkFont: *VkFont) !f32 {
+pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.PositionF32, fontSize: f32, vkFont: *VkFont, bigNumberSpacing: bool) !f32 {
+    return paintNumberWithZeroPrefix(number, vulkanSurfacePosition, fontSize, vkFont, bigNumberSpacing, false);
+}
+
+pub fn paintNumberWithZeroPrefix(number: anytype, vulkanSurfacePosition: main.PositionF32, fontSize: f32, vkFont: *VkFont, bigNumberSpacing: bool, singleZeroPrefixWhenSmallerTen: bool) !f32 {
     const max_len = 20;
     var buf: [max_len]u8 = undefined;
     var numberAsString: []u8 = undefined;
     if (@TypeOf(number) == f32) {
         numberAsString = try std.fmt.bufPrint(&buf, "{d:.1}", .{number});
     } else {
-        numberAsString = try std.fmt.bufPrint(&buf, "{d}", .{number});
+        if (singleZeroPrefixWhenSmallerTen and number < 10) {
+            numberAsString = try std.fmt.bufPrint(&buf, "0{d}", .{number});
+        } else {
+            numberAsString = try std.fmt.bufPrint(&buf, "{d}", .{number});
+        }
     }
 
     var texX: f32 = 0;
@@ -206,7 +214,7 @@ pub fn paintNumber(number: anytype, vulkanSurfacePosition: main.PositionF32, fon
             .size = fontSize,
         };
         xOffset += texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSize * 0.8;
-        if (i % 3 == spacingPosition) xOffset += spacing;
+        if (bigNumberSpacing and i % 3 == spacingPosition) xOffset += spacing;
         vkFont.verticeCount += 1;
     }
     return xOffset;

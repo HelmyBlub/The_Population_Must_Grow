@@ -463,6 +463,7 @@ pub fn setupVertices(state: *main.GameState) !void {
             .{ .x = settingsMenuUx.sliders[0].recDragArea.pos.x + textWidthVolume, .y = settingsMenuUx.sliders[0].recSlider.pos.y - fontVulkanHeight },
             fontSize,
             &state.vkState.settingsMenuUx.font,
+            false,
         );
 
         const textWidthUiScale = fontVulkanZig.paintText(
@@ -476,6 +477,7 @@ pub fn setupVertices(state: *main.GameState) !void {
             .{ .x = settingsMenuUx.sliders[1].recDragArea.pos.x + textWidthUiScale, .y = settingsMenuUx.sliders[1].recSlider.pos.y - fontVulkanHeight },
             fontSize,
             &state.vkState.settingsMenuUx.font,
+            false,
         );
 
         const fullscreenFillColor = if (settingsMenuUx.fullscreen.hovering) hoverColor else buttonFillColor;
