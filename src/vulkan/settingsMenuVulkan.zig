@@ -22,6 +22,11 @@ pub const VkSettingsUx = struct {
         holdStartTime: ?i64 = null,
         hovering: bool = false,
     } = undefined,
+    prestige: struct {
+        rec: main.Rectangle = undefined,
+        holdStartTime: ?i64 = null,
+        hovering: bool = false,
+    } = undefined,
     sliders: [2]struct {
         recSlider: main.Rectangle = undefined,
         recDragArea: main.Rectangle = undefined,
@@ -39,8 +44,8 @@ pub const VkSettingsUx = struct {
     } = undefined,
     menuOpen: bool = false,
     settingsIconHovered: bool = false,
-    const UX_RECTANGLES = 16;
-    const MAX_FONT_TOOLTIP = 100;
+    const UX_RECTANGLES = 20;
+    const MAX_FONT_TOOLTIP = 150;
     pub const MAX_VERTICES_TRIANGLES = 6 * UX_RECTANGLES;
     pub const MAX_VERTICES_LINES = 8 * UX_RECTANGLES;
     pub const MAX_VERTICES_SPRITES = UX_RECTANGLES;
@@ -74,7 +79,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
 
     const menuWidth = 510 / windowSdlZig.windowData.widthFloat * uiSizeFactor;
     settingsMenuUx.settingsMenuRectangle = .{
-        .height = 600 / windowSdlZig.windowData.heightFloat * uiSizeFactor,
+        .height = 680 / windowSdlZig.windowData.heightFloat * uiSizeFactor,
         .width = menuWidth,
         .pos = .{
             .x = 1 - menuWidth - vulkanSpacingX,
@@ -91,6 +96,14 @@ pub fn setupUiLocations(state: *main.GameState) void {
             .y = settingsMenuRec.pos.y + vulkanSpacingY,
         },
     };
+    settingsMenuUx.prestige.rec = .{
+        .height = 80 / windowSdlZig.windowData.heightFloat * uiSizeFactor,
+        .width = menuWidth - vulkanSpacingX * 2,
+        .pos = .{
+            .x = settingsMenuRec.pos.x + vulkanSpacingX,
+            .y = settingsMenuUx.restart.rec.pos.y + settingsMenuUx.restart.rec.height + vulkanSpacingY,
+        },
+    };
 
     const sliderSpacingX = 40.0 / windowSdlZig.windowData.widthFloat * uiSizeFactor;
     const sliderWidth = 40 / windowSdlZig.windowData.widthFloat * uiSizeFactor;
@@ -101,7 +114,7 @@ pub fn setupUiLocations(state: *main.GameState) void {
         .width = sliderWidth,
         .pos = .{
             .x = settingsMenuRec.pos.x + sliderVolumeOffsetX + vulkanSpacingX,
-            .y = settingsMenuUx.restart.rec.pos.y + settingsMenuUx.restart.rec.height + vulkanSpacingLargerY + 60 / windowSdlZig.windowData.heightFloat * uiSizeFactor,
+            .y = settingsMenuUx.prestige.rec.pos.y + settingsMenuUx.prestige.rec.height + vulkanSpacingLargerY + 60 / windowSdlZig.windowData.heightFloat * uiSizeFactor,
         },
     };
     settingsMenuUx.sliders[0].recDragArea = .{
@@ -156,6 +169,9 @@ fn initUi(state: *main.GameState) !void {
     settings.restart.holdStartTime = null;
     settings.restart.hovering = false;
 
+    settings.prestige.holdStartTime = null;
+    settings.prestige.hovering = false;
+
     settings.sliders[0].holding = false;
     settings.sliders[0].hovering = false;
 
@@ -186,6 +202,7 @@ pub fn mouseMove(state: *main.GameState) !void {
     settingsMenuUx.quit.hovering = false;
     settingsMenuUx.fullscreen.hovering = false;
     settingsMenuUx.restart.hovering = false;
+    settingsMenuUx.prestige.hovering = false;
     settingsMenuUx.sliders[0].hovering = false;
     settingsMenuUx.sliders[1].hovering = false;
     const restartRec = settingsMenuUx.restart.rec;
@@ -193,6 +210,14 @@ pub fn mouseMove(state: *main.GameState) !void {
         restartRec.pos.y > vulkanMousePos.y or restartRec.pos.y + restartRec.height < vulkanMousePos.y))
     {
         settingsMenuUx.restart.holdStartTime = null;
+        try setupVertices(state);
+        return;
+    }
+    const prestigeRec = settingsMenuUx.prestige.rec;
+    if (settingsMenuUx.prestige.holdStartTime != null and (prestigeRec.pos.x > vulkanMousePos.x or prestigeRec.pos.x + prestigeRec.width < vulkanMousePos.x or
+        prestigeRec.pos.y > vulkanMousePos.y or prestigeRec.pos.y + prestigeRec.height < vulkanMousePos.y))
+    {
+        settingsMenuUx.prestige.holdStartTime = null;
         try setupVertices(state);
         return;
     }
@@ -215,6 +240,11 @@ pub fn mouseMove(state: *main.GameState) !void {
 
     if (isPositionInUiRec(settingsMenuUx.restart.rec, vulkanMousePos)) {
         settingsMenuUx.restart.hovering = true;
+        try setupVertices(state);
+        return;
+    }
+    if (isPositionInUiRec(settingsMenuUx.prestige.rec, vulkanMousePos)) {
+        settingsMenuUx.prestige.hovering = true;
         try setupVertices(state);
         return;
     }
@@ -248,6 +278,12 @@ pub fn mouseUp(state: *main.GameState, mouseWindowPosition: main.PositionF32) !b
         return true;
     }
 
+    if (settingsMenuUx.prestige.holdStartTime != null) {
+        settingsMenuUx.prestige.holdStartTime = null;
+        try setupVertices(state);
+        return true;
+    }
+
     for (settingsMenuUx.sliders, 0..) |slider, index| {
         if (slider.holding) {
             settingsMenuUx.sliders[index].holding = false;
@@ -275,6 +311,10 @@ pub fn mouseDown(state: *main.GameState, mouseWindowPosition: main.PositionF32) 
 
     if (isPositionInUiRec(settingsMenuUx.restart.rec, vulkanMousePos)) {
         settingsMenuUx.restart.holdStartTime = std.time.milliTimestamp();
+        return true;
+    }
+    if (isPositionInUiRec(settingsMenuUx.prestige.rec, vulkanMousePos)) {
+        settingsMenuUx.prestige.holdStartTime = std.time.milliTimestamp();
         return true;
     }
 
@@ -321,13 +361,22 @@ fn isPositionInUiRec(rec: main.Rectangle, pos: main.PositionF32) bool {
 
 pub fn tick(state: *main.GameState) !void {
     const settingsMenuUx = &state.vkState.settingsMenuUx;
-    if (settingsMenuUx.restart.holdStartTime == null) return;
-    const timeDiff = settingsMenuUx.restart.holdStartTime.? + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp();
-    if (timeDiff < 0) {
-        try main.deleteSaveAndRestart(state);
-        settingsMenuUx.restart.holdStartTime = null;
+    if (settingsMenuUx.restart.holdStartTime != null) {
+        const timeDiff = settingsMenuUx.restart.holdStartTime.? + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp();
+        if (timeDiff < 0) {
+            try main.deleteSaveAndRestart(state, false);
+            settingsMenuUx.restart.holdStartTime = null;
+        }
+        try setupVertices(state);
     }
-    try setupVertices(state);
+    if (settingsMenuUx.prestige.holdStartTime != null) {
+        const timeDiff = settingsMenuUx.prestige.holdStartTime.? + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp();
+        if (timeDiff < 0) {
+            try main.deleteSaveAndRestart(state, true);
+            settingsMenuUx.prestige.holdStartTime = null;
+        }
+        try setupVertices(state);
+    }
 }
 
 pub fn init(state: *main.GameState) !void {
@@ -445,6 +494,45 @@ pub fn setupVertices(state: *main.GameState) !void {
             fontSize,
             &state.vkState.settingsMenuUx.font,
         );
+
+        const prestigeFillColor = if (settingsMenuUx.prestige.hovering) hoverColor else buttonFillColor;
+        setupVerticeForRectangle(settingsMenuUx.prestige.rec, settingsMenuUx, prestigeFillColor, borderColor);
+        if (settingsMenuUx.prestige.holdStartTime) |time| {
+            const timeDiff = @max(0, time + VkSettingsUx.RESTART_HOLD_DURATION_MS - std.time.milliTimestamp());
+            const fillPerCent: f32 = 1 - @as(f32, @floatFromInt(timeDiff)) / VkSettingsUx.RESTART_HOLD_DURATION_MS;
+            const holdRecColor: [3]f32 = .{ 0.2, 0.2, 0.2 };
+            const fillRec: main.Rectangle = .{
+                .pos = .{
+                    .x = settingsMenuUx.prestige.rec.pos.x,
+                    .y = settingsMenuUx.prestige.rec.pos.y,
+                },
+                .width = settingsMenuUx.prestige.rec.width * fillPerCent,
+                .height = settingsMenuUx.prestige.rec.height,
+            };
+            setupVerticeForRectangle(fillRec, settingsMenuUx, holdRecColor, borderColor);
+        }
+        _ = fontVulkanZig.paintText(
+            "Hold to Prestige",
+            .{
+                .x = settingsMenuUx.prestige.rec.pos.x,
+                .y = settingsMenuUx.prestige.rec.pos.y + settingsMenuUx.prestige.rec.height / 5.0,
+            },
+            fontSize,
+            &state.vkState.settingsMenuUx.font,
+        );
+        if (settingsMenuUx.prestige.hovering) {
+            const prestigeTooltip = &[_][]const u8{
+                "Prestige:",
+                "Deletes everything like restart but",
+                "  keeps the citizen counter",
+            };
+            const paddingXVulkan = uiSizeFactor / windowSdlZig.windowData.widthFloat * 2;
+            const paddingYVulkan = uiSizeFactor / windowSdlZig.windowData.heightFloat * 2;
+            buildOptionsUxVulkanZig.setupVerticesTooltip(prestigeTooltip, .{
+                .x = settingsMenuUx.prestige.rec.pos.x - paddingXVulkan * 430,
+                .y = settingsMenuUx.prestige.rec.pos.y + paddingYVulkan * 60,
+            }, font, lines, triangles, state);
+        }
 
         for (settingsMenuUx.sliders) |slider| {
             setupVerticeForRectangle(slider.recDragArea, settingsMenuUx, color, borderColor);

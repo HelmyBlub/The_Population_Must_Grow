@@ -1177,7 +1177,6 @@ pub fn createSpawnArea(state: *main.GameState) !void {
         try finishBuilding(building, 0, state);
     }
 
-    state.citizenCounterLastTick = 1;
     try chunkAreaZig.checkIfAreaIsActive(spawnChunk.chunkXY, 0, state);
 }
 

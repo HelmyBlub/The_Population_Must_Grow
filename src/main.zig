@@ -224,16 +224,22 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSe
     settingsMenuUxVulkanZig.setupUiLocations(state);
 }
 
-pub fn deleteSaveAndRestart(state: *GameState) !void {
+pub fn deleteSaveAndRestart(state: *GameState, keepCitizenCount: bool) !void {
     try saveZig.deleteSave(state.allocator);
-    state.citizenCounter = 0;
+    if (!keepCitizenCount) {
+        state.citizenCounter = 0;
+        state.citizenCounterLastTick = 1;
+        state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len;
+        state.gameTimeMs = 0;
+        state.lastGeneralDataSaveTime = 0;
+        state.lastAutoGameSpeedChangeTime = 0;
+    } else {
+        state.citizenCounterLastTick = state.citizenCounter + 1;
+    }
     state.camera = .{
         .position = .{ .x = 0, .y = 0 },
         .zoom = 1,
     };
-    state.gameTimeMs = 0;
-    state.lastGeneralDataSaveTime = 0;
-    state.lastAutoGameSpeedChangeTime = 0;
     var iterator = state.chunkAreas.iterator();
     while (iterator.next()) |entry| {
         entry.value_ptr.lastSaveTime = 0;
@@ -253,7 +259,6 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
         threadData.soundMixerData.soundsFutureQueue.clearAndFree();
     }
     try mapZig.createSpawnArea(state);
-    state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len;
     state.soundMixer.soundsToPlay.clearRetainingCapacity();
 }
 

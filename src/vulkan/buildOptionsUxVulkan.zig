@@ -472,56 +472,65 @@ pub fn setupVertices(state: *main.GameState) !void {
             font.verticeCount += 1;
         }
         if (state.vkState.buildOptionsUx.mouseHoverButtonIndex == uiButtonIndex) {
-            const paddingPixels = 2 * uiSizeFactor;
-            const paddingXVulkan = paddingPixels / windowSdlZig.windowData.widthFloat * 2;
-            const paddingYVulkan = paddingPixels / windowSdlZig.windowData.heightFloat * 2;
-            const fontSizePixels = 20.0 * uiSizeFactor;
-            const fontSizeVulkan = fontSizePixels / windowSdlZig.windowData.heightFloat * 2;
-            const tooltipBoxVertSpacing = paddingYVulkan * 10 * uiSizeFactor;
-            var width: f32 = 0;
-            var maxWidth: f32 = 0;
-            const height: f32 = fontSizeVulkan * @as(f32, @floatFromInt(uiButton.tooltip.len)) + paddingYVulkan * 2;
-            for (uiButton.tooltip, 0..) |line, tooltipLineIndex| {
-                for (line) |char| {
-                    font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(char, .{
-                        .x = uiButton.pos.x + width + paddingXVulkan,
-                        .y = uiButton.pos.y - height + @as(f32, @floatFromInt(tooltipLineIndex)) * fontSizeVulkan + paddingYVulkan - tooltipBoxVertSpacing,
-                    }, fontSizePixels);
-                    width += font.vertices[font.verticeCount].texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSizePixels * 0.8;
-                    font.verticeCount += 1;
-                }
-                if (maxWidth < width) maxWidth = width;
-                width = 0;
-            }
-            maxWidth += paddingXVulkan * 2;
-            const tooltipRectangle = main.Rectangle{
-                .pos = .{ .x = uiButton.pos.x, .y = uiButton.pos.y - height - tooltipBoxVertSpacing },
-                .width = maxWidth,
-                .height = height,
-            };
-            fillColor = selectedFillColor;
-            borderColor = unselectedBorderColor;
-            triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
-            triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = fillColor };
-            triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
-            triangles.vertices[triangles.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
-            triangles.vertices[triangles.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
-            triangles.vertices[triangles.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
-            triangles.verticeCount += 6;
-
-            lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 6] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
-            lines.vertices[lines.verticeCount + 7] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
-            lines.verticeCount += 8;
+            setupVerticesTooltip(uiButton.tooltip, uiButton.pos, font, lines, triangles, state);
         }
     }
 
     try setupVertexDataForGPU(&state.vkState);
+}
+
+pub fn setupVerticesTooltip(tooltip: []const []const u8, pos: main.PositionF32, font: *fontVulkanZig.VkFont, lines: *paintVulkanZig.VkLines, triangles: *paintVulkanZig.VkTriangles, state: *main.GameState) void {
+    if (triangles.vertices.len <= triangles.verticeCount + 6 or lines.vertices.len <= lines.verticeCount + 8) {
+        std.debug.print("test triangles full", .{});
+        return;
+    }
+    const uiSizeFactor = state.vkState.uiSizeFactor;
+    const paddingPixels = 2 * uiSizeFactor;
+    const paddingXVulkan = paddingPixels / windowSdlZig.windowData.widthFloat * 2;
+    const paddingYVulkan = paddingPixels / windowSdlZig.windowData.heightFloat * 2;
+    const fontSizePixels = 20.0 * uiSizeFactor;
+    const fontSizeVulkan = fontSizePixels / windowSdlZig.windowData.heightFloat * 2;
+    const tooltipBoxVertSpacing = paddingYVulkan * 10 * uiSizeFactor;
+    var width: f32 = 0;
+    var maxWidth: f32 = 0;
+    const height: f32 = fontSizeVulkan * @as(f32, @floatFromInt(tooltip.len)) + paddingYVulkan * 2;
+    for (tooltip, 0..) |line, tooltipLineIndex| {
+        for (line) |char| {
+            font.vertices[font.verticeCount] = fontVulkanZig.getCharFontVertex(char, .{
+                .x = pos.x + width + paddingXVulkan,
+                .y = pos.y - height + @as(f32, @floatFromInt(tooltipLineIndex)) * fontSizeVulkan + paddingYVulkan - tooltipBoxVertSpacing,
+            }, fontSizePixels);
+            width += font.vertices[font.verticeCount].texWidth * 1600 / windowSdlZig.windowData.widthFloat * 2 / 40 * fontSizePixels * 0.8;
+            font.verticeCount += 1;
+        }
+        if (maxWidth < width) maxWidth = width;
+        width = 0;
+    }
+    maxWidth += paddingXVulkan * 2;
+    const tooltipRectangle = main.Rectangle{
+        .pos = .{ .x = pos.x, .y = pos.y - height - tooltipBoxVertSpacing },
+        .width = maxWidth,
+        .height = height,
+    };
+    const fillColor: [3]f32 = .{ 0.25, 0.25, 0.25 };
+    const borderColor: [3]f32 = .{ 0, 0, 0 };
+    triangles.vertices[triangles.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
+    triangles.vertices[triangles.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = fillColor };
+    triangles.vertices[triangles.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+    triangles.vertices[triangles.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = fillColor };
+    triangles.vertices[triangles.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+    triangles.vertices[triangles.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = fillColor };
+    triangles.verticeCount += 6;
+
+    lines.vertices[lines.verticeCount + 0] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 1] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 2] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 3] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 4] = .{ .pos = .{ tooltipRectangle.pos.x + tooltipRectangle.width, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 5] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 6] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y + tooltipRectangle.height }, .color = borderColor };
+    lines.vertices[lines.verticeCount + 7] = .{ .pos = .{ tooltipRectangle.pos.x, tooltipRectangle.pos.y }, .color = borderColor };
+    lines.verticeCount += 8;
 }
 
 fn setupVertexDataForGPU(vkState: *paintVulkanZig.Vk_State) !void {

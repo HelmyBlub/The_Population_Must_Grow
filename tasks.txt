@@ -1,30 +1,8 @@
 tasks
-- check sound multiple cpus
-    - add panic back
 - implement prestige mode: restart but keep citizen counter
 
 - check if i find anything to my game if i google
     - only the steam pages (22.7.2025)
-
-Next project ideas:
-- i want to try out shaders to make something look "better"
-    - one simpler game where i can use most time on shaders and trying around with them
-- simple game ideas:
-    - speed dog ninja 
-        - when players draws blade, time stops
-        - has puzzle/tetris like pieces to move
-        - when killing enemy, move set refreshes
-        - when not hitting enemy in x turns, time runs again
-        - try to use shaders to make it look "better"
-
-
-Offstream:
-    - youtube video on weekend
-        - show my game
-            - what i used to build it
-                - zig
-                - vulkan
-                - twitch
   
 Some data:
 - FPS: 115, citizens: 32972, gameTime: 330000, end FPS: 93.282684 (17.07.2025)

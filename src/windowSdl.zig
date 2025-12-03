@@ -218,7 +218,7 @@ fn debugKeyBinds(state: *main.GameState, scancode: c_uint) !void {
         state.testData = testZig.createTestData(state.allocator);
         state.testData.?.fpsLimiter = false;
     } else if (scancode == sdl.SDL_SCANCODE_F10) {
-        try main.deleteSaveAndRestart(state);
+        try main.deleteSaveAndRestart(state, false);
     } else if (scancode == sdl.SDL_SCANCODE_F11) {
         std.debug.print("thread performance\n", .{});
         for (state.threadData, 0..) |threadData, index| {
