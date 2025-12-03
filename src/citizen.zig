@@ -412,10 +412,10 @@ fn buildingGetWood(citizen: *Citizen, threadIndex: usize, state: *main.GameState
                 const tooFarAwayFromCameraForSounds = main.calculateDistance(citizen.position, state.camera.position) > 1000;
                 if (!tooFarAwayFromCameraForSounds) {
                     while (temp < main.CITIZEN_TREE_CUT_DURATION) {
-                        try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.getRandomWoodChopIndex(), state.gameTimeMs + temp, citizen.position);
+                        try soundMixerZig.playSoundInFuture(soundMixerZig.getRandomWoodChopIndex(), state.gameTimeMs + temp, citizen.position, threadIndex, state);
                         temp += woodCutSoundInterval;
                     }
-                    try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + main.CITIZEN_TREE_CUT_PART1_DURATION, citizen.position);
+                    try soundMixerZig.playSoundInFuture(soundMixerZig.SOUND_TREE_FALLING, state.gameTimeMs + main.CITIZEN_TREE_CUT_PART1_DURATION, citizen.position, threadIndex, state);
                 }
             }
         } else {
@@ -468,7 +468,7 @@ fn buildingBuild(citizen: *Citizen, threadIndex: usize, state: *main.GameState) 
                         const hammerSoundInterval: u32 = @intFromFloat(std.math.pi * 200);
                         var temp: u32 = @divFloor(hammerSoundInterval, 2);
                         while (temp < 3000) {
-                            try soundMixerZig.playSoundInFuture(&state.soundMixer, soundMixerZig.SOUND_HAMMER_WOOD, state.gameTimeMs + temp, citizen.position);
+                            try soundMixerZig.playSoundInFuture(soundMixerZig.SOUND_HAMMER_WOOD, state.gameTimeMs + temp, citizen.position, threadIndex, state);
                             temp += hammerSoundInterval;
                         }
                     }

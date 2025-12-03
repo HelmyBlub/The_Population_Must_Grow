@@ -79,6 +79,7 @@ pub const ThreadData = struct {
     requestToLoadChunkAreaKeys: std.ArrayList(u64),
     requestToUnidleAreakey: std.ArrayList(u64),
     currentPathIndex: std.atomic.Value(usize),
+    soundMixerData: soundMixerZig.SoundMixerThreadData,
     sleeped: bool = true,
     /// e.g.: if 3 threads are used, state.threadData[2] would save the measured data for this thread count
     measureData: struct {
@@ -207,6 +208,7 @@ pub fn createGameState(allocator: std.mem.Allocator, state: *GameState, randomSe
             .requestToUnidleAreakey = std.ArrayList(u64).init(allocator),
             .currentPathIndex = std.atomic.Value(usize).init(0),
             .measureData = .{},
+            .soundMixerData = .{ .soundsFutureQueue = std.ArrayList(soundMixerZig.FutureSoundToPlay).init(allocator) },
         };
     }
     try saveZig.createSaveAndLoadThread(state);
@@ -248,10 +250,10 @@ pub fn deleteSaveAndRestart(state: *GameState) !void {
         threadData.recentlyRemovedChunkAreaKeys.clearAndFree();
         threadData.requestToLoadChunkAreaKeys.clearAndFree();
         threadData.requestToUnidleAreakey.clearAndFree();
+        threadData.soundMixerData.soundsFutureQueue.clearAndFree();
     }
     try mapZig.createSpawnArea(state);
     state.vkState.citizenPopulationCounterUx.nextCountryPopulationIndex = countryPopulationDataZig.WORLD_POPULATION.len;
-    state.soundMixer.soundsFutureQueue.clearRetainingCapacity();
     state.soundMixer.soundsToPlay.clearRetainingCapacity();
 }
 
@@ -942,20 +944,20 @@ fn tick(state: *GameState) !void {
     codePerformanceZig.evaluateTickData(&state.codePerformanceData);
 }
 
-fn tickThreadChunks(threadNumber: usize, state: *GameState) !void {
+fn tickThreadChunks(threadIndex: usize, state: *GameState) !void {
     const areaLen = chunkAreaZig.ChunkArea.SIZE * chunkAreaZig.ChunkArea.SIZE;
     while (true) {
         if (state.gameEnd) return;
-        state.threadData[threadNumber].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
-        if (threadNumber >= state.usedThreadsCount) {
+        state.threadData[threadIndex].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+        if (threadIndex >= state.usedThreadsCount) {
             std.Thread.sleep(16 * 1000 * 1000);
             continue;
         }
 
-        if (!state.threadData[threadNumber].finishedTick) {
-            const threadData = &state.threadData[threadNumber];
+        if (!state.threadData[threadIndex].finishedTick) {
+            const threadData = &state.threadData[threadIndex];
             while (true) {
-                state.threadData[threadNumber].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
+                state.threadData[threadIndex].dummyValue += 1; // because zig fastRelease build somehow has problems syncing data otherwise
                 if (state.gameEnd) return;
                 const allowedPathIndex = state.activeChunkAllowedPathIndex.load(.unordered) + ThreadData.VALIDATION_CHUNK_DISTANCE - 1;
                 if (allowedPathIndex >= threadData.currentPathIndex.load(.unordered)) {
@@ -972,7 +974,7 @@ fn tickThreadChunks(threadNumber: usize, state: *GameState) !void {
 
                         var chunkIndex = chunkArea.currentChunkIndex;
                         while (areaLen > chunkIndex and chunkIndex <= allowedPathIndex) {
-                            const idleTypeData = try tickSingleChunk(chunkIndex, threadNumber, chunkArea, state);
+                            const idleTypeData = try tickSingleChunk(chunkIndex, threadIndex, chunkArea, state);
                             if (chunkArea.idleTypeData != .active and idleTypeData != .idle) {
                                 if (idleTypeData == .active) {
                                     chunkArea.idleTypeData = .active;
@@ -1008,11 +1010,11 @@ fn tickThreadChunks(threadNumber: usize, state: *GameState) !void {
                 threadData.sleeped = false;
             }
         } else if (state.testData == null or state.testData.?.fpsLimiter) {
-            if (state.wasSingleCore or !state.threadData[threadNumber].sleeped) {
+            if (state.wasSingleCore or !state.threadData[threadIndex].sleeped) {
                 var passedTime = (std.time.microTimestamp() - state.tickStartTimeMicroSeconds);
                 if (passedTime < 0) passedTime = 0;
                 const sleepTime = @as(u64, @intCast(state.paintIntervalMs)) * 1_000 -| @as(u64, @intCast(passedTime));
-                state.threadData[threadNumber].sleeped = true;
+                state.threadData[threadIndex].sleeped = true;
                 if (sleepTime > 0) {
                     std.Thread.sleep(sleepTime * 1000);
                 }
@@ -1184,6 +1186,7 @@ pub fn destroyGameState(state: *GameState) void {
         threadData.recentlyRemovedChunkAreaKeys.deinit();
         threadData.requestToLoadChunkAreaKeys.deinit();
         threadData.requestToUnidleAreakey.deinit();
+        threadData.soundMixerData.soundsFutureQueue.deinit();
     }
     if (state.testData) |testData| {
         testData.testInputs.deinit();

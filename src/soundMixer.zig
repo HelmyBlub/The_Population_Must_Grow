@@ -9,10 +9,13 @@ const sdl = @cImport({
     @cInclude("SDL3/SDL_revision.h");
 });
 
+pub const SoundMixerThreadData = struct {
+    soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
+};
+
 pub const SoundMixer = struct {
     volume: f32 = 1,
     addedSoundDataUntilTimeMs: i64 = 0,
-    soundsFutureQueue: std.ArrayList(FutureSoundToPlay),
     soundsToPlay: std.ArrayList(SoundToPlay),
     soundData: SoundData = undefined,
     countTreeFalling: u8 = 0,
@@ -30,7 +33,7 @@ const SoundToPlay = struct {
     mapPosition: main.Position,
 };
 
-const FutureSoundToPlay = struct {
+pub const FutureSoundToPlay = struct {
     soundIndex: usize,
     startGameTimeMs: u64,
     mapPosition: main.Position,
@@ -50,7 +53,6 @@ pub const SoundData = struct {
 pub fn createSoundMixer(state: *main.GameState, allocator: std.mem.Allocator) !void {
     state.soundMixer = .{
         .soundsToPlay = std.ArrayList(SoundToPlay).init(allocator),
-        .soundsFutureQueue = std.ArrayList(FutureSoundToPlay).init(allocator),
     };
     state.soundMixer.soundData = try initSounds(state, allocator);
     try state.soundMixer.soundsToPlay.ensureTotalCapacity(SoundMixer.MAX_SOUNDS_AT_ONCE);
@@ -59,7 +61,6 @@ pub fn createSoundMixer(state: *main.GameState, allocator: std.mem.Allocator) !v
 pub fn destroySoundMixer(state: *main.GameState) void {
     sdl.SDL_DestroyAudioStream(state.soundMixer.soundData.stream);
     state.soundMixer.soundsToPlay.deinit();
-    state.soundMixer.soundsFutureQueue.deinit();
     for (state.soundMixer.soundData.sounds) |sound| {
         if (sound.mp3) |dealocate| {
             state.allocator.free(dealocate);
@@ -72,14 +73,16 @@ pub fn destroySoundMixer(state: *main.GameState) void {
 
 pub fn tickSoundMixer(state: *main.GameState) !void {
     var index: usize = 0;
-    while (index < state.soundMixer.soundsFutureQueue.items.len) {
-        const item = state.soundMixer.soundsFutureQueue.items[index];
-        if (item.startGameTimeMs <= state.gameTimeMs) {
-            const removed = state.soundMixer.soundsFutureQueue.swapRemove(index);
-            const offset = (state.gameTimeMs - removed.startGameTimeMs) * 48 * 2;
-            try playSound(&state.soundMixer, removed.soundIndex, offset, removed.mapPosition);
-        } else {
-            index += 1;
+    for (state.threadData) |*threadData| {
+        while (index < threadData.soundMixerData.soundsFutureQueue.items.len) {
+            const item = threadData.soundMixerData.soundsFutureQueue.items[index];
+            if (item.startGameTimeMs <= state.gameTimeMs) {
+                const removed = threadData.soundMixerData.soundsFutureQueue.swapRemove(index);
+                const offset = (state.gameTimeMs - removed.startGameTimeMs) * 48 * 2;
+                try playSound(&state.soundMixer, removed.soundIndex, offset, removed.mapPosition);
+            } else {
+                index += 1;
+            }
         }
     }
 
@@ -148,8 +151,8 @@ fn audioCallback(userdata: ?*anyopaque, stream: ?*sdl.SDL_AudioStream, additiona
     _ = sdl.SDL_PutAudioStreamData(stream, buffer.ptr, additional_amount);
 }
 
-pub fn playSoundInFuture(soundMixer: *SoundMixer, soundIndex: usize, startGameTimeMs: u64, mapPosition: main.Position) !void {
-    try soundMixer.soundsFutureQueue.append(FutureSoundToPlay{
+pub fn playSoundInFuture(soundIndex: usize, startGameTimeMs: u64, mapPosition: main.Position, threadIndex: usize, state: *main.GameState) !void {
+    try state.threadData[threadIndex].soundMixerData.soundsFutureQueue.append(FutureSoundToPlay{
         .soundIndex = soundIndex,
         .startGameTimeMs = startGameTimeMs,
         .mapPosition = mapPosition,
