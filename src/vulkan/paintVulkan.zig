@@ -1881,8 +1881,9 @@ fn isDeviceSuitable(device: vk.VkPhysicalDevice, state: *main.GameState, allocat
         std.debug.print("   score + DISCRETE_GPU: {d}\n", .{1000});
         score += 1000;
     }
-    score += physicalDeviceProperties.limits.maxImageDimension2D;
-    std.debug.print("   score + maxImageDimension2D: {d}\n", .{physicalDeviceProperties.limits.maxImageDimension2D});
+    const maxImageDim2DScore = physicalDeviceProperties.limits.maxImageDimension2D / 4096;
+    score += maxImageDim2DScore;
+    std.debug.print("   score + maxImageDimension2D: {d}\n", .{maxImageDim2DScore});
 
     const counts: vk.VkSampleCountFlags = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
     score += counts * 16;
